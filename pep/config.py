@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     webhook_secret: str = Field(
         "dev-secret", validation_alias=AliasChoices("COACH_WEBHOOK_SECRET", "PEP_WEBHOOK_SECRET")
     )
+    # Signs players' login tokens (JWT). Long and random in production; changing it logs everyone out.
+    jwt_secret: str = "dev-jwt-secret-change-me-please-32b"
+    access_token_minutes: int = 30
+    refresh_token_days: int = 60
+    # Browser origins allowed to call the player API (the Flutter web app). "*" is fine in dev.
+    cors_origins: list[str] = ["*"]
     # Password for the Pep Lab web UI (HTTP Basic, user "lab"). Empty = no password (dev only).
     lab_password: str = ""
 

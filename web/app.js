@@ -65,7 +65,7 @@ const routes = [
 
 const NAV = [
   ["analyse", "#/", "upload", "Analyse"],
-  ["players", "#/players", "eye", "Players"],
+  ["players", "#/players", "eye", "Scout preview"],
   ["calibrate", "#/calibrate", "target", "Calibrate"],
   ["health", "#/health", "pulse", "Health"],
 ];
@@ -368,7 +368,7 @@ function renderResult(job) {
 
   app.innerHTML = `
     <section class="hero fade-in" style="padding-bottom:22px">
-      <a href="#/players" class="row faint" style="text-decoration:none;font-weight:700;font-size:13px;width:max-content">${icon("back")} Players</a>
+      <a href="#/players" class="row faint" style="text-decoration:none;font-weight:700;font-size:13px;width:max-content">${icon("back")} Scout preview</a>
       <div class="row wrap spread" style="align-items:flex-end">
         <div class="stack" style="gap:8px">
           <span class="eyebrow neon">${esc(job.clipType)} · ${esc(job.positions.join(" / ") || "any position")} · ${ago(job.createdAt)}</span>
@@ -510,9 +510,9 @@ async function pagePlayers() {
   const state = { q: "", role: "", minConf: "LOW", sort: "score" };
   app.innerHTML = `
     <section class="hero fade-in" style="padding-bottom:20px">
-      <span class="eyebrow neon">Scout view</span>
-      <h1>Players</h1>
-      <p>Every analysed clip. Filter by the role you're scouting for; scores re-rank by role fit.</p>
+      <span class="eyebrow neon">Staff only · scout preview</span>
+      <h1>Scout preview</h1>
+      <p>A prototype of the future scout app, for staff: every analysed clip, filterable by role. Players don't see this, and nothing here is shared with scouts yet.</p>
     </section>
     <div class="row wrap" style="margin-bottom:8px">
       <div style="flex:2;min-width:200px"><input type="text" id="q" placeholder="Search players" /></div>

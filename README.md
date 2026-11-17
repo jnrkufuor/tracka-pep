@@ -1,13 +1,22 @@
-# Pep: Tracka's AI coach
+# Tracka: the player app, and Pep, its AI coach
 
-Pep watches a player's clip, measures them (speed, acceleration, touches,
-body shape, goalkeeping, timed drills), scores them against players their
-age, fits them to scouting roles, and explains how to improve, with a
-video-understanding model writing the coaching notes.
+**Tracka** is a mobile app (Android, iPhone, and web) for footballers.
+Players create a profile, upload clips of themselves, keep a library of
+their videos, and get scored and coached by **Pep**, an AI coach that
+measures speed, acceleration, touches, body shape and timed drills,
+compares them with players their age, and tells them exactly what to
+practise next.
 
-It plugs into **tracka-api** through the outside-coach contract that's
-already there: set `COACH_API_URL` to Pep's URL and share `COACH_API_KEY` and
-`COACH_WEBHOOK_SECRET`. No Tracka code changes.
+This repo holds both halves:
+
+| Folder | What | Built with |
+|---|---|---|
+| `app/` | The player app | Flutter (Dart) → Android, iOS, web |
+| `pep/` | The API the app talks to (`/v1/...`) and the Pep analysis pipeline | Python, FastAPI, YOLO26, Gemini |
+
+Scope today: **players only**. Scouts, opportunities and feeds come
+later (the Opportunities tab is there, empty), as a separate app on the
+same API.
 
 **Learning?** Start with [`docs/handbook/00-start-here.md`](docs/handbook/00-start-here.md).
 **Finding your way around?** [`docs/CODEMAP.md`](docs/CODEMAP.md).
@@ -15,70 +24,75 @@ already there: set `COACH_API_URL` to Pep's URL and share `COACH_API_KEY` and
 ## Quick start
 
 ```bash
+# the API + Pep
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,vision,coach,train]"
 cp .env.example .env
+pep serve                                  # http://localhost:8000 (+ Lab console at /lab)
+python scripts/seed_demo.py                # optional: demo@tracka.app / tracka-demo-123
 
-python scripts/make_test_clip.py run.mp4          # true top speed: 25.2 km/h
-pep analyse run.mp4 --positions RW --age 17 --height 1.75 --overlay seen.mp4
-pep serve                                         # Pep Lab at http://localhost:8000
-pytest                                            # fast tests
-pytest -m slow                                    # real YOLO26 on the test clip
+# the app (needs Flutter)
+cd app && ./tool/setup_platforms.sh
+flutter run -d chrome --dart-define=PEP_API_URL=http://localhost:8000
+
+# checks
+pytest && ruff check pep tests scripts training deploy && mypy pep
+cd app && flutter analyze && flutter test
 ```
 
-Add `GEMINI_API_KEY` to `.env` for AI coaching notes; without it Pep writes
-rule-based notes.
+Add `PEP_GEMINI_API_KEY` to `.env` for AI coaching notes; without it Pep
+writes rule-based notes.
 
 ## How it works
 
 ```
-clip → frames → YOLO26 pose + ball → camera-motion removal → pick the player
-     → pixels to metres → Kalman/RTS smoothing → metrics (+ drills)
-     → norms by age → skills with explanations and drills → Gemini notes
-     → role fit for scouts → signed callback to Tracka
+App ──► Pep API (/v1: accounts, profile, videos, coach) ──► Postgres job queue ──► GPU workers
+                                │                                                     │
+                                └──── clips in Cloudflare R2 ◄──────────────────────── ┘
+
+worker: clip → frames → YOLO26 pose + ball → camera-motion removal → pick the player
+       → pixels to metres → Kalman/RTS smoothing → metrics (+ drills)
+       → norms by age → skills, drills, role fit → Gemini notes (optional)
 ```
 
 | Part | Runs on | Notes |
 |---|---|---|
-| API + Pep Lab | Render (Frankfurt), `Dockerfile` | FastAPI; `/analyses` for Tracka, `/lab` for people, `/healthz` `/readyz` `/metrics` |
-| Queue + results | Render Postgres | `SELECT … FOR UPDATE SKIP LOCKED`, leases, backoff |
+| Player app | Phones (Play Store / App Store later); web on Cloudflare Pages | `app/`, built by `.github/workflows/app.yml` |
+| API | Render (Frankfurt), `Dockerfile` | FastAPI; `/v1` for the app, `/healthz` `/readyz` `/metrics` |
+| Queue + data | Render Postgres | `SELECT … FOR UPDATE SKIP LOCKED`, leases, backoff |
 | Workers | Modal GPUs (`deploy/modal_app.py`) or Render CPU (`Dockerfile.worker`) | scale to zero on Modal |
 | Clips | Cloudflare R2 | presigned URLs, free egress |
-| AI coach | Gemini 3.8 Flash | structured JSON, guarded, optional |
+| AI coach | Gemini 3.8 Flash | structured JSON, guarded, optional per player |
 
-## The Tracka contract
+![The app](https://raw.githubusercontent.com/jnrkufuor/tracka-pep/screenshots/2-home.png)
 
-```
-Tracka → Pep   POST /analyses   Authorization: Bearer COACH_API_KEY
-               { analysisId, videoUrl, lengthSeconds, positions, callbackUrl,
-                 // optional Pep extras:
-                 clipType, drill, playerHeightM, ageYears, sex, target, calibration }
-
-Pep → Tracka   POST callbackUrl   X-Tracka-Signature: hex(HMAC-SHA256(body, COACH_WEBHOOK_SECRET))
-               { analysisId, status, modelVersion, overallScore, confidence,
-                 skills[{name, score, explanation, drill}], moments[{atSeconds, kind, text}],
-                 // extras Tracka can adopt later:
-                 roleFit[], metrics{}, summary, clipType, coachSource }
-```
+Screenshots of every screen are regenerated by CI on the
+[`screenshots` branch](https://github.com/jnrkufuor/tracka-pep/tree/screenshots).
 
 ## Deploying
 1. **Render**: New → Blueprint → this repo (`render.yaml`). Fill in the
-   secrets it asks for.
+   secrets it asks for, including `PEP_JWT_SECRET` (a long random string)
+   and `PEP_CORS_ORIGINS` (your web app's address).
 2. **Cloudflare R2**: create bucket `pep-clips` and an API token; set the
    `PEP_S3_*` variables.
 3. **Modal** (GPU workers): `modal secret create pep-secrets …`, then
    `modal deploy deploy/modal_app.py`.
-4. **tracka-api**: set `COACH_API_URL=https://<pep>`,
-   `COACH_API_KEY` and `COACH_WEBHOOK_SECRET` (same values as Pep).
-5. **GitHub**: add the Actions secrets and branch protection
-   ([handbook 02](docs/handbook/02-cicd.md)).
+4. **Web app**: set the Actions variable `PEP_API_URL` and the secrets
+   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`; pushes to `main` deploy
+   to Cloudflare Pages.
+5. **Android**: CI builds APKs (artifact `tracka-android`); for the Play
+   Store, add a signing key. **iOS** needs a Mac and an Apple developer
+   account.
+6. **GitHub**: branch protection on `main` ([handbook 04](docs/handbook/04-ci-cd.md)).
 
-## Honest limits (v0.1)
-- Norms are starter priors, not Ghanaian data yet. Replace them with
-  `training/build_norms.py` when you have enough players.
-- Clip speeds use a body-height ruler (±10–15%). Drills with marked cones
+The older outside-coach contract for tracka-api (`POST /analyses` with a
+signed callback) still works; see `pep/contracts.py`.
+
+## Honest limits
+- Norms are starter values from research, not Ghanaian data yet.
+- Match-clip speeds use a body-height ruler (±10–15%). Drills with cones
   are the fair, comparable measure.
 - No event recognition yet (passes, shots, tackles): the AI coach's
   observations stand in, labelled LOW confidence.
-- Ultralytics YOLO is AGPL-3.0: read [handbook 04](docs/handbook/04-models.md#licences-important-for-a-business)
+- Ultralytics YOLO is AGPL-3.0: read [handbook 12](docs/handbook/12-cost-privacy-next.md)
   before a commercial launch.

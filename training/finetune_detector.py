@@ -15,7 +15,7 @@ THE DATA (YOLO format):
       images/train/*.jpg  images/val/*.jpg
       labels/train/*.txt  labels/val/*.txt    one line per object: class cx cy w h (0..1)
 
-Where to get it (docs/handbook/04-models.md has more):
+Where to get it (docs/handbook/06-computer-vision.md has more):
   * Roboflow Universe "football players detection" datasets (YOLO export)
   * SoccerNet (tracking, game-state, jersey numbers), research licence
   * YOUR OWN Tracka frames, labelled in CVAT or Roboflow: the most valuable,
@@ -28,7 +28,7 @@ PEP_DETECTOR_MODEL=best.pt (the worker will pick it up), and run
 training/evaluate.py to prove it's better before shipping.
 
 LICENCE: Ultralytics is AGPL-3.0. Fine-tuned weights are a derivative.
-Read docs/handbook/04-models.md "Licences" before a commercial launch.
+Read docs/handbook/12-cost-privacy-next.md "Licences" before a commercial launch.
 """
 
 from __future__ import annotations

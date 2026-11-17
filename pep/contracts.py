@@ -86,6 +86,7 @@ class AnalysisRequest(Wire):
     target_at_seconds: float = 0.0
     calibration: Calibration | None = None
     player_label: str | None = None  # a display name for the Lab; never needed by Tracka
+    coach_notes: bool = True  # False: skip the AI coach (the player turned notes off)
 
 
 class Skill(Wire):

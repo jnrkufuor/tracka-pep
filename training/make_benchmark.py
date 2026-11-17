@@ -6,7 +6,7 @@ Builds a small synthetic benchmark: clips with known top speeds.
 A benchmark is a fixed set of clips with known answers (labels.json) that
 you re-run after every model change. Synthetic clips are a start; the real
 benchmark should be Tracka clips where the truth was measured another way
-(timing gates, GPS vests, or a calibrated drill). See docs/handbook/09-improving.md.
+(timing gates, GPS vests, or a calibrated drill). See docs/handbook/12-cost-privacy-next.md.
 """
 
 from __future__ import annotations

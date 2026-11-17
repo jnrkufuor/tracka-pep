@@ -43,6 +43,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
@@ -55,7 +56,7 @@ from ..contracts import POSITIONS, AnalysisRequest
 from ..drills.runner import drill_catalogue
 from ..log import get_logger, setup_logging
 from ..scoring.roles import roles
-from ..storage import LocalStorage, storage
+from ..storage import LocalStorage, storage, verify_local
 
 log = get_logger(__name__)
 WEB = ROOT / "web"
@@ -85,6 +86,23 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Pep: Tracka AI coach", version=MODEL_VERSION, lifespan=lifespan)
+
+# CORS: browsers block a web page from calling an API on another origin unless the
+# API says it's allowed. The Flutter web app is served from its own domain
+# (Cloudflare Pages), so we list it here. Phones' native apps aren't browsers: CORS
+# doesn't apply to them.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings().cors_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["x-request-id"],
+)
+
+# The player app's API (accounts, profile, videos, coach): pep/players/routes.py
+from ..players.routes import router as player_router  # noqa: E402  (after `app` exists; routes import kick_workers)
+
+app.include_router(player_router)
 
 
 @app.middleware("http")
@@ -360,6 +378,14 @@ def lab_health() -> dict:
             "stagesMedian": {k: round(median(v), 2) for k, v in stages.items()},
         },
     }
+
+
+@app.get("/files/{key:path}")
+def signed_file(key: str, exp: int = 0, sig: str = ""):
+    """Local-disk storage only: serves a file if its link was signed by us (storage.url)."""
+    if not isinstance(storage(), LocalStorage) or not verify_local(key, exp, sig):
+        raise HTTPException(403, "link expired or invalid")
+    return lab_file(key)
 
 
 @app.get("/lab/files/{key:path}", dependencies=[Depends(lab_auth)])

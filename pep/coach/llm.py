@@ -21,7 +21,7 @@ turns "an LLM said something" into typed data you can validate and test.
 Cost (introductory Gemini 3.8 Flash pricing, check before relying on it):
 video is billed as tokens, roughly a few hundred per second of video, so a
 30 s clip with the prompt is in the order of 10-20k input tokens: about one
-or two US cents per clip. See docs/handbook/08-cost.md.
+or two US cents per clip. See docs/handbook/12-cost-privacy-next.md.
 """
 
 from __future__ import annotations

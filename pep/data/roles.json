@@ -2,7 +2,7 @@
   "_about": [
     "Player roles a scout searches for. Each role lists the Tracka position codes it applies to and how much each skill matters (weights add up to 1).",
     "A role-fit score is the weighted average of the skills Pep could score for that clip; 'coverage' says how much of the role's weight that was. Skills the AI coach only observed (not measured) count half.",
-    "Edit freely: this file is a football opinion, not a law. Get a coach or scout to sign off the weights, and record why in docs/handbook/06-scoring.md."
+    "Edit freely: this file is a football opinion, not a law. Get a coach or scout to sign off the weights, and record why in docs/handbook/07-numbers-to-scores.md."
   ],
   "roles": {
     "shot_stopper":      {"label": "Shot-stopping keeper",  "positions": ["GK"], "weights": {"Diving": 0.35, "Set position": 0.25, "Agility": 0.2, "Acceleration": 0.2}},
