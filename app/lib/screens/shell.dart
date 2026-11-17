@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../config.dart';
 import '../theme/theme.dart';
 import '../widgets/common.dart';
 import 'home_screen.dart';
 import 'opportunities_screen.dart';
 import 'pep_screen.dart';
 import 'profile_screen.dart';
+import 'video_screen.dart';
 import 'videos_screen.dart';
 
 /// The five tabs. Each keeps its scroll position when you switch (IndexedStack).
@@ -17,7 +19,17 @@ class Shell extends StatefulWidget {
 }
 
 class ShellState extends State<Shell> {
-  int index = 0;
+  int index = int.tryParse(AppConfig.param('tab') ?? '') ?? 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final video = AppConfig.param('video'); // screenshot mode only
+    if (video != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+          (_) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => VideoScreen(videoId: video))));
+    }
+  }
 
   static const tabs = [
     ('home', 'Home'),

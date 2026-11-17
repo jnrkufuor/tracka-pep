@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../config.dart';
 
 enum Stage { starting, signedOut, onboarding, ready }
 
@@ -40,6 +41,11 @@ class AppState extends ChangeNotifier {
       error = '$e';
     }
     await api.loadTokens();
+    if (!api.loggedIn && AppConfig.demo && AppConfig.param('welcome') == null) {
+      try {
+        await api.logIn(AppConfig.demoEmail, AppConfig.demoPassword);
+      } catch (_) {}
+    }
     if (!api.loggedIn) {
       stage = Stage.signedOut;
       notifyListeners();

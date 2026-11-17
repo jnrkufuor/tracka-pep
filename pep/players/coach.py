@@ -43,8 +43,11 @@ def _mean(xs: Sequence[float]) -> float | None:
     return sum(xs) / len(xs) if xs else None
 
 
-def summary(videos: list[dict]) -> dict:
-    """videos: the player's videos joined with their jobs, newest first (store.list_videos)."""
+def summary(videos: list[dict], positions: list[str] | None = None) -> dict:
+    """
+    videos: the player's videos joined with their jobs, newest first (store.list_videos).
+    positions: the player's positions; roles for those positions are listed first.
+    """
     ready = [
         v
         for v in videos
@@ -137,7 +140,12 @@ def summary(videos: list[dict]) -> dict:
             if f.get("coverage", 0) >= 0.35:
                 roles[f["role"]].append(f["score"])
                 labels[f["role"]] = f["label"]
-    best = sorted(((round(_mean(s) or 0), r) for r, s in roles.items()), reverse=True)[:3]
+    from ..scoring.roles import roles as role_catalogue
+
+    wanted = {p.upper() for p in positions or []}
+    catalogue = role_catalogue()
+    mine = {r: s for r, s in roles.items() if wanted & set(catalogue[r]["positions"])}
+    best = sorted(((round(_mean(s) or 0), r) for r, s in (mine or roles).items()), reverse=True)[:3]
     out["bestRoles"] = [{"role": r, "label": labels[r], "score": score} for score, r in best]
 
     for v in ready[:3]:

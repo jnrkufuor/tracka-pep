@@ -354,7 +354,7 @@ def remove(video_id: str, user: dict = Depends(auth.current_user)) -> None:
 
 @router.get("/coach")
 def coach(user: dict = Depends(auth.current_user)) -> dict:
-    return summary(store.list_videos(user["id"]))
+    return summary(store.list_videos(user["id"]), store.get_profile(user["id"])["positions"])
 
 
 @router.get("/opportunities")
