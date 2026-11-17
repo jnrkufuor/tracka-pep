@@ -148,7 +148,6 @@ ThemeData trackaTheme() {
     progressIndicatorTheme: const ProgressIndicatorThemeData(color: TColors.neon, linearTrackColor: TColors.surface3),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: ZoomPageTransitionsBuilder(),
-      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
     }),
   );
 }

@@ -159,7 +159,7 @@ class _VideoScreenState extends State<VideoScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: _toggleOverlay,
-                    icon: LoopyIcon('eye', size: 20, color: TColors.neon),
+                    icon: const LoopyIcon('eye', size: 20, color: TColors.neon),
                     label: Text(_overlay ? 'Show my video' : 'Show what Pep saw'),
                   ),
                 ),

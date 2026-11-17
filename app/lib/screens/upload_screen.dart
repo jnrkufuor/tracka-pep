@@ -151,7 +151,7 @@ class _UploadScreenState extends State<UploadScreen> {
                 FilledButton.icon(
                   onPressed: () => _pick(ImageSource.gallery),
                   icon: const LoopyIcon('film', color: TColors.onNeon, size: 22),
-                  label: Text(kIsWeb ? 'Choose a video' : 'From your gallery'),
+                  label: const Text(kIsWeb ? 'Choose a video' : 'From your gallery'),
                 ),
                 if (!kIsWeb) ...[
                   const SizedBox(height: 10),
