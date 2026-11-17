@@ -1,0 +1,23 @@
+{
+  "_about": [
+    "Player roles a scout searches for. Each role lists the Tracka position codes it applies to and how much each skill matters (weights add up to 1).",
+    "A role-fit score is the weighted average of the skills Pep could score for that clip; 'coverage' says how much of the role's weight that was. Skills the AI coach only observed (not measured) count half.",
+    "Edit freely: this file is a football opinion, not a law. Get a coach or scout to sign off the weights, and record why in docs/handbook/06-scoring.md."
+  ],
+  "roles": {
+    "shot_stopper":      {"label": "Shot-stopping keeper",  "positions": ["GK"], "weights": {"Diving": 0.35, "Set position": 0.25, "Agility": 0.2, "Acceleration": 0.2}},
+    "sweeper_keeper":    {"label": "Sweeper keeper",        "positions": ["GK"], "weights": {"Set position": 0.15, "Diving": 0.2, "Pace": 0.2, "Ball control": 0.2, "Passing": 0.15, "Scanning": 0.1}},
+    "stopper_cb":        {"label": "Stopper centre-back",   "positions": ["CB"], "weights": {"Pace": 0.2, "Acceleration": 0.2, "Agility": 0.15, "Body shape": 0.15, "Work rate": 0.1, "Defending": 0.2}},
+    "ball_playing_cb":   {"label": "Ball-playing centre-back","positions": ["CB"], "weights": {"Ball control": 0.25, "Passing": 0.2, "Scanning": 0.2, "Pace": 0.15, "Body shape": 0.1, "Defending": 0.1}},
+    "attacking_fullback":{"label": "Attacking full-back",   "positions": ["LB", "RB", "LWB", "RWB"], "weights": {"Pace": 0.25, "Work rate": 0.2, "Acceleration": 0.15, "Dribbling": 0.15, "Ball control": 0.1, "Passing": 0.15}},
+    "defensive_fullback":{"label": "Defensive full-back",   "positions": ["LB", "RB", "LWB", "RWB"], "weights": {"Pace": 0.2, "Agility": 0.2, "Acceleration": 0.15, "Work rate": 0.15, "Defending": 0.3}},
+    "anchor":            {"label": "Holding midfielder",    "positions": ["CDM", "CM"], "weights": {"Scanning": 0.25, "Ball control": 0.2, "Passing": 0.2, "Work rate": 0.15, "Defending": 0.2}},
+    "box_to_box":        {"label": "Box-to-box midfielder", "positions": ["CM", "CDM", "CAM"], "weights": {"Work rate": 0.25, "Pace": 0.15, "Acceleration": 0.1, "Ball control": 0.15, "Passing": 0.15, "Scanning": 0.1, "Dribbling": 0.1}},
+    "playmaker":         {"label": "Playmaker",             "positions": ["CAM", "CM"], "weights": {"Scanning": 0.25, "Ball control": 0.2, "Passing": 0.25, "Dribbling": 0.15, "Agility": 0.15}},
+    "wide_winger":       {"label": "Direct winger",         "positions": ["LW", "RW", "LM", "RM"], "weights": {"Pace": 0.3, "Acceleration": 0.2, "Dribbling": 0.25, "Agility": 0.15, "Ball control": 0.1}},
+    "inverted_winger":   {"label": "Inside forward",        "positions": ["LW", "RW", "CF"], "weights": {"Dribbling": 0.25, "Agility": 0.2, "Acceleration": 0.15, "Ball control": 0.15, "Finishing": 0.25}},
+    "poacher":           {"label": "Poacher",               "positions": ["ST", "CF"], "weights": {"Acceleration": 0.3, "Agility": 0.15, "Finishing": 0.35, "Ball control": 0.2}},
+    "pressing_forward":  {"label": "Pressing forward",      "positions": ["ST", "CF", "LW", "RW"], "weights": {"Work rate": 0.3, "Pace": 0.2, "Acceleration": 0.2, "Agility": 0.15, "Finishing": 0.15}},
+    "target_forward":    {"label": "Target forward",        "positions": ["ST", "CF"], "weights": {"Ball control": 0.3, "Body shape": 0.2, "Finishing": 0.3, "Work rate": 0.2}}
+  }
+}

@@ -1,0 +1,190 @@
+"""
+Builds Tracka's brand files from one source of truth: this script.
+
+    python scripts/build_brand.py        -> web/assets/brand/*.svg, web/assets/icons/*.svg, web/assets/icons.js
+
+Why generate instead of hand-editing SVG files? The logo appears in many
+sizes and colours (app icon, favicon, dark and light marks), and the icons
+are used both by the web UI (icons.js) and as standalone SVGs (for the
+Flutter app or slides). One definition, many outputs, never out of sync.
+
+THE MARK
+  Redrawn as clean vector shapes from the original tracka_logo.png: a head
+  (circle), a body sweeping like a "7" mid-kick, and the ball (circle).
+  In the app icon the mark is a little smaller than in the old icon
+  (about 58% of the tile's height instead of ~74%), so it breathes.
+
+THE ICONS
+  Tracka's "loopy" set: the same hand-drawn, single-line style as YesBut
+  (40 x 40 grid, round caps, slightly wobbly Bezier curves on purpose),
+  extended with sport icons: ball, stopwatch, bolt, cone, whistle...
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+OUT = ROOT / "web" / "assets"
+
+NEON = "#E5FF00"
+INK = "#0A0B09"
+
+# ---------------------------------------------------------------- the mark (viewBox 0 0 185 196)
+MARK_W, MARK_H = 185, 196
+MARK = [
+    '<circle cx="124.9" cy="22.6" r="22.6"/>',
+    '<circle cx="146.6" cy="148.8" r="23"/>',
+    '<path d="M46.5 72.6C78 56.6 128 47.5 180.6 66.6Q184.2 68 184 72.2L182.4 88.4Q181.8 92.4 177.4 93'
+    "C138 97 80 130 19.4 191.4Q15.6 195 12.2 192.4L3.2 183.4Q0.2 180 3.4 176.4C42 135 84 106 115.4 88.6"
+    'Q120.4 85.6 118.2 81.2Q116.8 78.8 112.6 79C92 79 72 82.6 56.8 89.6Q53.2 91 51.2 88L45 78.4Q43.4 74.6 46.5 72.6Z"/>',
+]
+
+
+def mark_svg(color: str) -> str:
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {MARK_W} {MARK_H}" fill="{color}">'
+        + "".join(MARK)
+        + "</svg>\n"
+    )
+
+
+def tile_svg(size: int = 512, mark_share: float = 0.58, radius_share: float = 0.225) -> str:
+    """App icon: neon tile, dark mark. mark_share = mark height / tile height."""
+    scale = size * mark_share / MARK_H
+    w, h = MARK_W * scale, MARK_H * scale
+    # Optical centring: the mark's weight sits low-left, so nudge it right and up a touch.
+    x, y = (size - w) / 2 + size * 0.015, (size - h) / 2 - size * 0.01
+    r = size * radius_share
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}">'
+        f'<rect width="{size}" height="{size}" rx="{r:.1f}" fill="{NEON}"/>'
+        f'<g transform="translate({x:.2f} {y:.2f}) scale({scale:.5f})" fill="{INK}">{"".join(MARK)}</g>'
+        "</svg>\n"
+    )
+
+
+# ---------------------------------------------------------------- loopy icons (40 x 40)
+ICONS: dict[str, list[str]] = {
+    # from YesBut, unchanged
+    "upload": [
+        "M12 27.4 C7.4 27.6 5.6 23.2 8.2 20.6 C9.2 19.6 10.6 19.4 11.6 19.8 C11.6 14.2 17.6 11.4 21.6 14 C23.2 15 24.2 16.6 24.4 18.2 C27.4 16.8 31.6 18.6 31.8 22.6 C32 25.8 29.6 27.6 27 27.4",
+        "M20.2 34.6 C20.4 30 19.8 25.2 20.4 20.6 C19.2 21.8 17.4 23.4 15.8 25 M20.4 20.6 C21.8 22 23.4 23.6 24.8 25.2",
+    ],
+    "check": [
+        "M27.8 9.2 C24.2 6.4 17 5.8 12 9.4 C6.4 13.4 5.6 22.6 9.8 28.2 C14 33.8 23.4 35 29 30.2 C33.6 26.2 34.4 19.2 31.8 14.4",
+        "M13.4 20.6 C15.4 22 17 23.8 18.4 25.6 C21.8 20 25.6 14.6 30.6 9.4 C32 8 33.4 8.6 32.4 10",
+    ],
+    "eye": [
+        "M4.6 20.4 C10 12.4 16 10.2 20.4 10.4 C27 10.6 32 15.2 35.4 20.2 C31.4 26.4 26 29.8 20 29.6 C13.6 29.4 8.6 25.8 4.6 20.4",
+        "M20.2 24.6 C16.8 24.6 15.6 21.4 17 19 C18.4 16.8 21.8 16.8 23 19.2 C24 21.2 22.6 22.8 21 22.2 C19.8 21.6 20.2 20.2 21 19.8",
+    ],
+    "flag": [
+        "M11 35 C10.6 26 11 16 11.2 6.4 C15.6 4.8 19.4 8.6 23.4 7.4 C26.6 6.4 28.2 5 31 6.2 C30.6 10.6 30.8 15 31.2 19.4 C27.6 21.4 24.2 18.6 20.6 19.6 C17.4 20.4 14.6 22.4 11.2 21.2",
+    ],
+    "search": [
+        "M18 29 C11.4 29.2 7.4 24.2 7.8 18.4 C8.2 12.4 13.2 8 19 8.4 C25 8.8 29 13.8 28.6 19.6 C28.4 23 26.6 25.8 24 27.4",
+        "M25.4 26.4 C27.8 28.8 30.2 31.4 33 34",
+    ],
+    "back": [
+        "M33 20.6 C26 20.2 18 20.8 9.4 20.4",
+        "M17 12.4 C14.4 15 12 17.6 9.4 20.4 C12 23.2 14.4 25.8 17.2 28.6",
+    ],
+    "refresh": [
+        "M30.6 15.4 C28.4 10.6 23.8 8 19.4 8.4 C12.6 9 8.2 14.8 8.6 21 C9 27.2 14.4 32 20.6 31.6 C25.4 31.2 29 28.2 30.6 24",
+        "M31.6 8.6 C31.4 11 31.2 13.4 31 15.8 C28.6 15.6 26.2 15.4 23.8 15.2",
+    ],
+    "ai": [
+        "M17 6 C17.8 12.6 13.8 17 8 18 C14 19.4 17.2 23.6 17.4 30 C18.4 23.4 22.6 19.6 28 18.2 C22.4 17 18.2 13 17 6",
+        "M29 27 C29.6 29.6 31 31 33.6 31.6 C31 32.2 29.6 33.6 29 36.2 C28.4 33.6 27 32.2 24.4 31.6",
+    ],
+    # new: sport
+    "ball": [
+        "M20 6.4 C28 6 34 12.2 33.8 20.2 C33.6 28 27.6 34 19.8 33.8 C12 33.6 6.2 27.6 6.4 19.8 C6.6 12.4 12.4 6.6 20 6.4",
+        "M20.2 15 C21.8 16 23.2 17.2 24.6 18.4 C24 20.2 23.4 22 22.8 23.8 C21 23.8 19 23.8 17.2 23.8 C16.6 22 16 20.2 15.4 18.4 C16.8 17.2 18.4 16 20.2 15",
+        "M20.2 15 C20 12.2 20.2 9.4 20.2 6.6",
+        "M24.6 18.4 C27.4 17.4 30.4 16.4 33.2 15.4",
+        "M22.8 23.8 C24.4 26.4 26 29 27.4 31.4",
+        "M17.2 23.8 C15.6 26.4 14 29 12.6 31.4",
+        "M15.4 18.4 C12.6 17.4 9.8 16.4 6.8 15.6",
+    ],
+    "stopwatch": [
+        "M20.2 33.6 C13.8 33.8 9 28.8 9.2 22.6 C9.4 16.6 14.4 11.8 20.4 12 C26.4 12.2 31.2 17.2 31 23.2 C30.8 29 26 33.4 20.2 33.6",
+        "M16.6 6.6 C19 6.4 21.2 6.6 23.6 6.4",
+        "M20.2 6.6 C20.2 8.4 20.2 10.2 20.4 12",
+        "M20.4 22.8 C21.8 20.4 23.2 18.2 24.8 16",
+        "M28.6 12.6 C29.6 11.6 30.6 10.6 31.6 9.6",
+    ],
+    "bolt": [
+        "M22.6 5.6 C19.4 11 16 16.4 12.4 21.8 C15.4 21.8 18.2 21.6 21 21.8 C19.8 25.8 18.6 29.8 17.4 34.4 C21.4 28.6 25.2 22.8 28.8 17.2 C25.8 17.4 23 17.2 20.2 17.4 C21 13.4 21.8 9.4 22.6 5.6",
+    ],
+    "cone": [
+        "M20 7 C17.4 15 14.8 23 12.2 30.8 C17.4 31.2 22.6 31 27.8 30.8 C25.2 23 22.6 15 20 7",
+        "M8.4 31 C16 31.4 24 30.8 31.6 31.2 C31.8 32.4 31.6 33.4 31.4 34.2 C24 34.4 16 34 8.6 34.2 C8.4 33.2 8.4 32 8.4 31",
+        "M15.8 20.6 C18.6 20.4 21.4 20.6 24.2 20.4",
+    ],
+    "whistle": [
+        "M8 18.4 C8.2 13.6 12.2 11 16.4 11.4 C22 11.6 28 11.2 33.6 11.6 C33.8 13.6 33.6 15.4 33.4 17 C30 17.2 27 17 24.6 17.4 C25.6 22.4 21.6 27.4 16.2 27.2 C11.6 27 8 23.4 8 18.4",
+        "M16.4 21.6 C14.2 21.6 13.4 19 15 17.8 C16.4 16.8 18.4 17.8 18 19.6",
+        "M33.4 11.6 C34.6 9.4 34.4 7 32.6 5.6",
+    ],
+    "player": [
+        "M24.4 9.6 C22.6 9.8 21.4 8.4 21.6 6.8 C21.8 5.2 23.4 4.2 25 4.6 C26.4 5 27 6.6 26.4 8 C26 9 25.2 9.6 24.4 9.6",
+        "M22.8 13 C20.6 17 19 20.6 17.4 23.8 C20.4 25.4 22.8 27 24.6 29.4 C24.4 31.4 24 33.4 23.4 35",
+        "M17.4 23.8 C15.4 26.6 13.2 29.6 10 31.4",
+        "M14.2 15.4 C16.8 13.8 19.8 12.6 22.8 13 C25.2 15 27.4 17 30.2 17.6",
+    ],
+    "pulse": [
+        "M5.4 21 C9 21 11.6 21.2 13.6 20.8 C15 17.6 16.4 13.4 17.6 9.6 C19.2 16 20.6 24.4 22.4 30.6 C23.8 26.6 25 23.4 26.2 20.6 C28.8 20.8 31.4 20.6 34.6 20.8"
+    ],
+    "star": [
+        "M20.2 6.2 C21.6 10 23 13.4 24.4 16.4 C28 16.6 31.4 16.8 34.4 17.2 C31.8 19.8 29.2 22.2 26.6 24.4 C27.4 28 28.2 31.4 28.8 34.2 C25.8 32.2 22.8 30.4 20 28.8 C17 30.6 14 32.4 11.2 34.2 C11.8 31 12.6 27.6 13.4 24.2 C10.8 22 8.2 19.6 5.6 17.2 C9 16.8 12.4 16.6 15.8 16.4 C17.2 13 18.6 9.8 20.2 6.2",
+    ],
+    "play": [
+        "M13.4 9.2 C13.2 16.4 13.4 23.6 13.6 30.8 C19.4 27.4 25 23.8 30.4 20.2 C24.8 16.4 19 12.8 13.4 9.2"
+    ],
+    "target": [
+        "M20 6.6 C27.6 6.4 33.6 12.4 33.4 20 C33.2 27.4 27.4 33.4 20 33.4 C12.6 33.4 6.6 27.4 6.6 20 C6.6 12.8 12.6 6.8 20 6.6",
+        "M20 13.4 C23.8 13.2 26.8 16.4 26.6 20 C26.4 23.6 23.6 26.6 20 26.6 C16.4 26.6 13.4 23.8 13.4 20.2 C13.4 16.4 16.6 13.6 20 13.4",
+        "M20.2 20.6 C19.6 20.6 19.4 19.8 19.8 19.6 C20.2 19.4 20.8 19.8 20.4 20.2",
+    ],
+    "ruler": [
+        "M6.4 25.6 C15 17 23.6 8.6 26.6 6.6 C29 9 31.4 11.4 33.6 13.6 C25 22.2 16.4 30.6 13.6 33.6 C11.2 31 8.8 28.4 6.4 25.6",
+        "M12.8 21.6 C13.8 22.6 14.6 23.4 15.6 24.4",
+        "M17 17.4 C17.6 18 18.2 18.6 18.8 19.2",
+        "M21.2 13.2 C22.2 14.2 23 15 24 16",
+        "M25.4 9.2 C26 9.8 26.6 10.4 27.2 11",
+    ],
+}
+
+
+def icon_svg(paths: list[str], color: str = "currentColor", stroke: float = 2.4) -> str:
+    body = "".join(f'<path d="{d}"/>' for d in paths)
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none" '
+        f'stroke="{color}" stroke-width="{stroke}" stroke-linecap="round" stroke-linejoin="round">{body}</svg>\n'
+    )
+
+
+def main() -> None:
+    (OUT / "brand").mkdir(parents=True, exist_ok=True)
+    (OUT / "icons").mkdir(parents=True, exist_ok=True)
+    (OUT / "brand" / "mark-neon.svg").write_text(mark_svg(NEON))
+    (OUT / "brand" / "mark-ink.svg").write_text(mark_svg(INK))
+    (OUT / "brand" / "mark-white.svg").write_text(mark_svg("#FFFFFF"))
+    (OUT / "brand" / "app-icon.svg").write_text(tile_svg())
+    (OUT / "brand" / "favicon.svg").write_text(tile_svg(64, mark_share=0.64, radius_share=0.24))
+    for name, paths in ICONS.items():
+        (OUT / "icons" / f"{name}.svg").write_text(icon_svg(paths))
+    # The web UI draws icons from this file, so they can take any colour via CSS (currentColor).
+    (OUT / "icons.js").write_text(
+        "// Generated by scripts/build_brand.py. Edit the script, not this file.\n"
+        f"export const ICONS = {json.dumps(ICONS, indent=0)};\n"
+        f"export const MARK = {json.dumps(''.join(MARK))};\n"
+    )
+    print(f"wrote {len(ICONS)} icons and 5 brand files to {OUT}")
+
+
+if __name__ == "__main__":
+    main()

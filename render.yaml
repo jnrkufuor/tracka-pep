@@ -1,0 +1,78 @@
+# Render Blueprint: the API, its Postgres database, and (optionally) a CPU worker.
+#
+# In Render: New > Blueprint > pick jnrkufuor/tracka-pep. Render creates
+# everything below and asks for the values marked `sync: false` (secrets).
+# Every push to `main` redeploys automatically (or let CI do it: see
+# .github/workflows/deploy.yml and docs/handbook/03-platforms.md).
+#
+# Region: Frankfurt is Render's closest region to Ghana (Render runs in
+# Oregon, Ohio, Virginia, Frankfurt and Singapore). Services in the same
+# region talk over a private network, so keep the API and DB together.
+
+databases:
+  - name: pep-db
+    region: frankfurt
+    plan: basic-256mb        # the free plan expires after 30 days: fine to try, not to keep
+    databaseName: pep
+    user: pep
+
+services:
+  - type: web
+    name: pep-api
+    runtime: docker
+    region: frankfurt
+    plan: starter            # free plans sleep after 15 min idle; Tracka's calls would wake it slowly
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /readyz # Render only switches traffic to a new deploy once this answers 200
+    envVars:
+      - key: PEP_ENV
+        value: prod
+      - key: PEP_DATABASE_URL
+        fromDatabase: { name: pep-db, property: connectionString }
+      - key: COACH_API_KEY          # same value as tracka-api's COACH_API_KEY
+        sync: false
+      - key: COACH_WEBHOOK_SECRET   # same value as tracka-api's COACH_WEBHOOK_SECRET
+        sync: false
+      - key: PEP_LAB_PASSWORD
+        generateValue: true
+      - key: PEP_STORAGE
+        value: s3
+      - key: PEP_S3_BUCKET
+        value: pep-clips
+      - key: PEP_S3_ENDPOINT        # https://<account-id>.r2.cloudflarestorage.com
+        sync: false
+      - key: PEP_S3_ACCESS_KEY
+        sync: false
+      - key: PEP_S3_SECRET_KEY
+        sync: false
+
+  # A CPU worker on Render. Simple, always on, slow (~0.25 s per frame: a 30 s clip
+  # takes about a minute and a half). Use it to start; move to the Modal GPU worker
+  # (deploy/modal_app.py) when clips queue up. Delete this block if you use Modal only.
+  - type: worker
+    name: pep-worker
+    runtime: docker
+    region: frankfurt
+    plan: standard           # PyTorch + YOLO needs ~2 GB of RAM; smaller plans run out of memory
+    dockerfilePath: ./Dockerfile.worker
+    envVars:
+      - key: PEP_ENV
+        value: prod
+      - key: PEP_DATABASE_URL
+        fromDatabase: { name: pep-db, property: connectionString }
+      - key: COACH_WEBHOOK_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PEP_STORAGE
+        value: s3
+      - key: PEP_S3_BUCKET
+        value: pep-clips
+      - key: PEP_S3_ENDPOINT
+        sync: false
+      - key: PEP_S3_ACCESS_KEY
+        sync: false
+      - key: PEP_S3_SECRET_KEY
+        sync: false
+      - key: PEP_SAMPLES_PER_SECOND
+        value: "8"               # a little cheaper on CPU

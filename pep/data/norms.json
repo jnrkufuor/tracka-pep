@@ -1,0 +1,29 @@
+{
+  "_about": [
+    "Reference values ('norms') each measurement is compared with, by age band. [mean, standard deviation] for boys/men; female_scale multiplies the mean for girls/women.",
+    "direction: 1 = higher is better, -1 = lower is better (times).",
+    "log: compare on a log scale (counts like keepy-ups, where 10 vs 20 matters as much as 100 vs 200).",
+    "THESE ARE STARTER PRIORS, rounded from typical ranges in published youth football testing. They are NOT Ghanaian data and NOT measured the way Pep measures (phone video adds error). Replace them with Tracka's own data as soon as you have a few hundred players per band: training/build_norms.py does that from the analyses table."
+  ],
+  "version": "priors-2026-11",
+  "bands": ["u13", "u15", "u17", "u20", "senior"],
+  "metrics": {
+    "top_speed_ms":       {"direction": 1,  "female_scale": 0.88, "bands": {"u13": [6.3, 0.6], "u15": [7.0, 0.6], "u17": [7.6, 0.6], "u20": [8.0, 0.6], "senior": [8.3, 0.6]}},
+    "peak_accel_ms2":     {"direction": 1,  "female_scale": 0.9,  "bands": {"u13": [3.2, 0.8], "u15": [3.5, 0.8], "u17": [3.8, 0.8], "u20": [4.0, 0.8], "senior": [4.2, 0.8]}},
+    "sprint_30m_s":       {"direction": -1, "female_scale": 1.1,  "bands": {"u13": [5.1, 0.3], "u15": [4.7, 0.25], "u17": [4.4, 0.2], "u20": [4.25, 0.18], "senior": [4.2, 0.18]}},
+    "split_10m_s":        {"direction": -1, "female_scale": 1.08, "bands": {"u13": [2.05, 0.12], "u15": [1.9, 0.1], "u17": [1.8, 0.09], "u20": [1.75, 0.08], "senior": [1.72, 0.08]}},
+    "agility_5105_s":     {"direction": -1, "female_scale": 1.08, "bands": {"u13": [5.4, 0.3], "u15": [5.1, 0.25], "u17": [4.85, 0.22], "u20": [4.7, 0.2], "senior": [4.65, 0.2]}},
+    "turns_per_min":      {"direction": 1,  "bands": {"u13": [4.0, 2.0], "u15": [4.0, 2.0], "u17": [4.0, 2.0], "u20": [4.0, 2.0], "senior": [4.0, 2.0]}},
+    "moving_share":       {"direction": 1,  "bands": {"u13": [0.45, 0.15], "u15": [0.45, 0.15], "u17": [0.47, 0.15], "u20": [0.48, 0.15], "senior": [0.48, 0.15]}},
+    "distance_per_min_m": {"direction": 1,  "bands": {"u13": [85, 25], "u15": [95, 25], "u17": [100, 25], "u20": [105, 25], "senior": [105, 25]}},
+    "ball_at_feet_share": {"direction": 1,  "bands": {"u13": [0.45, 0.15], "u15": [0.5, 0.15], "u17": [0.52, 0.15], "u20": [0.55, 0.15], "senior": [0.55, 0.15]}},
+    "touches_per_min":    {"direction": 1,  "bands": {"u13": [18, 8], "u15": [20, 8], "u17": [22, 8], "u20": [22, 8], "senior": [22, 8]}},
+    "close_control_m":    {"direction": -1, "bands": {"u13": [1.2, 0.4], "u15": [1.1, 0.35], "u17": [1.0, 0.35], "u20": [0.95, 0.3], "senior": [0.95, 0.3]}},
+    "ready_knee_deg":     {"direction": -1, "bands": {"u13": [158, 10], "u15": [156, 10], "u17": [155, 10], "u20": [154, 10], "senior": [154, 10]}},
+    "head_checks_per_min":{"direction": 1,  "bands": {"u13": [4, 3], "u15": [5, 3], "u17": [6, 3], "u20": [7, 3], "senior": [7, 3]}},
+    "juggles_best":       {"direction": 1,  "log": true, "bands": {"u13": [15, 1.0], "u15": [25, 1.0], "u17": [40, 1.0], "u20": [50, 1.0], "senior": [50, 1.0]}},
+    "wall_passes_30s":    {"direction": 1,  "bands": {"u13": [11, 3], "u15": [13, 3], "u17": [14, 3], "u20": [15, 3], "senior": [15, 3]}},
+    "dive_speed_ms":      {"direction": 1,  "bands": {"u13": [2.4, 0.7], "u15": [2.8, 0.7], "u17": [3.1, 0.7], "u20": [3.3, 0.7], "senior": [3.4, 0.7]}},
+    "set_share":          {"direction": 1,  "bands": {"u13": [0.4, 0.2], "u15": [0.45, 0.2], "u17": [0.5, 0.2], "u20": [0.55, 0.2], "senior": [0.55, 0.2]}}
+  }
+}

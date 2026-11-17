@@ -1,0 +1,33 @@
+# MODEL EVALUATION (MLOps): run by hand from the Actions tab.
+#
+# Code tests say "the code does what we wrote". This says "the model is as
+# good as it was": it re-scores a fixed benchmark of clips with known
+# answers and fails if accuracy got worse than the last accepted run.
+# Run it before merging any change to vision/, metrics/ or scoring/.
+
+name: Evaluate model
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: "Benchmark folder (clips + labels.json)"
+        default: "benchmark"
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -e ".[dev,vision,train]"
+      - name: Build the synthetic benchmark if there's no real one yet
+        run: |
+          if [ ! -d "${{ inputs.benchmark }}" ]; then python training/make_benchmark.py "${{ inputs.benchmark }}"; fi
+      - run: python training/evaluate.py "${{ inputs.benchmark }}" --report report.md --max-speed-error 0.12
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: evaluation-report, path: report.md }

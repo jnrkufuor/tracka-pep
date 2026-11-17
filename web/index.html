@@ -1,0 +1,30 @@
+<!doctype html>
+<!--
+  Pep Lab: the web console for Tracka's AI coach.
+  Plain HTML + CSS + JavaScript modules, no build step, served by the API itself.
+  Start reading at app.js: a tiny hash router renders one "page" function per tab.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0A0B09" />
+  <title>Pep · Tracka AI coach</title>
+  <link rel="icon" href="/assets/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/" aria-label="Pep home">
+      <span class="mark" id="brand-mark"></span>
+      <span class="word">tracka</span>
+      <span class="chip">Pep</span>
+    </a>
+    <nav class="nav" id="nav"></nav>
+  </header>
+  <main class="shell" id="app" aria-live="polite"></main>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

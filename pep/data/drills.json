@@ -1,0 +1,29 @@
+{
+  "_about": "Standard tests a player records so scores can be compared fairly. Cone layouts are in metres: x runs along the drill, y across it. See pep/drills/runner.py.",
+  "sprint_30m": {
+    "label": "30 m sprint",
+    "needs_calibration": true,
+    "cones_m": [[0, 0], [0, 4], [30, 0], [30, 4]],
+    "how": "Four cones: two on the start line 4 m apart, two on the finish line 30 m away. Phone on a tripod or wall, side-on, all four cones in shot. Start still, one foot on the line. The clock starts once you have moved 20 cm, like timing gates.",
+    "metrics": ["sprint_30m_s", "split_10m_s"]
+  },
+  "agility_5105": {
+    "label": "5-10-5 agility",
+    "needs_calibration": true,
+    "cones_m": [[-5, 0], [5, 0], [-5, 3], [5, 3]],
+    "how": "Middle line at 0, turn lines 5 m either side (mark both ends of each turn line). Start on the middle line, run 5 m one way, 10 m back, 5 m through the middle.",
+    "metrics": ["agility_5105_s"]
+  },
+  "juggling": {
+    "label": "Keepy-ups",
+    "needs_calibration": false,
+    "how": "Whole body and ball in shot, ball never leaving the frame. As many touches as you can without the ball touching the ground. Any surface counts.",
+    "metrics": ["juggles_best", "juggles_total"]
+  },
+  "wall_passes": {
+    "label": "Wall passes (30 s)",
+    "needs_calibration": false,
+    "how": "Stand 3-5 m from a wall. Pass, control, pass again for 30 seconds. Camera side-on so the ball's path to the wall is visible.",
+    "metrics": ["wall_passes_30s"]
+  }
+}

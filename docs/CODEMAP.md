@@ -1,0 +1,81 @@
+# Code map: where everything is
+
+```
+tracka-pep/
+├── pep/                          the Python package (everything that runs)
+│   ├── __init__.py               MODEL_VERSION: bump when measurements or scoring change
+│   ├── config.py                 every setting (env vars), with defaults and explanations
+│   ├── contracts.py              the Tracka <-> Pep contract as pydantic models (camelCase on the wire)
+│   ├── pipeline.py               ★ START HERE: the whole analysis, stage by stage, timed
+│   ├── cli.py                    `pep analyse | worker | drain | serve`
+│   ├── log.py                    structured logging (JSON in production)
+│   ├── db.py                     tables + the job queue (SKIP LOCKED, leases, backoff, callbacks)
+│   ├── worker.py                 claim → download → analyse → save → callback; heartbeat; SIGTERM
+│   ├── callbacks.py              signed webhooks back to Tracka (HMAC-SHA256), with retries
+│   ├── storage.py                local disk or S3/R2; presigned URLs
+│   ├── evaluation.py             agreement with scouts: MAE, bias, Spearman
+│   ├── overlay.py                debug video: box, skeleton, trail, live speed
+│   ├── video/frames.py           probe + sample frames (a generator)
+│   ├── vision/
+│   │   ├── types.py              Box, Person, FrameObs, COCO keypoint indices
+│   │   ├── perception.py         YOLO26 pose (+ ByteTrack) and ball detection (+ zoomed second look)
+│   │   ├── camera.py             camera-motion compensation (corners, optical flow, RANSAC)
+│   │   ├── target.py             pick the player, stitch broken tracks, follow them
+│   │   └── calibration.py        pixels → metres (homography for drills, pinhole body ruler otherwise)
+│   ├── metrics/
+│   │   ├── kinematics.py         Kalman + RTS smoother; speed, accel, distance, sprints, turns
+│   │   ├── ball.py               touches, ball at feet, close control, heavy touches
+│   │   ├── technique.py          joint angles from pose: ready stance, sprint lean, scanning
+│   │   └── goalkeeping.py        dives, dive speed, set position
+│   ├── drills/runner.py          30 m sprint, 5-10-5, keepy-ups, wall passes
+│   ├── scoring/
+│   │   ├── norms.py              z-scores, percentiles, age bands
+│   │   ├── skills.py             ★ the rulebook: measurements → skills, explanations, drills, confidence
+│   │   ├── roles.py              role fit, overall score, overall confidence
+│   │   └── learned.py            the trained scorer: FEATURES (predictors) + prediction
+│   ├── coach/
+│   │   ├── llm.py                Gemini: upload video, structured JSON notes, guardrails
+│   │   └── merge.py              combine measurements and AI notes; rule-written fallback summary
+│   ├── api/app.py                FastAPI: /analyses (Tracka), /lab/* (UI), /healthz /readyz /metrics
+│   └── data/
+│       ├── norms.json            reference values per age band (starter priors: replace with real data)
+│       ├── roles.json            scout roles and skill weights (football opinion: review with coaches)
+│       └── drills.json           drill definitions and cone layouts
+├── web/                          Pep Lab: plain HTML/CSS/JS served by the API
+│   ├── index.html, app.css, app.js
+│   └── assets/                   fonts, brand/ (logo, app icon), icons/ + icons.js (generated)
+├── training/                     offline ML work
+│   ├── train_scorer.py           learn scout ratings (gradient boosting, GroupKFold)
+│   ├── finetune_detector.py      fine-tune YOLO26 on football frames
+│   ├── build_norms.py            norms from Tracka's own players (median/MAD)
+│   ├── evaluate.py               benchmark accuracy report + CI gate
+│   └── make_benchmark.py         synthetic clips with known speeds
+├── scripts/
+│   ├── make_test_clip.py         a clip with a known top speed (25.2 km/h)
+│   └── build_brand.py            generates logo, app icon and icon set (single source of truth)
+├── deploy/modal_app.py           GPU workers on Modal (drain + kick)
+├── tests/                        pytest: contracts, kinematics, geometry, drills, scoring, queue, API, training
+├── docs/handbook/                the learning handbook (00 → 10), each with a workbook
+├── Dockerfile                    API image (Render builds this)
+├── Dockerfile.worker             worker image (PyTorch, YOLO, ffmpeg)
+├── docker-compose.yml            Postgres + MinIO + API + worker, locally
+├── render.yaml                   Render Blueprint (API, Postgres, optional CPU worker), Frankfurt
+├── .github/workflows/            ci.yml, deploy.yml, evaluate.yml; dependabot.yml
+└── pyproject.toml                dependencies (extras: vision, coach, train, dev) + tool settings
+```
+
+## "I want to…"
+
+| …change | go to |
+|---|---|
+| how a score is explained, or the drill suggested | `pep/scoring/skills.py` |
+| what a role values | `pep/data/roles.json` |
+| what "good for a U15" means | `pep/data/norms.json` (or `training/build_norms.py`) |
+| a speed or touch definition | `pep/metrics/*.py` (then bump `MODEL_VERSION`) |
+| the detector or pose model | `PEP_DETECTOR_MODEL` / `PEP_POSE_MODEL`, or `vision/perception.py` |
+| what the AI coach is told | `pep/coach/llm.py` (`SYSTEM`, `build_prompt`) |
+| what Tracka receives | `pep/contracts.py` (and tracka-api's `coachResultSchema`) |
+| a Lab page | `web/app.js` (one function per page) |
+| colours, fonts, radii | `web/app.css` `:root` |
+| the logo or icons | `scripts/build_brand.py`, then run it |
+| retries, leases, timeouts | `pep/config.py` (env vars) |

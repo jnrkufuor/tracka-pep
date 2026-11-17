@@ -1,0 +1,69 @@
+# CONTINUOUS DELIVERY: when CI passes on main, ship it.
+#
+#   1. Deploy the API to Render (via a "deploy hook" URL: a secret link that
+#      tells Render "build and release the latest commit").
+#   2. Wait until the new version answers /healthz with the new commit, then
+#      run a smoke test against production.
+#   3. Deploy the GPU worker to Modal.
+#
+# Secrets (GitHub repo > Settings > Secrets and variables > Actions):
+#   RENDER_DEPLOY_HOOK_URL   Render service > Settings > Deploy Hook
+#   PEP_PUBLIC_URL           e.g. https://pep-api.onrender.com
+#   MODAL_TOKEN_ID, MODAL_TOKEN_SECRET   from `modal token new`
+# Missing secrets make that step skip itself, so this file is safe before you've set them up.
+#
+# If you use this, switch off Render's own auto-deploy (Settings > Auto-Deploy: No),
+# so only commits that passed CI reach production.
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: {}   # the "Run workflow" button, for manual redeploys
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false   # never cancel a deploy halfway
+
+jobs:
+  api:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production   # shows deploys in GitHub; can require a manual approval
+    env:
+      HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      URL: ${{ secrets.PEP_PUBLIC_URL }}
+    steps:
+      - name: Trigger Render deploy
+        if: env.HOOK != ''
+        run: curl -fsS -X POST "$HOOK"
+      - name: Wait for the new version, then smoke-test
+        if: env.URL != ''
+        run: |
+          sleep 60
+          for i in $(seq 1 40); do
+            if curl -fsS "$URL/readyz"; then break; fi
+            sleep 15
+          done
+          curl -fsS "$URL/healthz"
+          # The API must refuse an unauthenticated Tracka call:
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/analyses" -H 'content-type: application/json' -d '{}')" = "401"
+
+  gpu-worker:
+    needs: api
+    runs-on: ubuntu-latest
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.MODAL_TOKEN_ID != ''
+      - uses: actions/setup-python@v5
+        if: env.MODAL_TOKEN_ID != ''
+        with: { python-version: "3.12" }
+      - name: Deploy to Modal
+        if: env.MODAL_TOKEN_ID != ''
+        run: pip install modal && modal deploy deploy/modal_app.py

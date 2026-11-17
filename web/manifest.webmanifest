@@ -1,0 +1,9 @@
+{
+  "name": "Pep · Tracka AI coach",
+  "short_name": "Pep",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0B09",
+  "theme_color": "#0A0B09",
+  "icons": [{ "src": "/assets/brand/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
