@@ -25,7 +25,7 @@ Then the metrics use ROBUST statistics: "top speed" is the best average
 over one second, not the single fastest frame (one bad frame would win).
 
 Thresholds follow common football conventions (e.g. high-speed running at
-19.8 km/h = 5.5 m/s); docs/handbook/05-features.md explains each one.
+19.8 km/h = 5.5 m/s); docs/handbook/06-computer-vision.md explains each one.
 """
 
 from __future__ import annotations

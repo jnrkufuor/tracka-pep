@@ -162,3 +162,18 @@ def test_rename_delete_video_and_account(blank_video):
         assert client.delete("/v1/me", headers=headers(h)).status_code == 204
         assert client.get("/v1/me", headers=headers(h)).status_code == 401
         assert store.user_by_email("kofi@example.com") is None
+
+
+def test_video_links_are_signed_and_absolute(blank_video):
+    """Local storage hands out presigned-style links: they work without a login, but only
+    unaltered and before they expire."""
+    with TestClient(app) as client:
+        h = signup(client)
+        complete_profile(client, h)
+        vid = upload(client, h, blank_video)
+        url = client.get(f"/v1/videos/{vid}", headers=headers(h)).json()["videoUrl"]
+        assert url.startswith("http://testserver/files/players/")
+        path = url.removeprefix("http://testserver")
+        assert client.get(path).status_code == 200
+        assert client.get(path.replace("sig=", "sig=0")).status_code == 403
+        assert client.get(path.split("?")[0]).status_code == 403

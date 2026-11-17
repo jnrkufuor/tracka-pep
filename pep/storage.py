@@ -17,7 +17,10 @@ faster, and the bucket stays private.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import shutil
+import time
 from functools import cache
 from pathlib import Path
 from typing import Protocol
@@ -53,7 +56,9 @@ class LocalStorage:
         return dest
 
     def url(self, key: str, expires_s: int = 3600) -> str:
-        return f"/lab/files/{key}"
+        """A presigned link, local edition: /files/<key>?exp=..&sig=.. (see verify_local)."""
+        exp = int(time.time()) + expires_s
+        return f"/files/{key}?exp={exp}&sig={_sign(key, exp)}"
 
     def delete(self, key: str) -> None:
         self._path(key).unlink(missing_ok=True)
@@ -91,6 +96,17 @@ class S3Storage:
 
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
+
+
+def _sign(key: str, exp: int) -> str:
+    return hmac.new(settings().jwt_secret.encode(), f"{key}|{exp}".encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def verify_local(key: str, exp: int, sig: str) -> bool:
+    """True if a LocalStorage link is genuine and not expired. compare_digest takes the
+    same time whether the first or last character differs, so attackers learn nothing
+    from timing (a "timing attack")."""
+    return exp >= time.time() and hmac.compare_digest(_sign(key, exp), sig)
 
 
 @cache

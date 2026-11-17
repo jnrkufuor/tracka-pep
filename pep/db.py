@@ -9,7 +9,7 @@ SQLAlchemy "Core" (not the ORM) is used: you write queries that look like
 SQL, in Python, and the same code runs on SQLite (local, tests) and
 Postgres (production). Tables are created on start-up with `create_all`;
 when the schema starts changing in production, switch to Alembic migrations
-(docs/handbook/09-improving.md explains why and how).
+(docs/handbook/10-reliability.md explains why and how).
 
 THE QUEUE
 =========

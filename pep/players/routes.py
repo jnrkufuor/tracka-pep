@@ -36,7 +36,7 @@ from datetime import date
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
@@ -226,8 +226,14 @@ class UploadMeta(Body):
     calibration: Calibration | None = None
 
 
-def _video_view(v: dict, full: bool = False) -> dict:
-    st = storage()
+def _video_view(v: dict, base: str, full: bool = False) -> dict:
+    """base: this API's own address. Local-disk storage gives links like /files/...,
+    which only work from another website (the app) once they're absolute."""
+
+    def link(key: str) -> str:
+        u = storage().url(key)
+        return base.rstrip("/") + u if u.startswith("/") else u
+
     r = v.get("result") or {}
     view = {
         "id": v["id"],
@@ -238,12 +244,12 @@ def _video_view(v: dict, full: bool = False) -> dict:
         "status": v.get("status") or "QUEUED",
         "overallScore": r.get("overallScore"),
         "confidence": r.get("confidence"),
-        "thumbnailUrl": st.url(v["thumb_key"]) if v.get("thumb_key") else None,
+        "thumbnailUrl": link(v["thumb_key"]) if v.get("thumb_key") else None,
     }
     if full:
         view |= {
-            "videoUrl": st.url(v["video_key"]),
-            "overlayUrl": st.url(v["overlay_key"]) if v.get("overlay_key") else None,
+            "videoUrl": link(v["video_key"]),
+            "overlayUrl": link(v["overlay_key"]) if v.get("overlay_key") else None,
             "error": r.get("error") or v.get("error"),
             "analysis": r if v.get("status") == "READY" else None,
         }
@@ -251,8 +257,8 @@ def _video_view(v: dict, full: bool = False) -> dict:
 
 
 @router.get("/videos")
-def my_videos(user: dict = Depends(auth.current_user)) -> list[dict]:
-    return [_video_view(v) for v in store.list_videos(user["id"])]
+def my_videos(req: Request, user: dict = Depends(auth.current_user)) -> list[dict]:
+    return [_video_view(v, str(req.base_url)) for v in store.list_videos(user["id"])]
 
 
 @router.post("/videos", status_code=202)
@@ -319,11 +325,11 @@ async def upload(
 
 
 @router.get("/videos/{video_id}")
-def one_video(video_id: str, user: dict = Depends(auth.current_user)) -> dict:
+def one_video(video_id: str, req: Request, user: dict = Depends(auth.current_user)) -> dict:
     v = store.get_video(user["id"], video_id)
     if v is None:
         raise HTTPException(404, "Video not found.")
-    return _video_view(v, full=True)
+    return _video_view(v, str(req.base_url), full=True)
 
 
 class RenameIn(Body):
@@ -331,10 +337,10 @@ class RenameIn(Body):
 
 
 @router.patch("/videos/{video_id}")
-def rename(video_id: str, body: RenameIn, user: dict = Depends(auth.current_user)) -> dict:
+def rename(video_id: str, body: RenameIn, req: Request, user: dict = Depends(auth.current_user)) -> dict:
     if not store.rename_video(user["id"], video_id, body.title.strip()):
         raise HTTPException(404, "Video not found.")
-    return one_video(video_id, user)
+    return one_video(video_id, req, user)
 
 
 @router.delete("/videos/{video_id}", status_code=204)

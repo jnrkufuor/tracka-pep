@@ -46,10 +46,14 @@ jobs:
       - name: Take screenshots
         run: |
           mkdir -p shots
+          # A shot under ~40 KB is the splash screen (the app hadn't finished loading): try again.
           shoot() {
-            google-chrome --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
-              --window-size=430,932 --force-device-scale-factor=2 --virtual-time-budget=20000 \
-              --screenshot="shots/$1.png" "http://localhost:8080/?$2"
+            for budget in 20000 40000 60000; do
+              google-chrome --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+                --window-size=430,932 --force-device-scale-factor=2 --virtual-time-budget=$budget \
+                --screenshot="shots/$1.png" "http://localhost:8080/?$2"
+              [ "$(stat -c%s "shots/$1.png")" -gt 40000 ] && break
+            done
           }
           shoot 1-welcome "welcome=1"
           shoot 2-home "tab=0"

@@ -56,7 +56,7 @@ from ..contracts import POSITIONS, AnalysisRequest
 from ..drills.runner import drill_catalogue
 from ..log import get_logger, setup_logging
 from ..scoring.roles import roles
-from ..storage import LocalStorage, storage
+from ..storage import LocalStorage, storage, verify_local
 
 log = get_logger(__name__)
 WEB = ROOT / "web"
@@ -378,6 +378,14 @@ def lab_health() -> dict:
             "stagesMedian": {k: round(median(v), 2) for k, v in stages.items()},
         },
     }
+
+
+@app.get("/files/{key:path}")
+def signed_file(key: str, exp: int = 0, sig: str = ""):
+    """Local-disk storage only: serves a file if its link was signed by us (storage.url)."""
+    if not isinstance(storage(), LocalStorage) or not verify_local(key, exp, sig):
+        raise HTTPException(403, "link expired or invalid")
+    return lab_file(key)
 
 
 @app.get("/lab/files/{key:path}", dependencies=[Depends(lab_auth)])

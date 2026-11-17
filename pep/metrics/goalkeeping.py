@@ -9,7 +9,7 @@ Goalkeeper metrics (first version: deliberately few, and honest about it).
                  a shot, once Pep can recognise shots.)
 
 Proper goalkeeper analysis needs to know about shots (where from, how hard,
-saved or not). That's action recognition: docs/handbook/09-improving.md.
+saved or not). That's action recognition: docs/handbook/12-cost-privacy-next.md.
 """
 
 from __future__ import annotations

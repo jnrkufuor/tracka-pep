@@ -21,7 +21,7 @@ How:
 RANSAC (RANdom SAmple Consensus) is worth understanding properly: fit a
 model to a random minimal sample, count how many points agree ("inliers"),
 repeat, keep the best. It's how you fit anything robustly when some data is
-garbage. See docs/handbook/04-models.md (workbook at the end).
+garbage. See docs/handbook/06-computer-vision.md (workbook at the end).
 
 Limits: a pitch with no texture (plain grass, sky) gives few corners; then we
 assume the camera held still for that step and lower our confidence.

@@ -1,4 +1,4 @@
-# Pep Lab design
+# Tracka design (app and Lab)
 
 **Brief:** YesBut's design language, turned to *night-match* mode. A darker,
 sportier Tracka, still with the neon.
@@ -31,6 +31,15 @@ sportier Tracka, still with the neon.
   pitch-side tape.
 - **Uppercase eyebrows** with wide letter-spacing, like broadcast graphics.
 - **Mobile**: the nav becomes a floating bottom pill (thumb reach).
+
+## In the Flutter app
+The app (`app/`) is the main product, and uses the same system:
+- tokens in `app/lib/theme/theme.dart` (`TColors`, `TRadius`, `TType`)
+  mirror `web/app.css :root`; change both together;
+- the icon set is generated into `app/lib/widgets/loopy_icons.g.dart`;
+- five tabs in a floating pill: Home, Videos, Pep, Chances, Profile;
+- one neon card per screen (the Pep score on Home, the clip score on a
+  video, the "on its way" card on Chances).
 
 ## The logo
 `scripts/build_brand.py` redraws Tracka's mark as clean vectors (head

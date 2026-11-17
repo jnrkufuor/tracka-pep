@@ -1,7 +1,7 @@
 """
 Perception: finding people (with their body keypoints) and the ball.
 
-Two neural networks, both Ultralytics YOLO26 (docs/handbook/04-models.md):
+Two neural networks, both Ultralytics YOLO26 (docs/handbook/06-computer-vision.md):
 
   * a POSE model (yolo26n-pose.pt) finds every person and 17 body keypoints
     each. Run in *tracking* mode, Ultralytics also gives each person an ID

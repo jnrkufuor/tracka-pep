@@ -12,7 +12,7 @@ most of it away wastes memory.
 
 This module uses a *generator* (`yield`): frames are produced one at a time
 as the caller asks for them, so a 10-minute clip never sits in memory all at
-once. That pattern is worth knowing: see docs/handbook/07-python.md.
+once. That pattern is worth knowing: see docs/handbook/11-python-toolbox.md.
 """
 
 from __future__ import annotations

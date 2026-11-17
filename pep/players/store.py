@@ -6,7 +6,7 @@ queue in pep/db.py. A player's video points at the job that analysed it
 (`videos.job_id`), so the analysis result lives in exactly one place.
 
 Built to grow: scouts, clubs and opportunities will be new tables that
-reference `users.id`, not changes to these. See docs/handbook/02-architecture.md.
+reference `users.id`, not changes to these. See docs/handbook/02-designing-a-system.md.
 """
 
 from __future__ import annotations

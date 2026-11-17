@@ -19,7 +19,7 @@ Deploy (CI does this on every push to main):
     modal deploy deploy/modal_app.py
 
 Costs: an L4 GPU is a good fit for YOLO26 (cheap, plenty fast). Check
-Modal's current price list; docs/handbook/08-cost.md has a worked example.
+Modal's current price list; docs/handbook/12-cost-privacy-next.md has a worked example.
 """
 
 from __future__ import annotations
