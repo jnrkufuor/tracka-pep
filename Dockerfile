@@ -7,7 +7,7 @@
 # Layer caching: Docker re-runs a step only if it or something before it
 # changed. We copy pyproject.toml and install dependencies BEFORE copying the
 # code, so editing a .py file doesn't reinstall every package.
-FROM python:3.12-slim
+FROM python:3.15-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
