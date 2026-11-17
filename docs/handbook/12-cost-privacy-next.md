@@ -27,8 +27,8 @@ see what happens at 10× the users.
 List prices in USD as of November 2026. They change; check before
 budgeting.
 
-**Fixed floor, about $13–20 a month**: Render API (Starter, ~$7),
-Render Postgres (~$6), Cloudflare R2 (first 10 GB free), Cloudflare
+**Fixed floor, about $13–20 a month**: Render API (Starter, about $7),
+Render Postgres (about $6), Cloudflare R2 (first 10 GB free), Cloudflare
 Pages (free), Modal (includes some free credit monthly).
 
 **Per 30-second clip**:

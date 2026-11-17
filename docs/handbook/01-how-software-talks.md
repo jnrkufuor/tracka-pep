@@ -103,6 +103,8 @@ they break. So APIs are **versioned** (`/v1/...`): breaking changes go to
 - **Uploads**: a video is sent as `multipart/form-data` (a format that
   carries files and text fields together), streamed in chunks so a big
   clip never sits in memory.
+- **Signed links**: video files are fetched with time-limited signed
+  URLs, so they need no login but can't be guessed or reused forever.
 - **Webhooks**: Pep can still score clips for the original tracka-api
   through its outside-coach contract (`pep/contracts.py`): Tracka calls
   `POST /analyses`, and Pep calls back with a **signed** result
@@ -112,7 +114,7 @@ they break. So APIs are **versioned** (`/v1/...`): breaking changes go to
 client · server · API · HTTP/HTTPS · request/response · status code ·
 JSON · REST · endpoint · authentication · authorisation · hash · salt ·
 token · JWT · access/refresh token · API versioning · multipart upload ·
-webhook · HMAC signature
+signed URL · webhook · HMAC signature
 
 ## Workbook 01
 

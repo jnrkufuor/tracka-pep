@@ -42,7 +42,7 @@ eventually the two will connect.
 | The app | One Flutter codebase that builds the Android app, the iPhone app and the website | `app/` |
 | Pep API | The server the app talks to: logins, profiles, videos, scores | `pep/players/`, `pep/api/` |
 | Pep workers | The programs that analyse clips with AI | `pep/pipeline.py`, `pep/worker.py` |
-| Pep Console | A staff-only web page for testing clips, calibrating scores and watching system health | `web/` |
+| Pep Lab | A staff-only web console for testing clips, rating them and watching system health | `web/` |
 | Training tools | Scripts that improve Pep over time | `training/` |
 
 ## Reading order
@@ -69,12 +69,13 @@ git clone https://github.com/jnrkufuor/tracka-pep && cd tracka-pep
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,vision,coach,train]"
 cp .env.example .env            # PEP_INLINE_WORKER=true: one process does everything
-pep serve                       # the API + Pep Console on http://localhost:8000
+pep serve                       # the API (+ Lab console at /lab) on http://localhost:8000
+python scripts/seed_demo.py     # optional demo player: demo@tracka.app / tracka-demo-123
 pytest                          # the backend's tests
 
 cd app                          # the Flutter app (install Flutter first: flutter.dev)
 ./tool/setup_platforms.sh
-flutter run -d chrome           # the web version, talking to your local API
+flutter run -d chrome --dart-define=PEP_API_URL=http://localhost:8000
 ```
 
 ## How to use this handbook

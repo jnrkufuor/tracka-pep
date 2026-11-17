@@ -120,7 +120,7 @@ cache · stateless · 12-factor
 ## Workbook 02
 
 **Try it**
-1. Run the API without the inline worker, upload a clip in the Console,
+1. Run the API without the inline worker, upload a clip in the app,
    then start `pep worker` in another terminal and watch it pick the job
    up. Start two workers and upload three clips: which worker did which?
 2. Set `PEP_JOB_LEASE_SECONDS=30`, start a clip, and kill the worker with

@@ -51,8 +51,9 @@ away), and watch for groups the model scores systematically lower.
 ## How Tracka does it
 
 1. **Norms by age band and sex** (`pep/data/norms.json`, loaded in
-   `pep/scoring/norms.py`): u13, u15, u17, u19, senior. Built from
-   published youth-football research to start (`training/build_norms.py`),
+   `pep/scoring/norms.py`): u13, u15, u17, u20, senior, with a scale
+   factor for girls and women. Built from published youth-football
+   research to start (`training/build_norms.py` rebuilds them),
    to be replaced with Ghanaian players' own data as it grows.
 2. **Measurement → percentile → 30–95**: never below 30 or above 95, by
    design.
@@ -66,10 +67,11 @@ away), and watch for groups the model scores systematically lower.
    skills differently. **Coverage** says how much of that role's weight
    we actually measured; a role is only suggested if coverage is high
    enough.
-5. **Overall score**: built from the player's own positions' roles.
+5. **Overall score**: built from the roles for the player's own positions.
 6. **The player's dashboard** (`pep/players/coach.py`): the average of the
    newest 5 clips, needing at least 3, with trend, strengths, the focus
-   skill, and a suggested drill for it.
+   skill, a suggested drill for it, and best-fitting roles (the
+   player's own positions first).
 7. **Learned scorer** (`pep/scoring/learned.py`): switched on only once
    coaches have rated enough clips (chapter 05).
 
@@ -81,9 +83,10 @@ fairness
 ## Workbook 07
 
 **Try it**
-1. In Python: `from pep.scoring.norms import norms` and print the u17
-   norm for `top_speed_ms`. Work out by hand the z-score and percentile
-   of 7.8 m/s, then check with the code.
+1. Open `pep/data/norms.json` and find the u17 values for `top_speed_ms`
+   (mean 7.6, SD 0.6). Work out by hand the z-score and percentile
+   of 7.8 m/s, then check with the functions in
+   `pep/scoring/norms.py`.
 2. Change one weight in `pep/data/roles.json` and run `pytest
    tests/test_scoring.py`. Which tests notice?
 3. Run `python scripts/seed_demo.py`, log in as the demo player, and
@@ -97,7 +100,7 @@ fairness
 Pace scores differ?**
 
 *Answer:* Each is compared with players their own age. 7.5 m/s is well
-above average for 13-year-olds and about average for 19-year-olds.
+above average for 13-year-olds and below average for 19-year-olds.
 
 **2. Why compare keepy-ups on a log scale?**
 

@@ -116,7 +116,7 @@ The **learned scorer** (`training/train_scorer.py`) is classic
 supervised regression:
 - **features**: the measurements from `pep/metrics/` plus age, sex,
   position and clip type;
-- **label**: a coach's rating of the clip (collected in the Console's
+- **label**: a coach's rating of the clip (collected in the Lab console's
   rating screen);
 - **model**: gradient-boosted trees, because the data is a table of
   numbers and there isn't much of it;
