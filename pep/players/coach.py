@@ -137,10 +137,8 @@ def summary(videos: list[dict]) -> dict:
             if f.get("coverage", 0) >= 0.35:
                 roles[f["role"]].append(f["score"])
                 labels[f["role"]] = f["label"]
-    out["bestRoles"] = sorted(
-        ({"role": r, "label": labels[r], "score": round(_mean(s) or 0)} for r, s in roles.items()),
-        key=lambda r: -int(r["score"]),
-    )[:3]
+    best = sorted(((round(_mean(s) or 0), r) for r, s in roles.items()), reverse=True)[:3]
+    out["bestRoles"] = [{"role": r, "label": labels[r], "score": score} for score, r in best]
 
     for v in ready[:3]:
         for m in v["result"].get("moments", [])[:3]:
