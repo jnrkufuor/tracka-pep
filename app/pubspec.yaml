@@ -1,0 +1,45 @@
+# Tracka: the player app (Android, iOS and web from one Flutter codebase).
+# Talks to the Pep API's /v1 routes (pep/players/routes.py).
+name: tracka
+description: "Tracka: upload your football clips, get coached by Pep."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2               # app state (ChangeNotifier), same pattern as YesBut
+  http: ^1.2.2                   # REST calls + multipart uploads
+  flutter_secure_storage: ^9.2.2 # login tokens in the phone's keychain / keystore
+  image_picker: ^1.1.2           # pick or record a video (works on web too)
+  video_player: ^2.9.2           # play clips, tap yourself on a frame
+  flutter_svg: ^2.0.10           # the Tracka mark and loopy icons
+  intl: ^0.20.1                  # dates
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/
+  fonts:
+    - family: SansFlex
+      fonts:
+        - asset: assets/fonts/GoogleSansFlex-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/GoogleSansFlex-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/GoogleSansFlex-Bold.ttf
+          weight: 700
+    - family: Bricolage
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/BricolageGrotesque-Bold.ttf
+          weight: 700
