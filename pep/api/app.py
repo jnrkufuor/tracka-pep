@@ -43,6 +43,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
@@ -85,6 +86,23 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Pep: Tracka AI coach", version=MODEL_VERSION, lifespan=lifespan)
+
+# CORS: browsers block a web page from calling an API on another origin unless the
+# API says it's allowed. The Flutter web app is served from its own domain
+# (Cloudflare Pages), so we list it here. Phones' native apps aren't browsers: CORS
+# doesn't apply to them.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings().cors_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["x-request-id"],
+)
+
+# The player app's API (accounts, profile, videos, coach): pep/players/routes.py
+from ..players.routes import router as player_router  # noqa: E402  (after `app` exists; routes import kick_workers)
+
+app.include_router(player_router)
 
 
 @app.middleware("http")

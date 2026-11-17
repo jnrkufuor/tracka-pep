@@ -148,17 +148,21 @@ def analyse(video: Path, req: AnalysisRequest, perceiver: Perceiver) -> Analysis
 
     # ---------------------------------------------------------------- coach
     with timer.stage("coach"):
-        notes = watch(
-            video,
-            {
-                "who": _describe_target(samples, obs),
-                "positions": req.positions,
-                "age": req.age_years,
-                "clip_type": req.clip_type,
-                "length": length,
-                "metrics": {k: v for k, v in metrics.items() if v is not None},
-                "skills": {sk.name: sk.score for sk in skills},
-            },
+        notes = (
+            None
+            if not req.coach_notes
+            else watch(
+                video,
+                {
+                    "who": _describe_target(samples, obs),
+                    "positions": req.positions,
+                    "age": req.age_years,
+                    "clip_type": req.clip_type,
+                    "length": length,
+                    "metrics": {k: v for k, v in metrics.items() if v is not None},
+                    "skills": {sk.name: sk.score for sk in skills},
+                },
+            )
         )
         skills, moments, summary = merge(skills, moments, notes, length)
 

@@ -99,9 +99,12 @@ class Worker:
             with tempfile.TemporaryDirectory(prefix="pep-") as tmp:
                 video = self._fetch(job, Path(tmp))
                 analysis = analyse(video, req, self.perceiver)
-                overlay_key = None
-                if job["source"] == "lab":  # debug video for the Lab (skip for Tracka jobs: saves time)
+                overlay_key = thumb_key = None
+                # Players (app) and staff (lab) see "what Pep saw" and a cover image.
+                # Tracka's own clips skip both: it has its own thumbnails, and it saves time.
+                if job["source"] in ("lab", "app"):
                     overlay_key = self._overlay(video, analysis, job["id"], Path(tmp))
+                    thumb_key = self._thumbnail(video, analysis, job["id"], Path(tmp))
                 timings = analysis.timings | {"total": round(time.monotonic() - started, 2)}
                 db.finish(
                     job["id"],
@@ -110,6 +113,7 @@ class Worker:
                     timings,
                     overlay_key,
                     callback=bool(req.callback_url),
+                    thumb_key=thumb_key,
                 )
                 log.info("job.done", job_id=job["id"], seconds=timings["total"])
         except CantReadClip as exc:
@@ -165,6 +169,18 @@ class Worker:
             return key
         except Exception as exc:  # a missing debug video must never fail the analysis
             log.warning("overlay.failed", job_id=job_id, error=str(exc))
+            return None
+
+    def _thumbnail(self, video: Path, analysis, job_id: str, tmp: Path) -> str | None:
+        from .overlay import render_thumbnail
+
+        try:
+            out = render_thumbnail(video, analysis, tmp / "thumb.jpg")
+            key = f"thumbs/{job_id}.jpg"
+            storage().put(key, out, "image/jpeg")
+            return key
+        except Exception as exc:
+            log.warning("thumbnail.failed", job_id=job_id, error=str(exc))
             return None
 
 

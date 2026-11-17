@@ -88,6 +88,7 @@ jobs = Table(
     Column("timings", JSON),
     Column("error", Text),
     Column("overlay_key", String(255)),
+    Column("thumb_key", String(255)),
     # Delivering the result back to Tracka is its own little state machine.
     Column("callback_status", String(16), nullable=False, default="NONE"),  # NONE PENDING SENT GAVE_UP
     Column("callback_attempts", Integer, nullable=False, default=0),
@@ -234,7 +235,13 @@ def heartbeat(job_id: str, worker: str, lease_seconds: int) -> bool:
 
 
 def finish(
-    job_id: str, worker: str, result: dict, timings: dict, overlay_key: str | None, callback: bool
+    job_id: str,
+    worker: str,
+    result: dict,
+    timings: dict,
+    overlay_key: str | None,
+    callback: bool,
+    thumb_key: str | None = None,
 ) -> None:
     with engine().begin() as c:
         c.execute(
@@ -248,6 +255,7 @@ def finish(
                 lease_until=None,
                 error=result.get("error"),
                 overlay_key=overlay_key,
+                thumb_key=thumb_key,
                 callback_status="PENDING" if callback else "NONE",
                 callback_next_at=now(),
             )

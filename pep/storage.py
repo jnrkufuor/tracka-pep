@@ -29,6 +29,7 @@ class Storage(Protocol):
     def put(self, key: str, src: Path, content_type: str = "video/mp4") -> None: ...
     def fetch(self, key: str, dest: Path) -> Path: ...
     def url(self, key: str, expires_s: int = 3600) -> str: ...
+    def delete(self, key: str) -> None: ...
 
 
 class LocalStorage:
@@ -53,6 +54,9 @@ class LocalStorage:
 
     def url(self, key: str, expires_s: int = 3600) -> str:
         return f"/lab/files/{key}"
+
+    def delete(self, key: str) -> None:
+        self._path(key).unlink(missing_ok=True)
 
     def local_path(self, key: str) -> Path:
         return self._path(key)
@@ -84,6 +88,9 @@ class S3Storage:
         return self.client.generate_presigned_url(
             "get_object", Params={"Bucket": self.bucket, "Key": key}, ExpiresIn=expires_s
         )
+
+    def delete(self, key: str) -> None:
+        self.client.delete_object(Bucket=self.bucket, Key=key)
 
 
 @cache

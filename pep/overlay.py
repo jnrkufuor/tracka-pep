@@ -132,3 +132,22 @@ def render_overlay(video: Path, analysis: Analysis, out: Path) -> Path:
     if proc.wait() != 0:
         raise RuntimeError("ffmpeg failed to write the overlay video")
     return out
+
+
+def render_thumbnail(video: Path, analysis: Analysis, out: Path, width: int = 640) -> Path:
+    """
+    A JPEG cover image for the player's video library: the frame where the
+    player is biggest on screen (usually the clearest shot of them).
+    """
+    import cv2
+
+    seen = [(i, s.box.h) for i, s in enumerate(analysis.samples) if s.box is not None]
+    best = max(seen, key=lambda x: x[1])[0] if seen else 0
+    s = settings()
+    for f in sample_frames(video, s.samples_per_second, s.max_side):
+        if f.index == best:
+            h, w = f.image.shape[:2]
+            img = cv2.resize(f.image, (width, round(h * width / w)), interpolation=cv2.INTER_AREA)
+            cv2.imwrite(str(out), img, [cv2.IMWRITE_JPEG_QUALITY, 82])
+            return out
+    raise ValueError("thumbnail frame not found")
