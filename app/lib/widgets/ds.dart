@@ -587,7 +587,9 @@ class EditSheet extends StatelessWidget {
 /// A toast at the BOTTOM of the screen, above the tabs, for 4 seconds.
 /// Use for "Saved", "Ama said yes", "Upload stopped". Never for errors that
 /// need a decision: those get a [StateView] or a sheet.
-void showToast(BuildContext context, String title, {String? detail, String? actionLabel, VoidCallback? onAction, bool aboveTabs = true}) {
+/// [ok] false = something didn't work: a gold "watch out" icon instead of a check.
+void showToast(BuildContext context, String title,
+    {String? detail, String? actionLabel, VoidCallback? onAction, bool aboveTabs = true, bool ok = true}) {
   final a = context.accent;
   final messenger = ScaffoldMessenger.of(context);
   messenger
@@ -600,9 +602,9 @@ void showToast(BuildContext context, String title, {String? detail, String? acti
         Container(
           width: 36,
           height: 36,
-          decoration: BoxDecoration(color: a.tile, borderRadius: BorderRadius.circular(11)),
+          decoration: BoxDecoration(color: ok ? a.tile : Tk.goldTile, borderRadius: BorderRadius.circular(11)),
           alignment: Alignment.center,
-          child: TIcon('check', size: 18, color: a.main, stroke: 5),
+          child: ok ? TIcon('check', size: 18, color: a.main, stroke: 5) : const TIcon('info', size: 18, color: Tk.gold),
         ),
         const SizedBox(width: 12),
         Expanded(

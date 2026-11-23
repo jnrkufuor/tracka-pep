@@ -333,6 +333,7 @@ class CoachSummary {
     this.recentMoments = const [],
     this.suggestedDrill,
     this.bestRoles = const [],
+    this.skillAreas,
   });
 
   final int clipsUploaded;
@@ -349,6 +350,9 @@ class CoachSummary {
   final List<Moment> recentMoments;
   final Map<String, dynamic>? suggestedDrill;
   final List<RoleFit> bestRoles;
+
+  /// Me › Growth: bands per skill area (null from older servers).
+  final SkillAreas? skillAreas;
 
   factory CoachSummary.fromJson(Map<String, dynamic> j) => CoachSummary(
         clipsUploaded: _i(j['clipsUploaded']) ?? 0,
@@ -367,5 +371,93 @@ class CoachSummary {
         recentMoments: _list(j['recentMoments'], Moment.fromJson),
         suggestedDrill: j['suggestedDrill'] as Map<String, dynamic>?,
         bestRoles: _list(j['bestRoles'], RoleFit.fromJson),
+        skillAreas: j['skillAreas'] is Map<String, dynamic> ? SkillAreas.fromJson(j['skillAreas'] as Map<String, dynamic>) : null,
+      );
+}
+
+
+/// Me › Growth (GET /v1/coach → skillAreas): skill areas grouped as Skills,
+/// Reading the game, Body (Goalkeeping), Attitude, compared with the player's age group.
+class SkillAreas {
+  SkillAreas({required this.ageGroup, required this.comparedWith, required this.measured, required this.groups});
+
+  final String ageGroup;
+  final String comparedWith;
+  final int measured;
+  final List<SkillGroup> groups;
+
+  factory SkillAreas.fromJson(Map<String, dynamic> j) => SkillAreas(
+        ageGroup: j['ageGroup'] as String? ?? '',
+        comparedWith: j['comparedWith'] as String? ?? '',
+        measured: _i(j['measured']) ?? 0,
+        groups: _list(j['groups'], SkillGroup.fromJson),
+      );
+}
+
+class SkillGroup {
+  SkillGroup({required this.name, required this.items});
+
+  final String name;
+  final List<SkillItem> items;
+
+  factory SkillGroup.fromJson(Map<String, dynamic> j) =>
+      SkillGroup(name: j['name'] as String? ?? '', items: _list(j['items'], SkillItem.fromJson));
+}
+
+class SkillItem {
+  SkillItem({
+    required this.id,
+    required this.name,
+    required this.key,
+    required this.state,
+    this.band,
+    this.average,
+    this.confidence = 'low',
+    this.trend = 'new',
+    this.measurements = 0,
+    this.howToMeasure,
+  });
+
+  final String id;
+  final String name;
+
+  /// Matters most for the player's position (a small dot in the app).
+  final bool key;
+
+  /// "measured" | "not_seen" | "coming_later" | "cant_see".
+  final String state;
+
+  /// "below" | "average" | "above" | "strong" | "standout" (only when measured).
+  final String? band;
+
+  /// The measured value in plain words ("10 m in 1.92 s").
+  final String? average;
+  final String confidence;
+  final String trend;
+  final int measurements;
+
+  /// What to film so Pep can measure it (when not seen yet).
+  final String? howToMeasure;
+
+  bool get measured => state == 'measured';
+
+  /// The words shown instead of a band when it isn't measured.
+  String get stateLabel => switch (state) {
+        'coming_later' => 'Coming later',
+        'cant_see' => "Pep can't see this",
+        _ => 'Not seen yet',
+      };
+
+  factory SkillItem.fromJson(Map<String, dynamic> j) => SkillItem(
+        id: j['id'] as String? ?? '',
+        name: j['name'] as String? ?? '',
+        key: j['key'] as bool? ?? false,
+        state: j['state'] as String? ?? 'not_seen',
+        band: j['band'] as String?,
+        average: j['average'] as String?,
+        confidence: j['confidence'] as String? ?? 'low',
+        trend: j['trend'] as String? ?? 'new',
+        measurements: _i(j['measurements']) ?? 0,
+        howToMeasure: j['howToMeasure'] as String?,
       );
 }
