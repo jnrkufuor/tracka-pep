@@ -183,7 +183,6 @@ ThemeData trackaTheme({MainColour colour = MainColour.volt}) {
     progressIndicatorTheme: ProgressIndicatorThemeData(color: a.main, linearTrackColor: Tk.line),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: ZoomPageTransitionsBuilder(),
-      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
     }),
   );
 }
