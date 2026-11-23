@@ -129,6 +129,10 @@ class SettingsIn(Body):
     coach_notes: bool | None = None
     notify_when_ready: bool | None = None
     share_with_scouts: bool | None = None
+    # Design-system settings (added Nov 2026; new fields only, so installed apps keep working).
+    main_colour: Literal["volt", "blue", "pink", "ice", "aqua"] | None = None
+    reduce_motion: bool | None = None
+    upload_on_wifi_only: bool | None = None
 
 
 class ProfileIn(Body):

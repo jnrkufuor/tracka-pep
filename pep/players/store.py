@@ -95,6 +95,9 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "coachNotes": True,  # AI-written notes on each clip
     "notifyWhenReady": True,
     "shareWithScouts": False,  # for the future scouting app; off until the player opts in
+    "mainColour": "volt",  # Settings › Main colour: the "you" colour (Pep purple and warning gold never change)
+    "reduceMotion": False,  # Settings › Accessibility: less movement, on top of the phone's own setting
+    "uploadOnWifiOnly": True,  # Settings › Your data: mobile data is expensive, so clips wait for Wi-Fi by default
 }
 
 

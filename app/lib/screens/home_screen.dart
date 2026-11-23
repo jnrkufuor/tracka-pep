@@ -7,6 +7,7 @@ import '../theme/theme.dart';
 import '../widgets/common.dart';
 import 'upload_screen.dart';
 import 'video_screen.dart';
+import 'videos_screen.dart';
 
 /// Home: where you stand, what to work on next, and a big upload button.
 class HomeScreen extends StatelessWidget {
@@ -68,7 +69,10 @@ class HomeScreen extends StatelessWidget {
                 Row(children: [
                   const Eyebrow('Recent moments'),
                   const Spacer(),
-                  TextButton(onPressed: () => onOpenTab(1), child: const Text('All videos')),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VideosScreen())),
+                    child: const Text('All videos'),
+                  ),
                 ]),
                 for (final m in c.recentMoments.take(5)) _MomentRow(moment: m),
               ],
