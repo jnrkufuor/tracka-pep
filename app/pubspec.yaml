@@ -29,17 +29,21 @@ flutter:
   assets:
     - assets/brand/
   fonts:
-    - family: SansFlex
+    - family: Figtree             # body text (free, Open Font License)
       fonts:
-        - asset: assets/fonts/GoogleSansFlex-Regular.ttf
+        - asset: assets/fonts/Figtree-Regular.ttf
           weight: 400
-        - asset: assets/fonts/GoogleSansFlex-Medium.ttf
+        - asset: assets/fonts/Figtree-Medium.ttf
           weight: 500
-        - asset: assets/fonts/GoogleSansFlex-Bold.ttf
+        - asset: assets/fonts/Figtree-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Figtree-Bold.ttf
           weight: 700
-    - family: Bricolage
+    - family: Bricolage           # headings and big numbers
       fonts:
         - asset: assets/fonts/BricolageGrotesque-Medium.ttf
           weight: 500
         - asset: assets/fonts/BricolageGrotesque-Bold.ttf
           weight: 700
+        - asset: assets/fonts/BricolageGrotesque-ExtraBold.ttf
+          weight: 800

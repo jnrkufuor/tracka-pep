@@ -63,7 +63,7 @@ class CameraMotion:
         step = None
         pts = cv2.goodFeaturesToTrack(self.prev_gray, self.max_corners, 0.01, 8, mask=mask)
         if pts is not None and len(pts) >= 12:
-            nxt, status, _ = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray, pts, None)  # type: ignore[call-overload]
+            nxt, status, _ = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray, pts, None)  # type: ignore[call-overload, unused-ignore]
             good = status.reshape(-1) == 1
             if good.sum() >= 12:
                 # current -> previous (so chaining gives current -> reference)

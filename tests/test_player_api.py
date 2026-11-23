@@ -177,3 +177,18 @@ def test_video_links_are_signed_and_absolute(blank_video):
         assert client.get(path).status_code == 200
         assert client.get(path.replace("sig=", "sig=0")).status_code == 403
         assert client.get(path.split("?")[0]).status_code == 403
+
+
+def test_design_settings_defaults_and_validation():
+    """Main colour, reduce motion and Wi-Fi-only uploads: defaults, saving, and bad values rejected."""
+    with TestClient(app) as client:
+        h = signup(client)
+        s = client.get("/v1/me", headers=headers(h)).json()["settings"]
+        assert s["mainColour"] == "volt" and s["reduceMotion"] is False and s["uploadOnWifiOnly"] is True
+        s = client.patch(
+            "/v1/me", json={"settings": {"mainColour": "pink", "reduceMotion": True}}, headers=headers(h)
+        ).json()["settings"]
+        assert s["mainColour"] == "pink" and s["reduceMotion"] is True and s["units"] == "kmh"
+        # Purple, gold and red are never main colours (they mean Pep, warnings and errors).
+        bad = client.patch("/v1/me", json={"settings": {"mainColour": "purple"}}, headers=headers(h))
+        assert bad.status_code == 422

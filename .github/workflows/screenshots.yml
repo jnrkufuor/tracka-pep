@@ -57,10 +57,9 @@ jobs:
           }
           shoot 1-welcome "welcome=1"
           shoot 2-home "tab=0"
-          shoot 3-videos "tab=1"
+          shoot 3-pitchside "tab=1"
           shoot 4-pep "tab=2"
-          shoot 5-chances "tab=3"
-          shoot 6-profile "tab=4"
+          shoot 5-me "tab=3"
           shoot 7-video "video=00000000-0000-4000-8000-000000000001"
           ls -la shots
       - name: Save to the screenshots branch

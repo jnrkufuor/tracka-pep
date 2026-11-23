@@ -54,18 +54,40 @@ class Profile {
 }
 
 class AppSettings {
-  AppSettings({this.units = 'kmh', this.coachNotes = true, this.notifyWhenReady = true, this.shareWithScouts = false});
+  AppSettings({
+    this.units = 'kmh',
+    this.coachNotes = true,
+    this.notifyWhenReady = true,
+    this.shareWithScouts = false,
+    this.mainColour = 'volt',
+    this.reduceMotion = false,
+    this.uploadOnWifiOnly = true,
+  });
 
   final String units;
   final bool coachNotes;
   final bool notifyWhenReady;
   final bool shareWithScouts;
 
+  /// Settings › Main colour: "volt" | "blue" | "pink" | "ice" | "aqua".
+  final String mainColour;
+
+  /// Settings › Accessibility: less movement, on top of the phone's own setting.
+  final bool reduceMotion;
+
+  /// Settings › Your data: clips wait for Wi-Fi unless the player chooses mobile data.
+  final bool uploadOnWifiOnly;
+
+  /// Every field has a default, so an older server that doesn't send the new
+  /// ones still works (add fields, never rename them: see CLAUDE.md).
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
         units: j['units'] as String? ?? 'kmh',
         coachNotes: j['coachNotes'] as bool? ?? true,
         notifyWhenReady: j['notifyWhenReady'] as bool? ?? true,
         shareWithScouts: j['shareWithScouts'] as bool? ?? false,
+        mainColour: j['mainColour'] as String? ?? 'volt',
+        reduceMotion: j['reduceMotion'] as bool? ?? false,
+        uploadOnWifiOnly: j['uploadOnWifiOnly'] as bool? ?? true,
       );
 
   /// Speed in the player's chosen unit.

@@ -56,6 +56,30 @@ A **design system** is the shared set of colours, fonts, spacing and
 components, so every screen looks like the same product. Define it once
 (a **theme**) and use it everywhere instead of picking colours per screen.
 
+#### Design tokens
+A **design token** is one design decision with a name: `Tk.pep` instead
+of `Color(0xFFB98CFF)`, `Motion.sheet` instead of `320`. Screens only use
+names, so changing a token changes every screen at once, and nobody
+invents a 51st shade of grey. Good tokens are named by **job**, not by
+look: "the colour for warnings" survives a rebrand; "dark yellow" doesn't.
+
+#### Theming at runtime
+Some tokens can change while the app runs: a player picks a main colour,
+and every button, chip and progress bar follows. In Flutter the theme is
+data passed down the widget tree; replace it at the top and everything
+below rebuilds. A **ThemeExtension** lets you add your own typed values
+(like the main colour) to the same theme.
+
+#### Motion and reduce motion
+Animation should *explain* a change (where a sheet came from, that a tap
+landed), never be the only way information is shown. Phones have a
+"reduce motion" / "remove animations" setting for people who get dizzy or
+distracted; apps should honour it by making changes happen instantly.
+
+#### Component libraries
+Shared widgets (cards, chips, warnings, empty and error screens) built
+once and reused. Fix a component and every screen using it is fixed.
+
 ## How Tracka does it
 
 **Flutter**, one codebase in `app/`, built for **Android, iOS and the
@@ -68,14 +92,18 @@ anyone without space for another app, and for testing.
 | Talking to the API | `lib/api/api_client.dart` | Bearer token; on a 401 it refreshes the token once and retries; uploads stream the file and report progress |
 | Data types | `lib/api/models.dart` | Mirrors the API's JSON (camelCase) |
 | App state | `lib/state/app_state.dart` | One `ChangeNotifier` (Provider): user, profile, videos, coach summary; polls every 6 s while a clip is processing |
-| Screens | `lib/screens/` | Welcome/auth, onboarding (with guardian step for under-18s), Home, Videos, Upload, Video, Pep, Chances (opportunities, coming soon), Profile & settings |
-| Theme | `lib/theme/theme.dart` | Dark pitch black, neon `#E5FF00`, Bricolage Grotesque + Google Sans Flex |
-| Icons | `lib/widgets/loopy_icons.g.dart` | **Generated** by `scripts/build_brand.py` from the same drawings as the web brand. Don't hand-edit |
+| Screens | `lib/screens/` | Splash, welcome/auth, onboarding (with guardian step for under-18s), the tabs (Home, Pitchside, + to add a clip, Pep, Me), Upload, Video, Profile & settings. Being rebuilt in the new design, area by area |
+| Design tokens | `lib/theme/tokens.dart` | Colours by job (`Tk`): your main colour, Pep purple, warning gold, calm stone. `MainColour` (5 choices), rating `Band`, `Confidence`, `Trend` |
+| Motion | `lib/theme/motion.dart` | Durations and easing; `Motion.reduced()` is true when the phone or Tracka's own setting asks for less motion |
+| Theme | `lib/theme/theme.dart` | Builds Material's theme from the tokens and the player's main colour; Bricolage Grotesque (headings) + Figtree (text) |
+| Components | `lib/widgets/ds.dart` | Chips, band pill, confidence dots, AI and safety notes, edit sheet, bottom toast, failsafe `StateView`, offline banner, loading `Skeleton` |
+| Icons | `lib/widgets/line_icons.g.dart` (new design), `loopy_icons.g.dart` (older screens) | **Generated** by `scripts/build_brand.py` from the same drawings as the web brand. Don't hand-edit; add icons in the script and run it. Drawn with `TIcon('name')` |
 | Tokens | `flutter_secure_storage` | Keychain / Keystore on phones |
 
 Design decisions:
-- **Player-only for now**: no feeds, no other players' videos, no scout
-  features. The API's structure (users with a `role`, an
+- **Player-only for now**: no scout features yet. Pitchside (other
+  players' clips, challenges, near you) has its final layout but shows
+  "coming soon" until its API routes exist. The API's structure (users with a `role`, an
   `/opportunities` route) leaves room for a scout app later.
 - **Tap yourself**: on upload, the player taps their own body in a
   frame, so Pep follows the right person in a crowded match.
@@ -92,7 +120,8 @@ Design decisions:
 client · server · native · cross-platform · Flutter · Dart · React
 Native · PWA · widget · state · state management · Provider · navigation ·
 secure storage · permissions · app store review · signing · design system ·
-theme
+theme · design token · ThemeExtension · component library · reduce motion ·
+contrast ratio
 
 ## Workbook 09
 
@@ -105,7 +134,14 @@ theme
 3. Change `TColors.neon` in `lib/theme/theme.dart` and hot-reload (`r`).
    Then change it back. Colours belong to the brand.
 4. Turn off Wi-Fi mid-upload. What does the app do? What *should* it do?
+   (Compare with the "Uploads" failsafe board on the design canvas.)
 5. Plug in an Android phone and `flutter run`. Upload a real clip.
+6. Turn on "Remove animations" (Android: Settings › Accessibility) and
+   open the app. The splash and chips should change instantly. Find the
+   line in `lib/theme/motion.dart` that makes that happen.
+7. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
+   to the contrast test's list. Does it pass? Even if it did, why would
+   Tracka still not offer it as a main colour?
 
 **Questions**
 
@@ -130,3 +166,26 @@ API changes under them, they break.
 
 *Answer:* In secure storage (Keychain / Keystore), which is encrypted and
 protected by the operating system, not in ordinary preferences or files.
+
+**5. Why are colours in `tokens.dart` named by job (`Tk.gold` = "watch
+out") instead of by shade?**
+
+*Answer:* Because a screen asks "what does this mean?", not "what does it
+look like?". If warnings ever change colour, one token changes and every
+warning follows; nothing that merely *happened* to be yellow changes by
+accident.
+
+**6. The main colour test checks a 4.5:1 contrast ratio. What is that
+number, and why black text?**
+
+*Answer:* It's the WCAG "AA" minimum for normal text: the lighter colour's
+brightness (plus a little) divided by the darker one's. Every main colour
+is a button background with black text on it, so black must stay easy to
+read on all five.
+
+**7. Why does `Motion.of()` return `Duration.zero` instead of skipping
+the animation code?**
+
+*Answer:* The change still has to happen (the chip still becomes
+selected, the sheet still opens), just instantly. Returning zero keeps one
+code path, so reduce motion can't accidentally break a feature.
