@@ -67,19 +67,19 @@ class _PitchsideScreenState extends State<PitchsideScreen> {
             child: switch (section) {
               _Section.challenges => const _Empty(
                   key: ValueKey('c'),
-                  icon: Icons.emoji_events_outlined,
+                  icon: 'trophy',
                   title: 'Weekly challenges are coming',
                   body: 'Film your go at the same drill as everyone else, and see how you compare with players your age.',
                 ),
               _Section.near => const _Empty(
                   key: ValueKey('n'),
-                  icon: Icons.place_outlined,
+                  icon: 'pin',
                   title: 'Pitches and games near you',
                   body: 'Find pitches and players in your region. We only ever show your region, never your town.',
                 ),
               _Section.opportunities => const _Empty(
                   key: ValueKey('o'),
-                  icon: Icons.flag_outlined,
+                  icon: 'flag',
                   title: 'Opportunities come later',
                   body: 'Trials, academies and tournaments. Keep filming: your profile will be ready when this opens.',
                 ),
@@ -106,7 +106,7 @@ class _Soon extends StatelessWidget {
 class _Empty extends StatelessWidget {
   const _Empty({super.key, required this.icon, required this.title, required this.body});
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String body;
 
@@ -118,7 +118,8 @@ class _Empty extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(color: Tk.stoneTile, borderRadius: BorderRadius.circular(20)),
-            child: Icon(icon, size: 28, color: Tk.stone),
+            alignment: Alignment.center,
+            child: TIcon(icon, size: 28, color: Tk.stone),
           ),
           const SizedBox(height: 14),
           Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Tk.ink)),

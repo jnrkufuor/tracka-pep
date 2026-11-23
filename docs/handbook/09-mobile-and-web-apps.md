@@ -97,7 +97,7 @@ anyone without space for another app, and for testing.
 | Motion | `lib/theme/motion.dart` | Durations and easing; `Motion.reduced()` is true when the phone or Tracka's own setting asks for less motion |
 | Theme | `lib/theme/theme.dart` | Builds Material's theme from the tokens and the player's main colour; Bricolage Grotesque (headings) + Figtree (text) |
 | Components | `lib/widgets/ds.dart` | Chips, band pill, confidence dots, AI and safety notes, edit sheet, bottom toast, failsafe `StateView`, offline banner, loading `Skeleton` |
-| Icons | `lib/widgets/loopy_icons.g.dart` | **Generated** by `scripts/build_brand.py` from the same drawings as the web brand. Don't hand-edit |
+| Icons | `lib/widgets/line_icons.g.dart` (new design), `loopy_icons.g.dart` (older screens) | **Generated** by `scripts/build_brand.py` from the same drawings as the web brand. Don't hand-edit; add icons in the script and run it. Drawn with `TIcon('name')` |
 | Tokens | `flutter_secure_storage` | Keychain / Keystore on phones |
 
 Design decisions:

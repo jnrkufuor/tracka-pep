@@ -10,6 +10,9 @@ Widget app(Widget child, {MainColour colour = MainColour.volt}) => MaterialApp(
       home: Scaffold(body: Center(child: child)),
     );
 
+/// The check icon inside a chip.
+final checks = find.byWidgetPredicate((w) => w is TIcon && w.name == 'check');
+
 void main() {
   group('tokens', () {
     test('unknown or missing main colour falls back to Volt', () {
@@ -22,6 +25,13 @@ void main() {
       for (final c in MainColour.values) {
         final ratio = (c.main.computeLuminance() + 0.05) / 0.05; // contrast against black
         expect(ratio, greaterThanOrEqualTo(4.5), reason: '${c.label}: black text on it');
+      }
+    });
+
+    test('every icon the app asks for exists in the generated line pack', () {
+      const used = ['home', 'clip', 'pep', 'you', 'plus', 'check', 'close', 'info', 'hurt', 'nosignal', 'trophy', 'pin', 'flag'];
+      for (final n in used) {
+        expect(TIcon.names, contains(n), reason: 'run scripts/build_brand.py after adding "$n" there');
       }
     });
 
@@ -56,7 +66,7 @@ void main() {
           onChanged: (v) => setState(() => value = v),
         ),
       )));
-      expect(find.byIcon(Icons.check_rounded), findsNothing);
+      expect(checks, findsNothing);
       await tester.tap(find.text('Challenges'));
       await tester.pumpAndSettle();
       expect(value, 'a');
@@ -67,7 +77,7 @@ void main() {
 
     testWidgets('multi chips show a check on what you ticked', (tester) async {
       await tester.pumpWidget(app(MultiChips<String>(options: const {'cm': 'CM', 'dm': 'DM'}, values: const {'cm'}, onChanged: (_) {})));
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+      expect(checks, findsOneWidget);
     });
 
     testWidgets('a skill not measured yet shows its state, not a band', (tester) async {

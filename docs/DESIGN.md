@@ -29,6 +29,10 @@ and still apply to the Lab (staff console).
   (stone) and safety note (gold), edit sheets on pure black (grabber,
   close button, saves as you go), toasts at the bottom, failsafe
   `StateView`, offline banner, loading skeletons.
+- **Icons**: the "Line, burst, play" pack (48 x 48, square ends, a few
+  solid shapes). Defined in `scripts/build_brand.py` (`LINE_ICONS`),
+  generated to `web/assets/icons/line/` and `app/lib/widgets/line_icons.g.dart`,
+  drawn in the app with `TIcon('name')`. Add an icon in the script, run it.
 - **Tabs**: Home, Pitchside, + (add a clip), Pep, Me. The splash fades
   the mark in, then "Tracka".
 

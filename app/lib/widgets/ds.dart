@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../theme/theme.dart';
-import 'common.dart';
+import 'line_icons.g.dart';
 
 // The design system's shared pieces, built once and used on every screen.
 //
@@ -10,6 +11,42 @@ import 'common.dart';
 // chip that's too small to tap) fixes it everywhere. Each piece matches a
 // board on the design canvas; the names say which.
 // See docs/handbook/09-mobile-and-web-apps.md, "Component libraries".
+
+// ───────────────────────────── icons
+
+/// An icon from Tracka's line pack (48 x 48 grid, square ends), generated into
+/// line_icons.g.dart by scripts/build_brand.py. Takes any colour; solid parts
+/// (the play triangle, the ball's patch) are filled with the same colour.
+/// Decorative by default: give [semanticLabel] when the icon is the only
+/// thing that says what a button does.
+class TIcon extends StatelessWidget {
+  const TIcon(this.name, {super.key, this.size = 20, this.color, this.stroke = 4, this.semanticLabel});
+
+  final String name;
+  final double size;
+  final Color? color;
+  final double stroke;
+  final String? semanticLabel;
+
+  /// Every icon name the pack has (handy in tests and pickers).
+  static Iterable<String> get names => linePaths.keys;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? IconTheme.of(context).color ?? Tk.ink;
+    final hex = '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+    final body = (linePaths[name] ?? linePaths['info']!).replaceAll('"C"', '"$hex"');
+    final svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" stroke="$hex" '
+        'stroke-width="$stroke" stroke-linecap="square" stroke-linejoin="miter">$body</svg>';
+    return SvgPicture.string(
+      svg,
+      width: size,
+      height: size,
+      semanticsLabel: semanticLabel,
+      excludeFromSemantics: semanticLabel == null,
+    );
+  }
+}
 
 // ───────────────────────────── motion helpers
 
@@ -151,7 +188,7 @@ class IconTile extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(size * 0.3)),
         alignment: Alignment.center,
-        child: LoopyIcon(icon, size: size * 0.5, color: color),
+        child: TIcon(icon, size: size * 0.5, color: color),
       );
 }
 
@@ -256,7 +293,7 @@ class _Chip extends StatelessWidget {
             border: Border.all(color: selected ? a.main : const Color(0xFF333333), width: 1.5),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (check && selected) ...[Icon(Icons.check_rounded, size: 15, color: a.on), const SizedBox(width: 6)],
+            if (check && selected) ...[TIcon('check', size: 14, color: a.on, stroke: 5), const SizedBox(width: 6)],
             Text(label,
                 style: TextStyle(
                   fontSize: 13.5,
@@ -425,7 +462,7 @@ class InfoNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Note(
         text: text,
-        icon: Icons.info_outline_rounded,
+        icon: 'info',
         iconColor: Tk.muted,
         textColor: Tk.muted,
         background: Tk.card,
@@ -445,7 +482,7 @@ class SafetyNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Note(
         text: text,
-        icon: Icons.healing_rounded,
+        icon: 'hurt',
         iconColor: Tk.gold,
         textColor: Tk.goldInk,
         background: Tk.goldTile,
@@ -464,7 +501,7 @@ class _Note extends StatelessWidget {
   });
 
   final String text;
-  final IconData icon;
+  final String icon;
   final Color iconColor;
   final Color textColor;
   final Color background;
@@ -476,7 +513,7 @@ class _Note extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14), border: Border.all(color: border)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(padding: const EdgeInsets.only(top: 1), child: Icon(icon, size: 16, color: iconColor)),
+          Padding(padding: const EdgeInsets.only(top: 1), child: TIcon(icon, size: 16, color: iconColor)),
           const SizedBox(width: 10),
           Expanded(child: Text(text, style: TextStyle(fontSize: 12.5, height: 1.45, color: textColor))),
         ]),
@@ -533,7 +570,8 @@ class EditSheet extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: const BoxDecoration(color: Tk.field, shape: BoxShape.circle),
-                  child: const Icon(Icons.close_rounded, size: 20, color: Tk.ink),
+                  alignment: Alignment.center,
+                  child: const TIcon('close', size: 18, color: Tk.ink),
                 ),
               ),
             ),
@@ -563,7 +601,8 @@ void showToast(BuildContext context, String title, {String? detail, String? acti
           width: 36,
           height: 36,
           decoration: BoxDecoration(color: a.tile, borderRadius: BorderRadius.circular(11)),
-          child: Icon(Icons.check_rounded, size: 18, color: a.main),
+          alignment: Alignment.center,
+          child: TIcon('check', size: 18, color: a.main, stroke: 5),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -595,7 +634,8 @@ class StateView extends StatelessWidget {
     this.extra,
   });
 
-  final IconData icon;
+  /// A line-pack icon name (see [TIcon]).
+  final String icon;
   final String title;
   final String message;
   final String actionLabel;
@@ -609,7 +649,7 @@ class StateView extends StatelessWidget {
 
   /// "That didn't work": something failed on our side. Work is safe; try again.
   factory StateView.error({required VoidCallback onRetry, VoidCallback? onReport}) => StateView(
-        icon: Icons.info_outline_rounded,
+        icon: 'info',
         kind: StateKind.watchOut,
         title: "That didn't work",
         message: 'Something went wrong on our side. Your clips and progress are safe. Try again in a moment.',
@@ -621,7 +661,7 @@ class StateView extends StatelessWidget {
 
   /// You're offline and there's nothing saved to show here.
   factory StateView.offline({required VoidCallback onRetry}) => StateView(
-        icon: Icons.wifi_off_rounded,
+        icon: 'nosignal',
         title: "You're offline",
         message: "This needs the internet. Everything you've done is saved, and clips upload when you're back.",
         actionLabel: 'Try again',
@@ -646,7 +686,8 @@ class StateView extends StatelessWidget {
               width: 76,
               height: 76,
               decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(24)),
-              child: Icon(icon, size: 34, color: fg),
+              alignment: Alignment.center,
+              child: TIcon(icon, size: 34, color: fg),
             ),
             const SizedBox(height: 16),
             Text(title, textAlign: TextAlign.center, style: Theme.of(ctx).textTheme.headlineMedium),
@@ -678,7 +719,7 @@ class OfflineBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFF262626))),
         child: const Row(children: [
-          Icon(Icons.wifi_off_rounded, size: 16, color: Tk.stone),
+          TIcon('nosignal', size: 16, color: Tk.stone),
           SizedBox(width: 10),
           Expanded(
             child: Text("You're offline. Showing what's saved. Clips upload when you're back.",
