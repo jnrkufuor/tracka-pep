@@ -422,7 +422,18 @@ def focus_areas(areas: dict, limit: int = 2) -> list[dict]:
     return [{"id": i["id"], "name": i["name"]} for i in sorted(items, key=rank)[:limit]]
 
 
-def session_plan(key: str, mode: str, focus: list[dict], test: str | None = None) -> dict:
+def can_do(drill: dict, kit: list[str] | None) -> bool:
+    """
+    Can the player do this drill with what they've got? Cones can be shoes or bottles,
+    and friends aren't kit, so only a ball and a wall really limit what Pep picks.
+    """
+    have = set(kit or ["ball"]) | {"nothing", "cones", "friends"}
+    return set(drill.get("needs", [])) <= have
+
+
+def session_plan(
+    key: str, mode: str, focus: list[dict], test: str | None = None, kit: list[str] | None = None
+) -> dict:
     """The steps of one session: warm-up, drills for the focus areas (or a test), cool-down."""
     lib = library()
     if mode == "rest":
@@ -455,11 +466,14 @@ def session_plan(key: str, mode: str, focus: list[dict], test: str | None = None
     for f in focus:
         if len(picked) >= 2:
             break
-        drill = next((d for d in lib["drills"] if f["id"] in d["areas"] and d not in picked), None)
+        options = [d for d in lib["drills"] if f["id"] in d["areas"] and d not in picked]
+        drill = next(
+            (d for d in options if can_do(d, kit)), None
+        )  # nothing they can do for it: skip this area
         if drill and all(p["id"] != drill["id"] for p in picked):
             picked.append(drill)
     if not picked:
-        picked = [lib["drills"][0]]
+        picked = [next((d for d in lib["drills"] if can_do(d, kit)), lib["drills"][0])]
     steps = [lib["warmup"], *picked, lib["cooldown"]]
     return {
         "key": key,

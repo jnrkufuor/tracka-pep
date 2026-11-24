@@ -92,7 +92,7 @@ anyone without space for another app, and for testing.
 | Talking to the API | `lib/api/api_client.dart` | Bearer token; on a 401 it refreshes the token once and retries; uploads stream the file and report progress |
 | Data types | `lib/api/models.dart` | Mirrors the API's JSON (camelCase) |
 | App state | `lib/state/app_state.dart` | One `ChangeNotifier` (Provider): user, profile, videos, coach summary; polls every 6 s while a clip is processing |
-| Screens | `lib/screens/` | Splash, welcome/auth, onboarding (with guardian step for under-18s), the tabs (Home, Pitchside, + to add a clip, Pep, Me), Upload, Video, Profile & settings. Being rebuilt in the new design, area by area |
+| Screens | `lib/screens/` | Splash, welcome/auth, onboarding v2 (Meet Pep, 5 steps with a casual and a looking-around path, a pitch to tap your positions, All set), the tabs (Home, Pitchside, + to add a clip, Pep, Me), Upload, Video, Profile & settings. Being rebuilt in the new design, area by area |
 | Design tokens | `lib/theme/tokens.dart` | Colours by job (`Tk`): your main colour, Pep purple, warning gold, calm stone. `MainColour` (5 choices), rating `Band`, `Confidence`, `Trend` |
 | Motion | `lib/theme/motion.dart` | Durations and easing; `Motion.reduced()` is true when the phone or Tracka's own setting asks for less motion |
 | Theme | `lib/theme/theme.dart` | Builds Material's theme from the tokens and the player's main colour; Bricolage Grotesque (headings) + Figtree (text) |
@@ -139,7 +139,10 @@ contrast ratio
 6. Turn on "Remove animations" (Android: Settings › Accessibility) and
    open the app. The splash and chips should change instantly. Find the
    line in `lib/theme/motion.dart` that makes that happen.
-7. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
+7. Sign up twice: once choosing "Get into an academy", once "Just looking
+   around". Which steps did you skip the second time, and which line in
+   `onboarding_screen.dart` (`flow`) decides it?
+8. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
    to the contrast test's list. Does it pass? Even if it did, why would
    Tracka still not offer it as a main colour?
 

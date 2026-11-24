@@ -126,14 +126,23 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveProfile(Map<String, dynamic> changes) async {
+  /// Save profile changes. During onboarding, [finish] false keeps the player
+  /// on the onboarding screens (for the "All set" page); call [finishOnboarding] after.
+  Future<void> saveProfile(Map<String, dynamic> changes, {bool finish = true}) async {
     me = await api.updateMe(changes);
-    if (stage == Stage.onboarding && me!.profileComplete) {
+    if (stage == Stage.onboarding && me!.profileComplete && finish) {
       stage = Stage.ready;
       notifyListeners();
       await refresh();
     }
     notifyListeners();
+  }
+
+  Future<void> finishOnboarding() async {
+    if (stage != Stage.onboarding || me?.profileComplete != true) return;
+    stage = Stage.ready;
+    notifyListeners();
+    await refresh();
   }
 
   Future<void> saveSettings(Map<String, dynamic> changes) async {
