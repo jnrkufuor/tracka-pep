@@ -6,6 +6,7 @@ import '../theme/theme.dart';
 import '../widgets/common.dart';
 import '../widgets/skill_card.dart';
 import 'home_screen.dart' show openUpload;
+import 'training_screens.dart';
 
 /// Pep, your coach: every skill across your recent clips, your best roles,
 /// the standard drills, and how scoring works.
@@ -35,6 +36,19 @@ class PepScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Tape(),
+            const SizedBox(height: 22),
+            const TodayCard(),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WeekScreen())),
+                  child: const Text('Your week'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: OutlinedButton(onPressed: () => showHealthSheet(context), child: const Text("How's your body?"))),
+            ]),
             const SizedBox(height: 22),
             if (c == null || c.skills.isEmpty)
               TCard(

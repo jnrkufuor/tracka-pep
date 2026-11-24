@@ -34,6 +34,7 @@ from sqlalchemy import (
 )
 
 from .. import db
+from . import training
 
 users = Table(
     "users",
@@ -98,6 +99,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "mainColour": "volt",  # Settings › Main colour: the "you" colour (Pep purple and warning gold never change)
     "reduceMotion": False,  # Settings › Accessibility: less movement, on top of the phone's own setting
     "uploadOnWifiOnly": True,  # Settings › Your data: mobile data is expensive, so clips wait for Wi-Fi by default
+    "sessionsPerWeek": 3,  # Pep sessions fitted around the player's own football each week
 }
 
 
@@ -155,7 +157,7 @@ def delete_user(uid: str) -> list[str]:
                 c.execute(delete(db.jobs).where(db.jobs.c.id == v.job_id))
                 c.execute(delete(db.ratings).where(db.ratings.c.job_id == v.job_id))
         # Children first: SQLite doesn't enforce ON DELETE CASCADE unless asked to.
-        for table in (videos, sessions, profiles):
+        for table in (*training.TABLES, videos, sessions, profiles):
             c.execute(delete(table).where(table.c.user_id == uid))
         c.execute(delete(users).where(users.c.id == uid))
     return keys

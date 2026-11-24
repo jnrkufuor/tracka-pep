@@ -547,6 +547,17 @@ class EditSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Its own ScaffoldMessenger + Scaffold, so a toast shown from inside the
+    // sheet appears on the sheet (not hidden behind it).
+    return ScaffoldMessenger(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _sheet(context),
+      ),
+    );
+  }
+
+  Widget _sheet(BuildContext context) {
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 1,

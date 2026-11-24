@@ -1,0 +1,34 @@
+{
+  "_about": [
+    "Pep's training library: short sessions a player can do with no gym and little kit.",
+    "A session = warm-up + one or two drills for the player's focus areas + cool-down. 'needs' lists the kit: nothing, ball, wall, cones, friend(s).",
+    "'areas' links a drill to skill areas in skill_areas.json. 'film' = Pep can count it if the player films it (a standard test in drills.json).",
+    "Football opinion: review with coaches. Pep never prescribes through pain: light and rest days exist for that."
+  ],
+  "version": "training-2026-11",
+  "warmup": {"id": "warmup", "name": "Warm-up", "minutes": 5, "how": "Jog, skips, side steps, open and close the gate, then three short runs at half speed.", "needs": ["nothing"]},
+  "cooldown": {"id": "cooldown", "name": "Cool-down", "minutes": 5, "how": "Walk for a minute, then stretch calves, hamstrings and hips. Drink water.", "needs": ["nothing"]},
+  "light": {"id": "mobility", "name": "Easy touches and stretching", "minutes": 15, "how": "Gentle ball touches on the spot, then slow stretches. Nothing should hurt: stop if it does.", "needs": ["ball"]},
+  "drills": [
+    {"id": "wall_passes", "name": "Weak-foot wall passes", "minutes": 8, "areas": ["passing_forward", "weak_foot"], "needs": ["ball", "wall"], "film": "wall_passes", "how": "Stand 2 m from a wall. Weaker foot only, ankle firm, 20 passes. Step back to 5 m and repeat."},
+    {"id": "scanning_rondo", "name": "Scanning rondo", "minutes": 12, "areas": ["scanning", "half_turn", "finding_space"], "needs": ["ball", "friends"], "how": "3 against 1 in a small square. Look over your shoulder before every touch and say what you see: 'turn' or 'man on'."},
+    {"id": "shoulder_checks", "name": "Shoulder checks against a wall", "minutes": 8, "areas": ["scanning", "half_turn"], "needs": ["ball", "wall"], "how": "Pass to the wall. Before the ball comes back, look over one shoulder, then the other. Receive on the half-turn and go."},
+    {"id": "keepy_ups", "name": "Keepy-up ladder", "minutes": 8, "areas": ["ball_mastery", "close_control"], "needs": ["ball"], "film": "juggling", "how": "Feet only, then thighs, then head. Count your best in a row each round."},
+    {"id": "cone_dribble", "name": "Tight dribble through cones", "minutes": 10, "areas": ["close_control", "turning", "agility"], "needs": ["ball", "cones"], "how": "Five cones 1 m apart. Inside and outside of both feet, ball never more than a step away. Shoes or bottles work as cones."},
+    {"id": "turn_and_go", "name": "Turn and go", "minutes": 8, "areas": ["turning", "half_turn"], "needs": ["ball"], "how": "Dribble, stop the ball with the sole, turn and accelerate 5 m. Both directions, both feet."},
+    {"id": "falling_starts", "name": "Falling starts", "minutes": 8, "areas": ["short_speed", "top_speed"], "needs": ["nothing"], "how": "Lean forward until you have to step, then sprint 10 m with short, fast steps. Walk back. 8 times."},
+    {"id": "sprint_30", "name": "30 m sprints", "minutes": 10, "areas": ["top_speed", "short_speed"], "needs": ["cones"], "film": "sprint_30m", "how": "Six sprints of 30 m with a full walk back between them. Fast, not tired."},
+    {"id": "shuttle_5105", "name": "5-10-5 shuttles", "minutes": 8, "areas": ["agility"], "needs": ["cones"], "film": "agility_5105", "how": "Touch the line each turn, stay low through the change of direction. Six reps, rest between."},
+    {"id": "box_to_box", "name": "Box-to-box runs", "minutes": 12, "areas": ["engine", "keeps_moving"], "needs": ["nothing"], "how": "Run at a steady pace for 1 minute, walk 1 minute. Six rounds. You should be able to talk."},
+    {"id": "ready_stance", "name": "Ready stance and react", "minutes": 8, "areas": ["ready", "defending_1v1"], "needs": ["friends"], "how": "Knees bent, weight on your toes. A friend points left or right; push off that way for 3 m. 20 reactions."},
+    {"id": "dive_practice", "name": "Low dives", "minutes": 10, "areas": ["diving", "set_position"], "needs": ["ball", "friends"], "how": "On soft ground. Set your feet before each shot, then dive low to each side. 10 each way."},
+    {"id": "wants_ball", "name": "Show for the ball", "minutes": 10, "areas": ["wants_ball", "finding_space"], "needs": ["ball", "friends"], "how": "In a small game, move into space after every pass and call for the ball. Count how often you get it."}
+  ],
+  "tests": {
+    "sprint_30m": {"name": "Speed test: 30 m sprint", "metric": "sprint_30m_s"},
+    "agility_5105": {"name": "Agility test: 5-10-5", "metric": "agility_5105_s"},
+    "juggling": {"name": "Keepy-up test", "metric": "juggles_best"},
+    "wall_passes": {"name": "Wall-pass test (30 s)", "metric": "wall_passes_30s"}
+  },
+  "retest_days": 14
+}

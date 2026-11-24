@@ -461,3 +461,208 @@ class SkillItem {
         howToMeasure: j['howToMeasure'] as String?,
       );
 }
+
+// ---------------------------------------------------------------- training (GET /v1/week etc.)
+
+/// One thing on a day: your own football (team, match, school, game), a Pep
+/// session, a rest day, or a timed test.
+class WeekItem {
+  WeekItem({
+    required this.id,
+    required this.kind,
+    required this.title,
+    required this.status,
+    this.time,
+    this.durationMin,
+    this.mode,
+    this.moved = false,
+    this.repeats = false,
+    this.drill,
+  });
+
+  final String id;
+
+  /// "team" | "match" | "school" | "game" | "other" | "pep" | "rest" | "test".
+  final String kind;
+  final String title;
+
+  /// "planned" | "done" | "skipped".
+  final String status;
+  final String? time;
+  final int? durationMin;
+
+  /// Pep sessions: "normal" | "light" | "rest".
+  final String? mode;
+  final bool moved;
+  final bool repeats;
+
+  /// Tests: which standard drill to film.
+  final String? drill;
+
+  bool get isPep => kind == 'pep' || kind == 'rest';
+  bool get isFootball => !isPep && kind != 'test';
+
+  factory WeekItem.fromJson(Map<String, dynamic> j) => WeekItem(
+        id: j['id'] as String,
+        kind: j['kind'] as String? ?? 'other',
+        title: j['title'] as String? ?? '',
+        status: j['status'] as String? ?? 'planned',
+        time: j['time'] as String?,
+        durationMin: _i(j['durationMin']),
+        mode: j['mode'] as String?,
+        moved: j['moved'] as bool? ?? false,
+        repeats: j['repeats'] as bool? ?? false,
+        drill: j['drill'] as String?,
+      );
+}
+
+class WeekDay {
+  WeekDay({required this.date, required this.weekday, required this.isToday, required this.matchDay, required this.items});
+
+  final DateTime date;
+  final String weekday;
+  final bool isToday;
+  final bool matchDay;
+  final List<WeekItem> items;
+
+  factory WeekDay.fromJson(Map<String, dynamic> j) => WeekDay(
+        date: DateTime.parse(j['date'] as String),
+        weekday: j['weekday'] as String? ?? '',
+        isToday: j['isToday'] as bool? ?? false,
+        matchDay: j['matchDay'] as bool? ?? false,
+        items: _list(j['items'], WeekItem.fromJson),
+      );
+}
+
+class Week {
+  Week({required this.start, required this.today, required this.health, required this.days, this.sessionsPerWeek = 3});
+
+  final DateTime start;
+  final DateTime today;
+  final String health;
+  final int sessionsPerWeek;
+  final List<WeekDay> days;
+
+  WeekDay? get todayDay => days.where((d) => d.isToday).firstOrNull;
+
+  /// The next Pep session from today that isn't done or skipped.
+  (WeekDay, WeekItem)? get nextSession {
+    for (final d in days) {
+      if (d.date.isBefore(today)) continue;
+      for (final i in d.items) {
+        if (i.isPep && i.status == 'planned') return (d, i);
+      }
+    }
+    return null;
+  }
+
+  factory Week.fromJson(Map<String, dynamic> j) => Week(
+        start: DateTime.parse(j['start'] as String),
+        today: DateTime.parse(j['today'] as String),
+        health: (j['health'] as Map?)?['status'] as String? ?? 'fine',
+        sessionsPerWeek: _i(j['sessionsPerWeek']) ?? 3,
+        days: _list(j['days'], WeekDay.fromJson),
+      );
+}
+
+class SessionStep {
+  SessionStep({required this.id, required this.name, required this.minutes, required this.how, this.needs = const [], this.film, this.test});
+
+  final String id;
+  final String name;
+  final int minutes;
+  final String how;
+  final List<String> needs;
+
+  /// A standard drill Pep can count if you film it.
+  final String? film;
+
+  /// Set when this step is a timed test.
+  final String? test;
+
+  factory SessionStep.fromJson(Map<String, dynamic> j) => SessionStep(
+        id: j['id'] as String? ?? '',
+        name: j['name'] as String? ?? '',
+        minutes: _i(j['minutes']) ?? 0,
+        how: j['how'] as String? ?? '',
+        needs: (j['needs'] as List? ?? const []).cast<String>(),
+        film: j['film'] as String?,
+        test: j['test'] as String?,
+      );
+}
+
+class SessionPlan {
+  SessionPlan({
+    required this.key,
+    required this.date,
+    required this.mode,
+    required this.title,
+    required this.minutes,
+    required this.focus,
+    required this.steps,
+    required this.safety,
+    required this.status,
+  });
+
+  final String key;
+  final DateTime date;
+  final String mode;
+  final String title;
+  final int minutes;
+
+  /// Skill areas this session works on (names).
+  final List<String> focus;
+  final List<SessionStep> steps;
+  final String safety;
+  final String status;
+
+  factory SessionPlan.fromJson(Map<String, dynamic> j) => SessionPlan(
+        key: j['key'] as String,
+        date: DateTime.parse(j['date'] as String),
+        mode: j['mode'] as String? ?? 'normal',
+        title: j['title'] as String? ?? '',
+        minutes: _i(j['minutes']) ?? 0,
+        focus: (j['focus'] as List? ?? const []).map((e) => (e as Map)['name'] as String).toList(),
+        steps: _list(j['steps'], SessionStep.fromJson),
+        safety: j['safety'] as String? ?? '',
+        status: j['status'] as String? ?? 'planned',
+      );
+}
+
+/// How your body feels (GET/PUT /v1/health).
+class HealthState {
+  HealthState({required this.status, this.area, this.advice = ''});
+
+  /// "fine" | "sore" | "pain" | "injured".
+  final String status;
+  final String? area;
+  final String advice;
+
+  factory HealthState.fromJson(Map<String, dynamic> j) =>
+      HealthState(status: j['status'] as String? ?? 'fine', area: j['area'] as String?, advice: j['advice'] as String? ?? '');
+}
+
+/// Your own football (GET /v1/events): team training, matches, school, games.
+class FootballEvent {
+  FootballEvent({required this.id, required this.kind, required this.title, this.weekdays = const [], this.onDate, this.time, this.durationMin = 90});
+
+  final String id;
+  final String kind;
+  final String title;
+
+  /// Repeating: 0 = Monday … 6 = Sunday. Empty for a one-off.
+  final List<int> weekdays;
+  final DateTime? onDate;
+  final String? time;
+  final int durationMin;
+
+  factory FootballEvent.fromJson(Map<String, dynamic> j) => FootballEvent(
+        id: j['id'] as String,
+        kind: j['kind'] as String? ?? 'other',
+        title: j['title'] as String? ?? '',
+        weekdays: (j['weekdays'] as List? ?? const []).map((e) => (e as num).toInt()).toList(),
+        onDate: j['onDate'] == null ? null : DateTime.parse(j['onDate'] as String),
+        time: j['time'] as String?,
+        durationMin: _i(j['durationMin']) ?? 90,
+      );
+}
