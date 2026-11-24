@@ -27,6 +27,9 @@ void main() {
 
   testWidgets('pitch picker: first tap is main, tapping an extra makes it main', (tester) async {
     var picked = <String>[];
+    tester.view.physicalSize = const Size(390 * 3, 1400 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       theme: trackaTheme(),
       home: Scaffold(
