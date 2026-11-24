@@ -18,6 +18,35 @@ class ProfileDraft {
   String guardianEmail = '';
   bool guardianConsent = false;
 
+  // Onboarding v2
+  String firstName = '';
+  String lastName = '';
+  String shirtName = '';
+  int? shirtNumber;
+  String town = '';
+  String? level;
+  String? goal;
+  String? style;
+  int? weakFoot;
+  String guardianPhone = '';
+  String guardianRelation = 'parent';
+
+  /// Positions in order: the first is the main one.
+  List<String> positionOrder = [];
+
+  /// What goes on the shirt: what they typed, or the suggestion; at most 20 letters.
+  String get shirtNameToSave {
+    final n = shirtName.trim().isEmpty ? suggestedShirtName : shirtName.trim().toUpperCase();
+    return n.length > 20 ? n.substring(0, 20) : n;
+  }
+
+  /// "K. ASANTE" from "Kwame" "Asante".
+  String get suggestedShirtName {
+    final f = firstName.trim(), l = lastName.trim();
+    if (l.isEmpty) return f.toUpperCase();
+    return '${f.isEmpty ? '' : '${f[0]}. '}$l'.toUpperCase();
+  }
+
   int? get age {
     final b = birthDate;
     if (b == null) return null;
@@ -26,6 +55,28 @@ class ProfileDraft {
   }
 
   bool get minor => (age ?? 99) < 18;
+
+  /// What onboarding v2 sends (PATCH /v1/me). Only fields that were filled in.
+  Map<String, dynamic> toJsonV2() => {
+        'displayName': '${firstName.trim()} ${lastName.trim()}'.trim(),
+        if (birthDate != null) 'birthDate': DateFormat('yyyy-MM-dd').format(birthDate!),
+        if (sex != null) 'sex': sex,
+        if (shirtNameToSave.isNotEmpty) 'shirtName': shirtNameToSave,
+        if (shirtNumber != null) 'shirtNumber': shirtNumber,
+        if (region != null) 'region': region,
+        if (town.trim().isNotEmpty) 'town': town.trim(),
+        if (level != null) 'level': level,
+        if (goal != null) 'goal': goal,
+        if (positionOrder.isNotEmpty) 'positions': positionOrder,
+        if (style != null) 'style': style,
+        if (foot != null) 'foot': foot,
+        if (weakFoot != null) 'weakFoot': weakFoot,
+        if (heightM != null) 'heightM': heightM,
+        if (minor && guardianPhone.trim().isNotEmpty) 'guardianPhone': guardianPhone.trim(),
+        if (minor) 'guardianRelation': guardianRelation,
+        if (minor && guardianEmail.trim().isNotEmpty) 'guardianEmail': guardianEmail.trim(),
+        if (minor) 'guardianConsent': guardianConsent,
+      };
 
   Map<String, dynamic> toJson() => {
         'displayName': name.trim(),

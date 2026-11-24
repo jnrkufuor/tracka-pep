@@ -20,6 +20,15 @@ class Profile {
     this.bio,
     this.guardianEmail,
     this.guardianConsent = false,
+    this.shirtName,
+    this.shirtNumber,
+    this.town,
+    this.level,
+    this.goal,
+    this.style,
+    this.weakFoot,
+    this.guardianPhone,
+    this.guardianRelation,
   });
 
   final String displayName;
@@ -35,6 +44,28 @@ class Profile {
   final String? guardianEmail;
   final bool guardianConsent;
 
+  // Onboarding v2 (null from older servers).
+  final String? shirtName;
+  final int? shirtNumber;
+
+  /// Private: never shown to other players (only the region is).
+  final String? town;
+
+  /// fun | amateur | school | club | academy | pro
+  final String? level;
+
+  /// fun | school | academy | standout | better | looking
+  final String? goal;
+  final String? style;
+
+  /// 1 (hard to use) … 5 (strong as my best).
+  final int? weakFoot;
+  final String? guardianPhone;
+  final String? guardianRelation;
+
+  /// Players having fun or looking around get a lighter app (no scouting profile).
+  bool get casual => goal == 'fun' || goal == 'looking';
+
   factory Profile.fromJson(Map<String, dynamic> j) => Profile(
         displayName: j['displayName'] as String? ?? '',
         birthDate: j['birthDate'] == null ? null : DateTime.parse(j['birthDate'] as String),
@@ -47,6 +78,15 @@ class Profile {
         club: j['club'] as String?,
         bio: j['bio'] as String?,
         guardianEmail: j['guardianEmail'] as String?,
+        shirtName: j['shirtName'] as String?,
+        shirtNumber: _i(j['shirtNumber']),
+        town: j['town'] as String?,
+        level: j['level'] as String?,
+        goal: j['goal'] as String?,
+        style: j['style'] as String?,
+        weakFoot: _i(j['weakFoot']),
+        guardianPhone: j['guardianPhone'] as String?,
+        guardianRelation: j['guardianRelation'] as String?,
         guardianConsent: j['guardianConsent'] as bool? ?? false,
       );
 

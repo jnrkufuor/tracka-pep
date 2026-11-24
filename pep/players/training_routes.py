@@ -93,7 +93,8 @@ def get_session(key: str, user: dict = Depends(auth.current_user)) -> dict:
     day = next(d for d in wk["days"] if d["date"] == item["date"])
     test = next((i["drill"] for i in day["items"] if i["kind"] == "test"), None)
     videos = store.list_videos(user["id"])
-    plan = training.session_plan(key, item.get("mode", "normal"), _focus(user["id"], videos), test)
+    kit = store.get_profile(user["id"])["settings"].get("kit")
+    plan = training.session_plan(key, item.get("mode", "normal"), _focus(user["id"], videos), test, kit)
     return {**plan, "date": item["date"], "status": item["status"]}
 
 

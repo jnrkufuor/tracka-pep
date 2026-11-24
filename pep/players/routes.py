@@ -46,7 +46,7 @@ from ..contracts import POSITIONS, AnalysisRequest, Calibration, Point
 from ..drills.runner import drill_catalogue
 from ..log import get_logger
 from ..storage import storage
-from . import auth, store
+from . import auth, details, store
 from .coach import summary
 from .skill_areas import skill_areas
 
@@ -138,6 +138,9 @@ class SettingsIn(Body):
     sessions_per_week: int | None = Field(
         None, ge=0, le=6
     )  # how many Pep sessions to fit around your football
+    # Onboarding v2: what kit the player has, and how Pep talks to them.
+    kit: list[Literal["ball", "wall", "space", "cones", "gym"]] | None = Field(None, max_length=5)
+    pep_voice: Literal["street", "coach"] | None = None
 
 
 class ProfileIn(Body):
@@ -150,6 +153,17 @@ class ProfileIn(Body):
     region: str | None = Field(None, max_length=40)
     club: str | None = Field(None, max_length=80)
     bio: str | None = Field(None, max_length=400)
+    # Onboarding v2 (stored in player_details, a new table: see details.py)
+    shirt_name: str | None = Field(None, max_length=20)
+    shirt_number: int | None = Field(None, ge=1, le=99)
+    town: str | None = Field(None, max_length=60)
+    level: Literal["fun", "amateur", "school", "club", "academy", "pro"] | None = None
+    goal: Literal["fun", "school", "academy", "standout", "better", "looking"] | None = None
+    style: str | None = Field(None, max_length=40)
+    weak_foot: int | None = Field(None, ge=1, le=5)
+    guardian_phone: str | None = Field(None, max_length=24, pattern=r"^\+?[0-9 ]{7,20}$")
+    guardian_relation: Literal["parent", "guardian", "coach"] | None = None
+    casual: dict | None = None
     guardian_email: str | None = Field(None, max_length=254)
     guardian_consent: bool | None = None
     settings: SettingsIn | None = None
@@ -157,6 +171,7 @@ class ProfileIn(Body):
 
 def _me(user: dict) -> dict:
     p = store.get_profile(user["id"])
+    d = details.get(user["id"])
     age = store.age_on(p["birth_date"])
     return {
         "id": user["id"],
@@ -175,10 +190,24 @@ def _me(user: dict) -> dict:
             "bio": p["bio"],
             "guardianEmail": p["guardian_email"],
             "guardianConsent": p["guardian_consent"],
+            # onboarding v2 (new fields: older apps ignore them)
+            "shirtName": d["shirt_name"],
+            "shirtNumber": d["shirt_number"],
+            "town": d["town"],
+            "level": d["level"],
+            "goal": d["goal"],
+            "style": d["style"],
+            "weakFoot": d["weak_foot"],
+            "guardianPhone": d["guardian_phone"],
+            "guardianRelation": d["guardian_relation"],
+            "casual": d["casual"],
         },
         "settings": p["settings"],
         # The app shows onboarding until these are filled in.
-        "profileComplete": bool(p["display_name"] and p["birth_date"] and p["positions"]),
+        # Players just having fun or looking around don't need positions to finish onboarding.
+        "profileComplete": bool(
+            p["display_name"] and p["birth_date"] and (p["positions"] or d["goal"] in details.CASUAL_GOALS)
+        ),
         "needsGuardian": age is not None and age < 18 and not p["guardian_consent"],
     }
 
@@ -199,6 +228,9 @@ def update_me(body: ProfileIn, user: dict = Depends(auth.current_user)) -> dict:
         raise HTTPException(422, "Pick a region from the list.")
     if values.get("guardian_email") and not EMAIL.match(values["guardian_email"]):
         raise HTTPException(422, "The guardian's email doesn't look right.")
+    extra = {k: values.pop(k) for k in list(values) if k in details.FIELDS}
+    if extra:
+        details.save(user["id"], extra)
     if body.settings is not None:
         current = store.get_profile(user["id"])["settings"]
         changes = {to_camel(k): v for k, v in body.settings.model_dump(exclude_unset=True).items()}
@@ -279,7 +311,7 @@ async def upload(
 ) -> dict:
     """Store the clip, queue it for Pep, and answer at once. The app polls GET /videos/{id}."""
     me_ = _me(user)
-    if not me_["profileComplete"]:
+    if not me_["profileComplete"] or not me_["profile"]["positions"]:
         raise HTTPException(
             409, "Finish your profile first: Pep needs your age and positions to score you fairly."
         )
