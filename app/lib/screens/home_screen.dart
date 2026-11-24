@@ -5,6 +5,7 @@ import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/common.dart';
+import 'training_screens.dart';
 import 'upload_screen.dart';
 import 'video_screen.dart';
 import 'videos_screen.dart';
@@ -41,6 +42,8 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 6),
             Text(me == null ? 'Hello' : 'Hey ${me.profile.firstName}', style: t.displayMedium),
             const SizedBox(height: 18),
+            const TodayCard(),
+            const SizedBox(height: 12),
             if (s.uploads.isNotEmpty) ...[_UploadingCard(progress: s.uploads.values.first), const SizedBox(height: 12)],
             if (c != null && c.processing > 0) ...[_ProcessingCard(count: c.processing), const SizedBox(height: 12)],
             _ScoreCard(coach: c),

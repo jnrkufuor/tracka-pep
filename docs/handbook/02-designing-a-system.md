@@ -110,12 +110,20 @@ in memory or on local disk.
   `users` is already there for that, and the `/v1/opportunities` route
   already exists (empty for now).
 - **Settings** all come from environment variables (`pep/config.py`).
+- **Derived state: the training week** (`pep/players/training.py`). The
+  database keeps only facts the player gave (their team training and
+  matches, sessions they moved, skipped or finished, how their body feels).
+  The week with Pep's sessions in it is *computed* from those facts on every
+  request (`GET /v1/week`), so it can never go stale, and changing a rule
+  ("no Pep session the day before a match") changes every player's plan at
+  once. New tables (`events`, `session_changes`, `training_log`, `health`)
+  all point at `users`.
 
 ## Words to know
 monolith · microservices · modular monolith · synchronous · asynchronous ·
 job queue · worker · retry · exponential backoff · jitter · idempotency ·
 timeout · lease · heartbeat · relational database · object storage ·
-cache · stateless · 12-factor
+cache · stateless · 12-factor · derived state · source of truth
 
 ## Workbook 02
 
@@ -129,6 +137,9 @@ cache · stateless · 12-factor
    workers and storage, with arrows labelled with what flows along them.
 4. Sketch where a future **scout** app would plug in. Which tables would
    you add? Which existing parts would it reuse?
+5. With `pep serve` running, add a Saturday match (`POST /v1/events`) and
+   fetch `GET /v1/week`. Which days did Pep pick for its sessions, and why
+   is Friday never one of them? Find the rule in `place_sessions`.
 
 **Questions**
 
@@ -155,3 +166,12 @@ efficiently.
 *Answer:* Without it, every client that failed at the same moment retries
 at the same moment, hitting the recovering service with a spike (a
 "thundering herd") that can knock it down again.
+
+**5. Why does Tracka compute the week on every request instead of saving
+the plan in a table?**
+
+*Answer:* A saved plan is a copy that can drift from its inputs: add a
+match on Saturday and a stored plan would still have a hard session on
+Friday until something rebuilt it. Computing it from the facts (events,
+moves, skips, health) means there's one source of truth and the plan is
+always right. The cost is a little work per request, which is cheap here.

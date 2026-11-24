@@ -7,7 +7,8 @@ tracka-pep/
 │   ├── lib/config.dart           PEP_API_URL (and CI-only screenshot mode)
 │   ├── lib/api/                  api_client.dart (tokens, refresh, streamed uploads), models.dart (JSON types)
 │   ├── lib/state/app_state.dart  the one ChangeNotifier: user, profile, videos, coach; polls while processing
-│   ├── lib/screens/              splash, auth, onboarding, shell (tabs: Home, Pitchside, +, Pep, Me),
+│   ├── lib/screens/              splash, auth, onboarding, shell (tabs: Home, Pitchside, +, Pep, Me), training
+│   │                             (week, session, done, health, your football),
 │   │                             home, pitchside, videos, upload, video, pep, profile (+ edit, settings)
 │   ├── lib/theme/tokens.dart     design tokens: colours by job (Tk), MainColour, rating Band/Confidence/Trend
 │   ├── lib/theme/motion.dart     durations, easing, reduce motion
@@ -55,6 +56,8 @@ tracka-pep/
 │   │   ├── auth.py               scrypt password hashing, JWT access + refresh tokens (rotation, reuse detection)
 │   │   ├── store.py              tables: users, profiles, videos, sessions
 │   │   ├── coach.py              the player's dashboard: overall score, trend, focus skill, drill, roles
+│   │   ├── training.py           the week (computed), Pep sessions, events, health: tables + rules
+│   │   ├── training_routes.py    /v1/week, /v1/sessions, /v1/events, /v1/health
 │   │   └── skill_areas.py        Me tab: bands, measured averages, confidence, trend per skill area
 │   ├── api/app.py                FastAPI app: mounts /v1, /analyses (tracka-api contract), /lab/* (staff console),
 │   │                             /files (signed local links), /healthz /readyz /metrics
@@ -62,7 +65,8 @@ tracka-pep/
 │       ├── norms.json            reference values per age band (starter priors: replace with real data)
 │       ├── roles.json            scout roles and skill weights (football opinion: review with coaches)
 │       ├── drills.json           drill definitions and cone layouts
-│       └── skill_areas.json      skill areas by group, their measurements, key areas per position
+│       ├── skill_areas.json      skill areas by group, their measurements, key areas per position
+│       └── training.json         Pep's training library: warm-up, drills per skill area, tests, light day
 ├── web/                          Pep Lab: a staff console (plain HTML/CSS/JS served by the API)
 │   ├── index.html, app.css, app.js
 │   └── assets/                   fonts, brand/ (logo, app icon), icons/ (+ icons/line/) + icons.js (generated)
@@ -95,6 +99,7 @@ tracka-pep/
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | what the app gets from the API | `pep/players/routes.py` (and `app/lib/api/models.dart`) |
 | the player's dashboard numbers | `pep/players/coach.py` |
+| how Pep plans the week, or a training drill | `pep/players/training.py`, `pep/data/training.json` |
 | the Me tab's skill areas, bands, key areas per position | `pep/players/skill_areas.py`, `pep/data/skill_areas.json` |
 | sign-up, login, tokens | `pep/players/auth.py` |
 | app colours, fonts, motion | `app/lib/theme/tokens.dart`, `motion.dart` (theme.dart builds from them) |

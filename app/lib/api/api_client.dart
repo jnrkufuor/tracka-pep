@@ -194,4 +194,45 @@ class ApiClient {
 
   Future<bool> opportunitiesComingSoon() async =>
       ((await _send('GET', '/v1/opportunities')) as Map<String, dynamic>)['comingSoon'] as bool? ?? true;
+
+  // ---------------------------------------------------------------- training
+
+  String _d(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<Week> week({DateTime? start}) async =>
+      Week.fromJson(await _send('GET', start == null ? '/v1/week' : '/v1/week?start=${_d(start)}') as Map<String, dynamic>);
+
+  Future<SessionPlan> session(String key) async =>
+      SessionPlan.fromJson(await _send('GET', '/v1/sessions/$key') as Map<String, dynamic>);
+
+  Future<Week> moveSession(String key, DateTime to) async =>
+      Week.fromJson(await _send('POST', '/v1/sessions/$key/move', body: {'to': _d(to)}) as Map<String, dynamic>);
+
+  Future<Week> skipSession(String key) async =>
+      Week.fromJson(await _send('POST', '/v1/sessions/$key/skip') as Map<String, dynamic>);
+
+  Future<Week> restoreSession(String key) async =>
+      Week.fromJson(await _send('POST', '/v1/sessions/$key/restore') as Map<String, dynamic>);
+
+  /// Log a finished session. Returns the follow-up line to show.
+  Future<String> finishSession(String key, {required String effort, required bool hurt}) async {
+    final r = await _send('POST', '/v1/sessions/$key/done', body: {'effort': effort, 'hurt': hurt}) as Map<String, dynamic>;
+    return r['next'] as String? ?? '';
+  }
+
+  Future<List<FootballEvent>> events() async =>
+      (await _send('GET', '/v1/events') as List).map((e) => FootballEvent.fromJson(e as Map<String, dynamic>)).toList();
+
+  Future<FootballEvent> addEvent(Map<String, dynamic> body) async =>
+      FootballEvent.fromJson(await _send('POST', '/v1/events', body: body) as Map<String, dynamic>);
+
+  Future<FootballEvent> updateEvent(String id, Map<String, dynamic> body) async =>
+      FootballEvent.fromJson(await _send('PATCH', '/v1/events/$id', body: body) as Map<String, dynamic>);
+
+  Future<void> deleteEvent(String id) => _send('DELETE', '/v1/events/$id');
+
+  Future<HealthState> health() async => HealthState.fromJson(await _send('GET', '/v1/health') as Map<String, dynamic>);
+
+  Future<HealthState> setHealth(String status, {String? area}) async =>
+      HealthState.fromJson(await _send('PUT', '/v1/health', body: {'status': status, 'area': area}) as Map<String, dynamic>);
 }

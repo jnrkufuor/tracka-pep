@@ -30,10 +30,18 @@ os.environ["PEP_LEARNED_SCORER_PATH"] = str(_tmp / "no-scorer.joblib")
 def clean_db():
     """Empty tables before each test so tests can't affect each other."""
     from pep import db
-    from pep.players import store
+    from pep.players import store, training
 
     with db.engine().begin() as c:
-        for table in (store.videos, store.sessions, store.profiles, store.users, db.jobs, db.ratings):
+        for table in (
+            *training.TABLES,
+            store.videos,
+            store.sessions,
+            store.profiles,
+            store.users,
+            db.jobs,
+            db.ratings,
+        ):
             c.execute(table.delete())
     yield
 

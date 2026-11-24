@@ -25,6 +25,10 @@ class AppState extends ChangeNotifier {
   Meta? meta;
   List<Video> videos = [];
   CoachSummary? coach;
+
+  /// This week's plan (football + Pep sessions + tests) and how the body feels.
+  Week? week;
+  HealthState? health;
   bool loadingVideos = false;
   String? error;
 
@@ -87,8 +91,34 @@ class AppState extends ChangeNotifier {
     _signedOut();
   }
 
+  /// Reload the week and health. Never fatal: an older server without these
+  /// routes just leaves them empty, and the rest of the app keeps working.
+  Future<void> loadWeek() async {
+    try {
+      final r = await Future.wait([api.week(), api.health()]);
+      week = r[0] as Week;
+      health = r[1] as HealthState;
+    } catch (_) {
+      // keep whatever we had
+    }
+    notifyListeners();
+  }
+
+  /// Apply a change the server answered with a new week (move, skip, restore).
+  void setWeek(Week w) {
+    week = w;
+    notifyListeners();
+  }
+
+  Future<void> setHealth(String status, {String? area}) async {
+    health = await api.setHealth(status, area: area);
+    await loadWeek();
+  }
+
   void _signedOut() {
     _poll?.cancel();
+    week = null;
+    health = null;
     me = null;
     videos = [];
     coach = null;
@@ -120,6 +150,7 @@ class AppState extends ChangeNotifier {
       videos = results[0] as List<Video>;
       coach = results[1] as CoachSummary;
       error = null;
+      await loadWeek();
     } catch (e) {
       error = '$e';
     } finally {

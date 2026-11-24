@@ -16,6 +16,7 @@ The player API: what the Tracka mobile and web app talk to.
     DELETE /v1/videos/{id}          delete
     GET    /v1/coach                the coach summary across all clips + skillAreas (bands, Me tab)
     GET    /v1/opportunities        empty for now ("coming soon")
+    …      /v1/week, /v1/sessions, /v1/events, /v1/health: training (see training_routes.py)
 
 Versioned under /v1: once phones have the app installed you can't update
 them all at once, so breaking changes go to /v2 while /v1 keeps working.
@@ -134,6 +135,9 @@ class SettingsIn(Body):
     main_colour: Literal["volt", "blue", "pink", "ice", "aqua"] | None = None
     reduce_motion: bool | None = None
     upload_on_wifi_only: bool | None = None
+    sessions_per_week: int | None = Field(
+        None, ge=0, le=6
+    )  # how many Pep sessions to fit around your football
 
 
 class ProfileIn(Body):
@@ -381,3 +385,9 @@ def coach(user: dict = Depends(auth.current_user)) -> dict:
 def opportunities(user: dict = Depends(auth.current_user)) -> dict:
     """Trials, academies and tournaments will appear here. Not built yet: the app shows 'coming soon'."""
     return {"comingSoon": True, "items": []}
+
+
+# ---------------------------------------------------------------- training (week, sessions, events, health)
+from .training_routes import router as training_router  # noqa: E402  (after this router exists)
+
+router.include_router(training_router)
