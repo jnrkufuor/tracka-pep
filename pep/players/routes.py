@@ -46,7 +46,7 @@ from ..contracts import POSITIONS, AnalysisRequest, Calibration, Point
 from ..drills.runner import drill_catalogue
 from ..log import get_logger
 from ..storage import storage
-from . import auth, details, store
+from . import auth, details, review, store
 from .coach import summary
 from .skill_areas import skill_areas
 
@@ -267,7 +267,7 @@ class UploadMeta(Body):
     calibration: Calibration | None = None
 
 
-def _video_view(v: dict, base: str, full: bool = False) -> dict:
+def _video_view(v: dict, base: str, full: bool = False, kit: list[str] | None = None) -> dict:
     """base: this API's own address. Local-disk storage gives links like /files/...,
     which only work from another website (the app) once they're absolute."""
 
@@ -287,12 +287,17 @@ def _video_view(v: dict, base: str, full: bool = False) -> dict:
         "confidence": r.get("confidence"),
         "thumbnailUrl": link(v["thumb_key"]) if v.get("thumb_key") else None,
     }
+    rv = review.review(r if v.get("status") == "READY" else None, kit)
+    if rv is not None:
+        view["reviewNote"] = rv["note"]  # the line under it in Pep › Reviews
     if full:
         view |= {
             "videoUrl": link(v["video_key"]),
             "overlayUrl": link(v["overlay_key"]) if v.get("overlay_key") else None,
             "error": r.get("error") or v.get("error"),
             "analysis": r if v.get("status") == "READY" else None,
+            # Pep's review as a story: headline, moments, tips with drills (pep/players/review.py)
+            "review": rv,
         }
     return view
 
@@ -370,7 +375,8 @@ def one_video(video_id: str, req: Request, user: dict = Depends(auth.current_use
     v = store.get_video(user["id"], video_id)
     if v is None:
         raise HTTPException(404, "Video not found.")
-    return _video_view(v, str(req.base_url), full=True)
+    kit = store.get_profile(user["id"])["settings"].get("kit")
+    return _video_view(v, str(req.base_url), full=True, kit=kit)
 
 
 class RenameIn(Body):
@@ -411,6 +417,19 @@ def coach(user: dict = Depends(auth.current_user)) -> dict:
     out = summary(videos, p["positions"])
     out["skillAreas"] = skill_areas(videos, p["positions"], store.age_on(p["birth_date"]), p["sex"])
     return out
+
+
+@router.get("/tips")
+def tips(req: Request, user: dict = Depends(auth.current_user)) -> list[dict]:
+    """
+    Pep › Tips: every tip from the player's ready clips, newest first. Each one says
+    which clip and moment it came from (so the app can jump there) and the drill
+    Pep picked for the player's kit. Only the logged-in player's own clips.
+    """
+    videos = store.list_videos(user["id"])
+    kit = store.get_profile(user["id"])["settings"].get("kit")
+    thumbs = {v["id"]: _video_view(v, str(req.base_url))["thumbnailUrl"] for v in videos}
+    return [t | {"thumbnailUrl": thumbs.get(t["videoId"])} for t in review.all_tips(videos, kit)]
 
 
 @router.get("/opportunities")

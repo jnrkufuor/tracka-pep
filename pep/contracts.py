@@ -103,6 +103,20 @@ class Moment(Wire):
     at_seconds: float = Field(ge=0)
     kind: Literal["GOOD", "WORK_ON"]
     text: str = Field(max_length=300)
+    # Pep extras (tracka-api's schema ignores unknown keys): a few-word title and the
+    # skill area (pep/data/skill_areas.json id) the moment is about.
+    title: str | None = Field(None, max_length=60)
+    area: str | None = Field(None, max_length=40)
+
+
+class ReviewTip(Wire):
+    """One thing to practise, tied to a moment in the clip and a skill area. Words only:
+    Pep picks the drill itself, from the player's kit (pep/players/review.py)."""
+
+    area: str = Field(max_length=40)
+    title: str = Field(max_length=60)
+    text: str = Field(max_length=300)
+    at_seconds: float | None = Field(None, ge=0)
 
 
 class RoleFit(Wire):
@@ -129,6 +143,8 @@ class CoachResult(Wire):
     role_fit: list[RoleFit] = Field(default_factory=list)
     metrics: dict[str, float | None] = Field(default_factory=dict)
     summary: str | None = Field(None, max_length=600)
+    headline: str | None = Field(None, max_length=60)
+    tips: list[ReviewTip] = Field(default_factory=list, max_length=6)
     coach_source: Literal["gemini", "rules"] | None = None
 
     @classmethod

@@ -58,6 +58,7 @@ tracka-pep/
 │   │   ├── coach.py              the player's dashboard: overall score, trend, focus skill, drill, roles
 │   │   ├── training.py           the week (computed), Pep sessions, events, health: tables + rules
 │   │   ├── training_routes.py    /v1/week, /v1/sessions, /v1/events, /v1/health
+│   │   ├── review.py             Pep's review of a clip: headline, moments, tips + kit-aware drills (/v1/tips)
 │   │   ├── details.py            onboarding v2 details (shirt, town, level, goal, style, weaker foot, guardian phone)
 │   │   └── skill_areas.py        Me tab: bands, measured averages, confidence, trend per skill area
 │   ├── api/app.py                FastAPI app: mounts /v1, /analyses (tracka-api contract), /lab/* (staff console),
@@ -98,6 +99,7 @@ tracka-pep/
 | …change | go to |
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
+| Pep's reviews and tips | `pep/players/review.py`, `app/lib/screens/review_screens.dart` |
 | onboarding steps (Meet Pep → 5 steps → All set) | `app/lib/screens/onboarding_screen.dart`, `pep/players/details.py` |
 | what the app gets from the API | `pep/players/routes.py` (and `app/lib/api/models.dart`) |
 | the player's dashboard numbers | `pep/players/coach.py` |

@@ -409,15 +409,26 @@ def session_minutes(mode: str) -> int:
     return 30
 
 
-def focus_areas(areas: dict, limit: int = 2) -> list[dict]:
-    """The areas a session works on: weakest key areas first, then key areas not measured yet."""
-    items = [i for g in areas.get("groups", []) for i in g["items"] if i["state"] in ("measured", "not_seen")]
+def focus_areas(areas: dict, limit: int = 2, prefer: list[str] | None = None) -> list[dict]:
+    """
+    The areas a session works on: what Pep's latest review said to work on (`prefer`)
+    first, then the weakest key areas, then key areas not measured yet. That's how a
+    tip in a review becomes "New drill in your plan" (pep/players/review.py).
+    """
+    prefer = prefer or []
+    items = [
+        i
+        for g in areas.get("groups", [])
+        for i in g["items"]
+        if i["state"] in ("measured", "not_seen") or i["id"] in prefer
+    ]
     trainable = {a for d in library()["drills"] for a in d["areas"]}
     items = [i for i in items if i["id"] in trainable]
 
     def rank(i: dict) -> tuple:
         measured = i["state"] == "measured"
-        return (not i["key"], not measured, BAND_ORDER.get(i["band"] or "", 9))
+        first = prefer.index(i["id"]) if i["id"] in prefer else len(prefer)
+        return (first, not i["key"], not measured, BAND_ORDER.get(i.get("band") or "", 9))
 
     return [{"id": i["id"], "name": i["name"]} for i in sorted(items, key=rank)[:limit]]
 
