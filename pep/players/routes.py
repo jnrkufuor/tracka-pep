@@ -14,7 +14,7 @@ The player API: what the Tracka mobile and web app talk to.
     GET    /v1/videos/{id}          one clip + its analysis
     PATCH  /v1/videos/{id}          rename
     DELETE /v1/videos/{id}          delete
-    GET    /v1/coach                the coach summary across all clips
+    GET    /v1/coach                the coach summary across all clips + skillAreas (bands, Me tab)
     GET    /v1/opportunities        empty for now ("coming soon")
 
 Versioned under /v1: once phones have the app installed you can't update
@@ -47,6 +47,7 @@ from ..log import get_logger
 from ..storage import storage
 from . import auth, store
 from .coach import summary
+from .skill_areas import skill_areas
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["player app"])
@@ -364,7 +365,16 @@ def remove(video_id: str, user: dict = Depends(auth.current_user)) -> None:
 
 @router.get("/coach")
 def coach(user: dict = Depends(auth.current_user)) -> dict:
-    return summary(store.list_videos(user["id"]), store.get_profile(user["id"])["positions"])
+    """
+    The coach summary (Home and Pep) plus `skillAreas` (Me › Growth): bands, measured
+    averages, confidence and trends compared with the player's age group. The old
+    `overallScore` stays for installed apps; the new design doesn't show it.
+    """
+    videos = store.list_videos(user["id"])
+    p = store.get_profile(user["id"])
+    out = summary(videos, p["positions"])
+    out["skillAreas"] = skill_areas(videos, p["positions"], store.age_on(p["birth_date"]), p["sex"])
+    return out
 
 
 @router.get("/opportunities")

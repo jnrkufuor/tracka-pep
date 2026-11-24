@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/common.dart';
+import '../widgets/ds.dart';
 import '../widgets/profile_fields.dart';
+import '../widgets/skill_areas_view.dart';
 
 /// Your profile and settings.
 class ProfileScreen extends StatelessWidget {
@@ -66,6 +68,10 @@ class ProfileScreen extends StatelessWidget {
               _Info('Email', me.email),
             ]),
           ),
+          if (s.coach?.skillAreas != null) ...[
+            const SizedBox(height: 26),
+            SkillAreasView(areas: s.coach!.skillAreas!),
+          ],
           const SizedBox(height: 26),
           const Eyebrow('Settings'),
           const SizedBox(height: 10),
@@ -93,6 +99,28 @@ class ProfileScreen extends StatelessWidget {
                 title: const Text('Tell me when a clip is ready'),
                 value: st.notifyWhenReady,
                 onChanged: (v) => setting('notifyWhenReady', v),
+              ),
+              ListTile(
+                title: const Text('Main colour'),
+                subtitle: Text(MainColour.fromName(st.mainColour).label),
+                trailing: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: MainColour.fromName(st.mainColour).main),
+                ),
+                onTap: () => showEditSheet<void>(context, title: 'Main colour', child: const MainColourPicker()),
+              ),
+              SwitchListTile(
+                title: const Text('Reduce motion'),
+                subtitle: const Text('Less movement on screen. Your phone\'s own setting also works.'),
+                value: st.reduceMotion,
+                onChanged: (v) => setting('reduceMotion', v),
+              ),
+              SwitchListTile(
+                title: const Text('Upload on Wi-Fi only'),
+                subtitle: const Text('Saves your data. Clips wait until you\'re on Wi-Fi.'),
+                value: st.uploadOnWifiOnly,
+                onChanged: (v) => setting('uploadOnWifiOnly', v),
               ),
               const SwitchListTile(
                 title: Text('Share my profile with scouts'),
@@ -272,5 +300,67 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ]),
       ),
     );
+  }
+}
+
+
+/// Settings › Main colour (canvas: "Settings › Main colour"). Tap a colour and
+/// the whole app re-colours at once; it saves straight away. Pep stays purple
+/// and warnings stay gold whatever you pick.
+class MainColourPicker extends StatelessWidget {
+  const MainColourPicker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.watch<AppState>();
+    final current = MainColour.fromName(s.settings.mainColour);
+    Future<void> pick(MainColour c) async {
+      try {
+        await s.saveSettings({'mainColour': c.name});
+      } catch (_) {
+        if (context.mounted) {
+          showToast(context, "Couldn't save that", detail: 'Check your connection and try again.', aboveTabs: false, ok: false);
+        }
+      }
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('The colour that marks you: your buttons, your progress and your player card.',
+          style: TextStyle(fontSize: 14, color: Tk.muted, height: 1.45)),
+      const SizedBox(height: 20),
+      Wrap(spacing: 14, runSpacing: 16, children: [
+        for (final c in MainColour.values)
+          Semantics(
+            button: true,
+            selected: c == current,
+            label: c.label,
+            excludeSemantics: true,
+            child: Pressable(
+              onTap: () => pick(c),
+              child: SizedBox(
+                width: 64,
+                child: Column(children: [
+                  AnimatedContainer(
+                    duration: Motion.of(context, Motion.select),
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: c.main,
+                      border: Border.all(color: c == current ? Tk.ink : Colors.transparent, width: 2.5),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(c.label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11.5, color: c == current ? Tk.ink : Tk.muted, fontWeight: c == current ? FontWeight.w700 : FontWeight.w500)),
+                ]),
+              ),
+            ),
+          ),
+      ]),
+      const SizedBox(height: 22),
+      const InfoNote('Pep always stays purple and warnings always stay gold. People you share your card with see your colour.'),
+    ]);
   }
 }

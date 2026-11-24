@@ -54,13 +54,15 @@ tracka-pep/
 │   │   ├── routes.py             auth, /me (profile + settings), /meta, /videos, /coach, /opportunities
 │   │   ├── auth.py               scrypt password hashing, JWT access + refresh tokens (rotation, reuse detection)
 │   │   ├── store.py              tables: users, profiles, videos, sessions
-│   │   └── coach.py              the player's dashboard: overall score, trend, focus skill, drill, roles
+│   │   ├── coach.py              the player's dashboard: overall score, trend, focus skill, drill, roles
+│   │   └── skill_areas.py        Me tab: bands, measured averages, confidence, trend per skill area
 │   ├── api/app.py                FastAPI app: mounts /v1, /analyses (tracka-api contract), /lab/* (staff console),
 │   │                             /files (signed local links), /healthz /readyz /metrics
 │   └── data/
 │       ├── norms.json            reference values per age band (starter priors: replace with real data)
 │       ├── roles.json            scout roles and skill weights (football opinion: review with coaches)
-│       └── drills.json           drill definitions and cone layouts
+│       ├── drills.json           drill definitions and cone layouts
+│       └── skill_areas.json      skill areas by group, their measurements, key areas per position
 ├── web/                          Pep Lab: a staff console (plain HTML/CSS/JS served by the API)
 │   ├── index.html, app.css, app.js
 │   └── assets/                   fonts, brand/ (logo, app icon), icons/ (+ icons/line/) + icons.js (generated)
@@ -93,6 +95,7 @@ tracka-pep/
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | what the app gets from the API | `pep/players/routes.py` (and `app/lib/api/models.dart`) |
 | the player's dashboard numbers | `pep/players/coach.py` |
+| the Me tab's skill areas, bands, key areas per position | `pep/players/skill_areas.py`, `pep/data/skill_areas.json` |
 | sign-up, login, tokens | `pep/players/auth.py` |
 | app colours, fonts, motion | `app/lib/theme/tokens.dart`, `motion.dart` (theme.dart builds from them) |
 | a shared app component | `app/lib/widgets/ds.dart` |

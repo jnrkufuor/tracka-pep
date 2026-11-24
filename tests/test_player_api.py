@@ -134,6 +134,11 @@ def test_upload_analyse_library_and_coach_summary(blank_video, fake_perceiver):
         coach = client.get("/v1/coach", headers=headers(h)).json()
         assert coach["clipsAnalysed"] == 3 and coach["overallScore"] is not None
         assert coach["skills"] and coach["focus"] and coach["trend"]
+        # Me tab: skill areas with bands, measured from the clips (top speed is measured by the fake perceiver)
+        areas = coach["skillAreas"]
+        assert areas["ageGroup"] and areas["groups"]
+        top = next(i for g in areas["groups"] for i in g["items"] if i["id"] == "top_speed")
+        assert top["state"] == "measured" and top["band"] and "km/h" in top["average"]
         assert client.get("/v1/opportunities", headers=headers(h)).json() == {"comingSoon": True, "items": []}
 
 
