@@ -60,6 +60,20 @@ class AppState extends ChangeNotifier {
   HealthState? health;
   bool loadingVideos = false;
 
+  /// Pep's tour ("Show me around") is showing over Home.
+  bool tourPending = false;
+
+  void startTour() {
+    tourPending = true;
+    notifyListeners();
+  }
+
+  void endTour() {
+    tourPending = false;
+    notifyListeners();
+    saveSettings({'tourSeen': true}).catchError((_) {});
+  }
+
   /// Unread notifications (the dot on the bell).
   int unread = 0;
   String? error;

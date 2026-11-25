@@ -378,6 +378,14 @@ class HelpScreen extends StatelessWidget {
           Panel(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(children: [
+              ListTile(
+                title: const Text('Show me around'),
+                subtitle: const Text("Pep's tour of Home, again"),
+                onTap: () {
+                  context.read<AppState>().startTour();
+                  Navigator.of(context).popUntil((r) => r.isFirst);
+                },
+              ),
               ListTile(title: const Text('Report a problem'), subtitle: const Text('Something broke, someone is unsafe, or an idea'), onTap: () => _report(context)),
               ListTile(
                 title: const Text('Terms of use'),
