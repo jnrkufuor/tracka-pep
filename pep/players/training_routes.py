@@ -255,3 +255,48 @@ def get_health(user: dict = Depends(auth.current_user)) -> dict:
 def put_health(body: HealthIn, user: dict = Depends(auth.current_user)) -> dict:
     h = training.set_health(user["id"], body.status, body.area if body.status != "fine" else None)
     return {"status": h["status"], "area": h["area"], "advice": ADVICE[h["status"]]}
+
+
+# ---------------------------------------------------------------- focus and tests
+
+
+@router.get("/focus")
+def focus(user: dict = Depends(auth.current_user)) -> dict:
+    """
+    Pep › Focus and tests: what the sessions work on now (the same rule the plan
+    uses, so the two always agree), the next test, your bests, and the areas
+    growing fastest ("Your game is growing" on the Pep tab). Bands and words,
+    never a 0-100 score.
+    """
+    from .card import best_results
+
+    uid = user["id"]
+    videos = store.list_videos(uid)
+    p = store.get_profile(uid)
+    areas = skill_areas(videos, p["positions"], store.age_on(p["birth_date"]), p["sex"])
+    items = {i["id"]: i | {"group": g["name"]} for g in areas["groups"] for i in g["items"]}
+    keep = ("id", "name", "group", "state", "band", "trend", "confidence", "average")
+    now_on = [{k: items[f["id"]].get(k) for k in keep} for f in _focus(uid, videos) if f["id"] in items]
+    growing = [{k: i.get(k) for k in keep} for i in items.values() if i["trend"] == "growing"][:3]
+
+    today = _today()
+    wk = training.week(uid, training.monday_of(today), today, _per_week(uid), videos)
+    nxt = None
+    for d in wk["days"]:
+        for it in d["items"]:
+            if it["kind"] == "test" and d["date"] >= today.isoformat():
+                nxt = {"drill": it["drill"], "name": it["title"], "date": d["date"]}
+                break
+        if nxt:
+            break
+    if nxt is None:
+        due = training.tests_due(videos, today)
+        if due:
+            nxt = {"drill": due[0], "name": training.library()["tests"][due[0]]["name"], "date": None}
+    return {
+        "focus": now_on,
+        "growing": growing,
+        "nextTest": nxt,
+        "bests": best_results(videos),
+        "comparedWith": areas["comparedWith"],
+    }

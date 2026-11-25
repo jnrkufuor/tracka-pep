@@ -175,7 +175,10 @@ contrast ratio
 9. Post a clip from one account and open the Feed from another. Then
    report it from three more accounts. In `tests/test_pitchside.py`, which
    assert proves the feed never carries Pep's notes?
-10. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
+10. `PepScreen.weekLine` turns your week into one sentence ("You have a
+   match tomorrow. Keep today light."). Add the case of a match in 3 days to
+   `test/pep_tab_test.dart`, then make it pass.
+11. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
    to the contrast test's list. Does it pass? Even if it did, why would
    Tracka still not offer it as a main colour?
 

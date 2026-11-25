@@ -45,7 +45,7 @@ class ApiClient {
   /// True while the last call couldn't reach Tracka and a saved copy was shown.
   final ValueNotifier<bool> offline = ValueNotifier(false);
 
-  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian', '/v1/challenges', '/v1/pitches', '/v1/notifications'];
+  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian', '/v1/challenges', '/v1/pitches', '/v1/notifications', '/v1/focus'];
   static bool _cacheable(String method, String path) => method == 'GET' && _cached.any((p) => path == p || path.startsWith('$p?'));
   String? _access;
   String? _refresh;
@@ -215,6 +215,8 @@ class ApiClient {
   }
 
   // ------------------------------------------------------------- coach
+
+  Future<FocusState> focus() async => FocusState.fromJson(await _send('GET', '/v1/focus') as Map<String, dynamic>);
 
   // ------------------------------------------------------------- notifications
 
