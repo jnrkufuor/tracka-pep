@@ -107,6 +107,8 @@ class AppSettings {
     this.notifications = const {},
     this.quietHours = true,
     this.homeCards,
+    this.textSize = 'm',
+    this.pepVoice = 'coach',
   });
 
   final String units;
@@ -138,6 +140,14 @@ class AppSettings {
   /// Home: the cards shown, in order. Null = Pep's suggestion (Customise home).
   final List<String>? homeCards;
 
+  /// Settings › Accessibility: s | m | l | xl.
+  final String textSize;
+
+  /// Settings › How Pep talks to you: street | coach.
+  final String pepVoice;
+
+  double get textScale => switch (textSize) { 's' => 0.9, 'l' => 1.15, 'xl' => 1.3, _ => 1.0 };
+
   /// Every field has a default, so an older server that doesn't send the new
   /// ones still works (add fields, never rename them: see CLAUDE.md).
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -153,6 +163,8 @@ class AppSettings {
         notifications: (j['notifications'] as Map<String, dynamic>? ?? const {}).map((k, v) => MapEntry(k, v as bool)),
         quietHours: j['quietHours'] as bool? ?? true,
         homeCards: (j['homeCards'] as List?)?.cast<String>(),
+        textSize: j['textSize'] as String? ?? 'm',
+        pepVoice: j['pepVoice'] as String? ?? 'coach',
       );
 
   /// Speed in the player's chosen unit.

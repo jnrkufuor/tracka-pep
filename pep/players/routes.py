@@ -150,6 +150,9 @@ class SettingsIn(Body):
     quiet_hours: bool | None = None  # 9 pm to 7 am; always on for under-18s
     # Home: the cards shown, in order (Customise home). Unknown ids are ignored by the app.
     home_cards: list[str] | None = Field(None, max_length=20)
+    # Settings › Accessibility
+    text_size: Literal["s", "m", "l", "xl"] | None = None
+    high_contrast: bool | None = None
 
 
 class ProfileIn(Body):
@@ -507,3 +510,7 @@ router.include_router(notifications_router)
 from .progress import router as progress_router  # noqa: E402
 
 router.include_router(progress_router)
+
+from .account import router as account_router  # noqa: E402
+
+router.include_router(account_router)

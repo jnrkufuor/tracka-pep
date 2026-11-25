@@ -177,6 +177,9 @@ learning · re-identification · action recognition
 6. Share your card, open the link in a private browser window, then turn
    the link off and reload. Now add a field to `card_data` and write the
    test that proves it doesn't leak the player's town.
+7. Settings › Your data › Download your data. Open the file: which tables
+   are in it, and which are left out on purpose (`SKIP_TABLES` in
+   `pep/players/account.py`)? Why would leaving `sessions` in be a problem?
 
 **Questions**
 

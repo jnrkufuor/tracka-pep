@@ -33,10 +33,16 @@ class TrackaApp extends StatelessWidget {
     // The player's main colour and reduce-motion choice re-theme the whole app.
     final colour = context.select<AppState, String>((s) => s.settings.mainColour);
     Motion.appSetting = context.select<AppState, bool>((s) => s.settings.reduceMotion);
+    // Settings › Accessibility › Text size, on top of the phone's own text size.
+    final scale = context.select<AppState, double>((s) => s.settings.textScale);
     return MaterialApp(
       title: 'Tracka',
       debugShowCheckedModeBanner: false,
       theme: trackaTheme(colour: MainColour.fromName(colour)),
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear((mq.textScaler.scale(14) / 14 * scale).clamp(0.85, 2.0))), child: child!);
+      },
       home: AnimatedSwitcher(
         duration: Motion.enter,
         child: switch (stage) {
@@ -49,3 +55,4 @@ class TrackaApp extends StatelessWidget {
     );
   }
 }
+

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../config.dart';
+import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
 import 'home_screen.dart';
 import 'pep_screen.dart';
 import 'pitchside_screen.dart';
 import 'profile_screen.dart';
+import 'training_screens.dart' show WeekScreen, showEventSheet;
 import 'upload_screen.dart';
 import 'video_screen.dart';
 
@@ -38,7 +41,8 @@ class ShellState extends State<Shell> {
 
   void go(int i) => setState(() => index = i);
 
-  void _add() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UploadScreen()));
+  /// The + button (canvas: The + button): what do you want to do?
+  void _add() => showPlusSheet(context);
 
   @override
   Widget build(BuildContext context) {
@@ -132,4 +136,40 @@ class TabBarT extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// What do you want to do? Film a clip, this week's challenge, an event, or log a session.
+Future<void> showPlusSheet(BuildContext context) {
+  final s = context.read<AppState>();
+  Widget row(BuildContext ctx, String icon, String title, String sub, Future<void> Function() go) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: IconTile(icon: icon, color: ctx.accent.main, background: ctx.accent.tile, size: 40),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(sub),
+        onTap: () async {
+          Navigator.of(ctx).pop();
+          await go();
+        },
+      );
+  return showEditSheet<void>(
+    context,
+    title: 'What do you want to do?',
+    child: Builder(
+      builder: (ctx) => Column(children: [
+        row(ctx, 'camera', 'Film a clip', 'Pep watches it and sends you tips',
+            () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UploadScreen()))),
+        row(ctx, 'trophy', "Try this week's challenge", 'Film your go. It stays private unless you post it', () async {
+          try {
+            final c = await s.api.challenges();
+            if (context.mounted) {
+              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChallengeRecordScreen(challenge: c.thisWeek)));
+            }
+          } catch (_) {}
+        }),
+        row(ctx, 'calendar', 'Create an event', 'A match, a casual game or training', () => showEventSheet(context)),
+        row(ctx, 'check', 'Log a session', 'Something you did without filming', () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WeekScreen()))),
+      ]),
+    ),
+  );
 }
