@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/common.dart' show TrackaLogo;
 import '../widgets/ds.dart';
+import '../widgets/tour.dart' show TourKeys;
 import 'feed_screens.dart';
 import 'guardian_screens.dart' show GuardianCard;
 import 'notifications_screen.dart' show BellButton;
@@ -133,10 +134,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _card(String id) => switch (id) {
-        'road' => const _RoadCard(),
+        'road' => KeyedSubtree(key: TourKeys.road, child: const _RoadCard()),
         'week' => const TodayCard(),
         'noticed' => const _NoticedCard(),
-        'progress' => _ProgressCard(p: progress),
+        'progress' => KeyedSubtree(key: TourKeys.progress, child: _ProgressCard(p: progress)),
         'challenge' => _ChallengeCard(c: challenges),
         'readiness' => _ReadinessCard(p: progress),
         'streak' => _StreakCard(p: progress),

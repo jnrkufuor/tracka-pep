@@ -5,6 +5,7 @@ import '../config.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
+import '../widgets/tour.dart';
 import 'home_screen.dart';
 import 'pep_screen.dart';
 import 'pitchside_screen.dart';
@@ -46,7 +47,8 @@ class ShellState extends State<Shell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final s = context.watch<AppState>();
+    final scaffold = Scaffold(
       body: IndexedStack(index: index, children: [
         HomeScreen(onOpenTab: go),
         const PitchsideScreen(),
@@ -55,6 +57,9 @@ class ShellState extends State<Shell> {
       ]),
       bottomNavigationBar: TabBarT(index: index, onTab: go, onAdd: _add),
     );
+    if (!s.tourPending) return scaffold;
+    if (index != 0) WidgetsBinding.instance.addPostFrameCallback((_) => go(0));
+    return Stack(children: [scaffold, Positioned.fill(child: TourOverlay(onDone: s.endTour))]);
   }
 }
 
@@ -77,7 +82,9 @@ class TabBarT extends StatelessWidget {
       // Pep's tab is purple when open (Pep's colour); the others use your main colour.
       final colour = !on ? Tk.faint : (i == 2 ? Tk.pep : a.main);
       return Expanded(
-        child: Semantics(
+        child: KeyedSubtree(
+          key: i == 2 ? TourKeys.pepTab : null,
+          child: Semantics(
           selected: on,
           button: true,
           label: _tabs[i].$2,
@@ -98,6 +105,7 @@ class TabBarT extends StatelessWidget {
             ),
           ),
         ),
+        ),
       );
     }
 
@@ -117,6 +125,7 @@ class TabBarT extends StatelessWidget {
                   label: 'Add a clip',
                   excludeSemantics: true,
                   child: Pressable(
+                    key: TourKeys.plus,
                     onTap: onAdd,
                     child: Container(
                       width: 42,

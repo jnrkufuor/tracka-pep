@@ -153,6 +153,7 @@ class SettingsIn(Body):
     # Settings › Accessibility
     text_size: Literal["s", "m", "l", "xl"] | None = None
     high_contrast: bool | None = None
+    tour_seen: bool | None = None  # Pep's tour ("Show me around") was shown
 
 
 class ProfileIn(Body):

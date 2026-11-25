@@ -733,6 +733,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       FilledButton(
         onPressed: () async {
           await showHowPepWorks(context);
+          s.startTour();
           await s.finishOnboarding();
         },
         child: const Text('Show me around'),

@@ -178,7 +178,10 @@ contrast ratio
 10. `PepScreen.weekLine` turns your week into one sentence ("You have a
    match tomorrow. Keep today light."). Add the case of a match in 3 days to
    `test/pep_tab_test.dart`, then make it pass.
-11. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
+11. Pep's tour finds what to point at with GlobalKeys (`lib/widgets/tour.dart`).
+   Hide "Tests and PBs" in Customise home, then run the tour from Settings ›
+   Help. What does step 2 do when its card isn't there, and which line decides?
+12. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
    to the contrast test's list. Does it pass? Even if it did, why would
    Tracka still not offer it as a main colour?
 
