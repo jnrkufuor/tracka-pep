@@ -11,6 +11,7 @@ import '../theme/theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ds.dart';
 import '../widgets/skill_card.dart';
+import 'feed_screens.dart' show showPostSheet;
 import 'review_screens.dart' show ReviewView;
 
 /// One clip: the video (yours, or "what Pep saw"), key moments, and Pep's analysis.
@@ -90,6 +91,10 @@ class _VideoScreenState extends State<VideoScreen> {
   Future<void> _menu(String action) async {
     final s = context.read<AppState>();
     final nav = Navigator.of(context);
+    if (action == 'post') {
+      await showPostSheet(context, widget.videoId);
+      return;
+    }
     if (action == 'rename') {
       final controller = TextEditingController(text: _v?.title);
       final title = await showDialog<String>(
@@ -145,9 +150,10 @@ class _VideoScreenState extends State<VideoScreen> {
               color: TColors.surface2,
               onSelected: _menu,
               icon: const LoopyIcon('settings', size: 24),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'rename', child: Text('Rename')),
-                PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: TColors.cherry))),
+              itemBuilder: (_) => [
+                if (v.status == 'READY') const PopupMenuItem(value: 'post', child: Text('Post on Pitchside')),
+                const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: TColors.cherry))),
               ],
             ),
         ],

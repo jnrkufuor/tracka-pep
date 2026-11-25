@@ -424,6 +424,23 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
             Text('Off', style: TextStyle(color: Tk.faint)),
           ]),
         ),
+        const SizedBox(height: 10),
+        Panel(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: SwitchListTile(
+            title: const Text('Show up in search'),
+            subtitle: Text(minor ? 'Other players your age can find you. Your guardian has to agree.' : 'Other players can find you on Pitchside.'),
+            value: me?.settings.findable ?? false,
+            onChanged: (v) async {
+              await s.saveSettings({'findable': v});
+              if (v && minor && context.mounted) {
+                final g = await s.api.guardian().catchError((_) => GuardianState(needed: true, status: 'none'));
+                if (!g.can('search') && context.mounted) await showAskGuardian(context, 'search');
+              }
+              if (mounted) setState(() {});
+            },
+          ),
+        ),
         const SizedBox(height: 18),
         const SectionLabel('Always private'),
         Panel(

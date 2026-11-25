@@ -1,0 +1,26 @@
+{
+  "_about": [
+    "Pitchside challenges. 'weekly' rotate one per ISO week (week number modulo the list); each is a Tracka drill Pep can measure, so results are numbers from measurement and count on Me as a skill area.",
+    "'fun' challenges are always on: no measurement, just clips players post. Football opinion: review with coaches."
+  ],
+  "version": "challenges-2026-11",
+  "weekly": [
+    {"id": "wall_passes_weak", "name": "Weak-foot wall passes in 30 seconds", "short": "Weak-foot wall passes", "group": "Skills", "area": "weak_foot", "drill": "wall_passes", "metric": "wall_passes_30s", "unit": "", "lower": false, "result": "clean passes in 30 seconds",
+     "how": "Weaker foot only. Every clean pass back to you counts.",
+     "steps": ["Stand 2 big steps from a wall", "Phone 3 to 4 steps back, on its side", "Go when the timer beeps"]},
+    {"id": "juggling", "name": "Keepy-ups: how many in a row?", "short": "Keepy-ups in a row", "group": "Skills", "area": "ball_mastery", "drill": "juggling", "metric": "juggles_best", "unit": "", "lower": false, "result": "keepy-ups in a row",
+     "how": "Any part of the body except your arms. Your best run counts.",
+     "steps": ["Find flat ground with space around you", "Phone on its side, all of you in shot", "Start with the ball in your hands"]},
+    {"id": "shuttle", "name": "5-10-5 shuttle", "short": "5-10-5 shuttle", "group": "Body", "area": "agility", "drill": "agility_5105", "metric": "agility_5105_s", "unit": "s", "lower": true, "result": "seconds",
+     "how": "Three cones 5 metres apart. Touch each line with your hand.",
+     "steps": ["Put 3 cones in a line, 5 m apart", "Phone side-on, all 3 cones in shot", "Mark the cones when you upload"]},
+    {"id": "sprint", "name": "30 m sprint", "short": "30 m sprint", "group": "Body", "area": "top_speed", "drill": "sprint_30m", "metric": "sprint_30m_s", "unit": "s", "lower": true, "result": "seconds",
+     "how": "Flat out from a standing start. Fastest time wins.",
+     "steps": ["Mark 0, 10 and 30 m with cones", "Phone side-on, far enough back to see the whole run", "Mark the cones when you upload"]}
+  ],
+  "fun": [
+    {"id": "crossbar", "name": "Crossbar challenge", "how": "Hit the bar from the edge of the box."},
+    {"id": "keepy_friend", "name": "Keepy-uppies with a friend", "how": "Pass it back and forth, no bounce."},
+    {"id": "trick_bin", "name": "Trick shot into a bin", "how": "Any trick, any distance."}
+  ]
+}

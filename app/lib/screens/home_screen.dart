@@ -97,8 +97,8 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-Future<void> openUpload(BuildContext context, {String? drill}) =>
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => UploadScreen(drill: drill)));
+Future<void> openUpload(BuildContext context, {String? drill, String? challenge, String? title}) =>
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => UploadScreen(drill: drill, challenge: challenge, title: title)));
 
 class _ScoreCard extends StatelessWidget {
   const _ScoreCard({required this.coach});

@@ -14,9 +14,13 @@ import 'uploads_screen.dart';
 
 /// Upload a clip: pick it, say what it is, tap yourself (and the cones, for a drill), send it to Pep.
 class UploadScreen extends StatefulWidget {
-  const UploadScreen({super.key, this.drill});
+  const UploadScreen({super.key, this.drill, this.challenge, this.title});
 
   final String? drill;
+
+  /// A Pitchside challenge id: the clip counts as an attempt (private unless posted).
+  final String? challenge;
+  final String? title;
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
@@ -37,6 +41,8 @@ class _UploadScreenState extends State<UploadScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.title != null) _title.text = widget.title!;
+    if (widget.challenge != null && widget.drill == null) _clipType = 'highlight';
     if (widget.drill != null) {
       _clipType = 'drill';
       _drill = widget.drill;
@@ -107,6 +113,7 @@ class _UploadScreenState extends State<UploadScreen> {
       'title': _title.text.trim(),
       'clipType': _clipType,
       if (_clipType == 'drill') 'drill': _drill,
+      if (widget.challenge != null) 'challenge': widget.challenge,
       if (_target != null) 'target': {'x': _target!.dx, 'y': _target!.dy},
       if (_target != null) 'targetAtSeconds': _targetAt,
       if (_needsCones)

@@ -62,6 +62,7 @@ tracka-pep/
 │   │   ├── guardian_routes.py    /v1/guardian (player), /v1/g/{code} (guardian), /v1/sms/inbound
 │   │   ├── sms.py                texts: PLACEHOLDER outbox until an SMS provider is chosen
 │   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*
+│   │   ├── pitchside.py          Feed, posts, respect, follow, block, report, search, challenges, pitches
 │   │   ├── card.py               player card + share link (/v1/card, /v1/c/{token}); only safe fields
 │   │   ├── review.py             Pep's review of a clip: headline, moments, tips + kit-aware drills (/v1/tips)
 │   │   ├── details.py            onboarding v2 details (shirt, town, level, goal, style, weaker foot, guardian phone)
@@ -105,6 +106,7 @@ tracka-pep/
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | guardian approval | `pep/players/guardian.py`, `app/lib/screens/guardian_screens.dart`, page in `pep/players/pages.py` |
+| Pitchside (feed, challenges, near you) | `pep/players/pitchside.py`, `pep/data/challenges.json`, `app/lib/screens/pitchside_screen.dart`, `feed_screens.dart` |
 | upload queue, offline | `app/lib/state/upload_queue.dart`, `app/lib/api/cache.dart`, `app/lib/screens/uploads_screen.dart`, `upload_keys` in `pep/players/store.py` |
 | player card, share link, privacy | `pep/players/card.py`, `app/lib/screens/card_screens.dart`, page `/c/{token}` in `pages.py` |
 | Pep's reviews and tips | `pep/players/review.py`, `app/lib/screens/review_screens.dart` |

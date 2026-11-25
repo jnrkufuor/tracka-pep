@@ -132,6 +132,17 @@ Phones in Ghana often have slow, costly or patchy data, so the app is built
   **fallback**: possibly old, clearly labelled, never used when the real thing
   answers.
 
+### Pitchside: a small social network, built safe (pep/players/pitchside.py)
+
+A feed looks simple (a list of clips, newest first) but every social app is
+mostly **rules about who sees what**. Pitchside's are written as code and
+checked by tests: posting and being findable need the guardian's yes for
+under-18s, others see a shirt name (never the full name or town), there are
+no messages at all, blocking hides both players from each other, and three
+reports hide a clip until it's reviewed. Pep's review is never sent with
+someone else's clip. Pitches are **crowd-sourced with a check**: one player
+adds it, two others confirm it.
+
 ## Words to know
 client · server · native · cross-platform · Flutter · Dart · React
 Native · PWA · widget · state · state management · Provider · navigation ·
@@ -161,7 +172,10 @@ contrast ratio
 8. In `test/upload_queue_test.dart`, add a test: two clips on mobile data
    with Wi-Fi only on, then switch the fake network to Wi-Fi. Do both go?
    Which line in `UploadQueue` listens for the change?
-9. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
+9. Post a clip from one account and open the Feed from another. Then
+   report it from three more accounts. In `tests/test_pitchside.py`, which
+   assert proves the feed never carries Pep's notes?
+10. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
    to the contrast test's list. Does it pass? Even if it did, why would
    Tracka still not offer it as a main colour?
 
