@@ -277,6 +277,9 @@ class UploadMeta(Body):
     target: Point | None = None
     target_at_seconds: float = 0.0
     calibration: Calibration | None = None
+    # The app's own id for this upload (its upload queue). Sending the same one again
+    # (a retry after the connection dropped) returns the clip already made: no duplicates.
+    client_id: str | None = Field(None, max_length=40)
 
 
 def _video_view(v: dict, base: str, full: bool = False, kit: list[str] | None = None) -> dict:
@@ -341,6 +344,11 @@ async def upload(
     if m.clip_type == "drill" and m.drill not in drill_catalogue():
         raise HTTPException(422, "Pick which drill this is.")
 
+    if m.client_id:
+        done = store.video_for_client_id(user["id"], m.client_id)
+        if done is not None:
+            return {"id": done, "status": "QUEUED", "duplicate": True}
+
     video_id = str(uuid.uuid4())
     suffix = Path(video.filename or "clip.mp4").suffix.lower() or ".mp4"
     key = f"players/{user['id']}/videos/{video_id}{suffix}"
@@ -374,6 +382,8 @@ async def upload(
     )
     job = db.enqueue(request.to_wire(), source="app", video_key=key)
     store.add_video(user["id"], video_id, m.title or "", key, m.clip_type, request.drill, size, job["id"])
+    if m.client_id:
+        store.remember_client_id(user["id"], m.client_id, video_id)
 
     from ..api.app import kick_workers
 

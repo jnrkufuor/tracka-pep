@@ -81,6 +81,17 @@ videos = Table(
 
 # One row per refresh token handed out. Lets us log a device out (revoke) and
 # detect a stolen token being reused (rotation): see auth.py.
+# The app's upload queue retries when a connection drops. It sends its own id for
+# each clip, so a retry that reaches us twice makes one clip, not two. This is an
+# IDEMPOTENCY KEY (handbook chapter 10): doing it again changes nothing.
+upload_keys = Table(
+    "upload_keys",
+    db.metadata,
+    Column("user_id", String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("client_id", String(40), primary_key=True),
+    Column("video_id", String(36), ForeignKey("videos.id", ondelete="CASCADE"), nullable=False),
+)
+
 sessions = Table(
     "sessions",
     db.metadata,
@@ -217,6 +228,21 @@ def add_video(
         )
 
 
+def video_for_client_id(uid: str, client_id: str) -> str | None:
+    with db.engine().connect() as c:
+        row = c.execute(
+            select(upload_keys.c.video_id).where(
+                upload_keys.c.user_id == uid, upload_keys.c.client_id == client_id
+            )
+        ).first()
+    return row[0] if row else None
+
+
+def remember_client_id(uid: str, client_id: str, video_id: str) -> None:
+    with db.engine().begin() as c:
+        c.execute(insert(upload_keys).values(user_id=uid, client_id=client_id, video_id=video_id))
+
+
 def list_videos(uid: str, limit: int = 200) -> list[dict]:
     """The player's videos, newest first, each joined with its analysis job."""
     q = (
@@ -262,6 +288,11 @@ def delete_video(uid: str, video_id: str) -> list[str]:
         return []
     keys = [k for k in (v["video_key"], v.get("thumb_key"), v.get("overlay_key")) if k]
     with db.engine().begin() as c:
+        # Rows elsewhere that point at this clip first (portfolio, upload keys, posts...).
+        for table in reversed(db.metadata.sorted_tables):
+            for col in table.c:
+                if table is not videos and any(fk.column is videos.c.id for fk in col.foreign_keys):
+                    c.execute(delete(table).where(col == video_id))
         c.execute(delete(videos).where(videos.c.id == video_id))
         if v.get("job_id"):
             c.execute(delete(db.jobs).where(db.jobs.c.id == v["job_id"]))

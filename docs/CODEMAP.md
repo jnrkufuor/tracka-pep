@@ -105,6 +105,7 @@ tracka-pep/
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | guardian approval | `pep/players/guardian.py`, `app/lib/screens/guardian_screens.dart`, page in `pep/players/pages.py` |
+| upload queue, offline | `app/lib/state/upload_queue.dart`, `app/lib/api/cache.dart`, `app/lib/screens/uploads_screen.dart`, `upload_keys` in `pep/players/store.py` |
 | player card, share link, privacy | `pep/players/card.py`, `app/lib/screens/card_screens.dart`, page `/c/{token}` in `pages.py` |
 | Pep's reviews and tips | `pep/players/review.py`, `app/lib/screens/review_screens.dart` |
 | onboarding steps (Meet Pep → 5 steps → All set) | `app/lib/screens/onboarding_screen.dart`, `pep/players/details.py` |

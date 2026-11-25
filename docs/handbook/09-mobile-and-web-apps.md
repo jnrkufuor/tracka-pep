@@ -116,6 +116,22 @@ Design decisions:
   photographs each screen (`screenshots.yml`); real builds never contain
   them.
 
+### Working offline: the upload queue and saved screens
+
+Phones in Ghana often have slow, costly or patchy data, so the app is built
+**offline-first** in two places:
+
+- **The upload queue** (`lib/state/upload_queue.dart`). A clip is saved first
+  and sent later: on Wi-Fi only if the player asked, when the connection comes
+  back, after the guardian says yes. A dropped upload is retried, and each clip
+  carries a `clientId` so the server makes it once however many times it
+  arrives. That's an **idempotency key** (`upload_keys` in `pep/players/store.py`).
+- **Saved screens** (`lib/api/cache.dart`). The last good answer to each main
+  GET is kept. If Tracka can't be reached, the app shows the saved copy with
+  "You're offline. Showing what's saved." That's a **cache** with a
+  **fallback**: possibly old, clearly labelled, never used when the real thing
+  answers.
+
 ## Words to know
 client · server · native · cross-platform · Flutter · Dart · React
 Native · PWA · widget · state · state management · Provider · navigation ·
@@ -142,7 +158,10 @@ contrast ratio
 7. Sign up twice: once choosing "Get into an academy", once "Just looking
    around". Which steps did you skip the second time, and which line in
    `onboarding_screen.dart` (`flow`) decides it?
-8. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
+8. In `test/upload_queue_test.dart`, add a test: two clips on mobile data
+   with Wi-Fi only on, then switch the fake network to Wi-Fi. Do both go?
+   Which line in `UploadQueue` listens for the change?
+9. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
    to the contrast test's list. Does it pass? Even if it did, why would
    Tracka still not offer it as a main colour?
 

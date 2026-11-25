@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../config.dart';
+import 'cache.dart';
 import 'models.dart';
 
 /// An API error with a message that's safe to show the player.
@@ -26,13 +28,25 @@ class ApiError implements Exception {
 /// retry the call. If that fails too, the player is logged out ([onLoggedOut]).
 /// Tokens live in secure storage (Keychain on iOS, Keystore on Android,
 /// browser storage on web), never in plain preferences.
+///
+/// Offline: answers to the GETs in [_cached] are saved ([ResponseCache]). If the
+/// network is down, the saved copy is returned instead and [offline] turns true,
+/// so screens show what they last saw with a "You're offline" note.
 class ApiClient {
-  ApiClient({http.Client? client, FlutterSecureStorage? storage})
+  ApiClient({http.Client? client, FlutterSecureStorage? storage, ResponseCache? cache})
       : _http = client ?? http.Client(),
-        _store = storage ?? const FlutterSecureStorage();
+        _store = storage ?? const FlutterSecureStorage(),
+        cache = cache ?? PrefsCache();
 
   final http.Client _http;
   final FlutterSecureStorage _store;
+  final ResponseCache cache;
+
+  /// True while the last call couldn't reach Tracka and a saved copy was shown.
+  final ValueNotifier<bool> offline = ValueNotifier(false);
+
+  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian'];
+  static bool _cacheable(String method, String path) => method == 'GET' && _cached.any((p) => path == p || path.startsWith('$p?'));
   String? _access;
   String? _refresh;
   Future<bool>? _refreshing; // one refresh at a time, even if several calls hit 401 together
@@ -74,6 +88,7 @@ class ApiClient {
       return _http.send(req).then(http.Response.fromStream).timeout(const Duration(seconds: 30));
     }
 
+    final save = _cacheable(method, path);
     http.Response res;
     try {
       res = await go();
@@ -81,11 +96,20 @@ class ApiClient {
         res = await go();
       }
     } on TimeoutException {
-      throw ApiError(0, 'The connection is slow. Try again in a moment.');
+      return _fromCache(path, save, ApiError(0, 'The connection is slow. Try again in a moment.'));
     } on http.ClientException {
-      throw ApiError(0, "Can't reach Tracka. Check your connection.");
+      return _fromCache(path, save, ApiError(0, "Can't reach Tracka. Check your connection."));
     }
+    offline.value = false;
+    if (save && res.statusCode == 200) unawaited(cache.put(path, utf8.decode(res.bodyBytes)));
     return _decode(res, auth: auth);
+  }
+
+  Future<dynamic> _fromCache(String path, bool cacheable, ApiError error) async {
+    final saved = cacheable ? await cache.get(path) : null;
+    if (saved == null) throw error;
+    offline.value = true;
+    return jsonDecode(saved);
   }
 
   dynamic _decode(http.Response res, {bool auth = true}) {
@@ -95,6 +119,7 @@ class ApiClient {
     if (res.statusCode >= 200 && res.statusCode < 300) return data;
     if (res.statusCode == 401 && auth) {
       clearTokens();
+      cache.clear();
       onLoggedOut?.call();
     }
     final detail = data is Map ? data['detail'] : null;
@@ -132,6 +157,7 @@ class ApiClient {
       if (_refresh != null) await _send('POST', '/v1/auth/logout', body: {'refreshToken': _refresh}, auth: false);
     } catch (_) {}
     await clearTokens();
+    await cache.clear(); // saved screens and the upload queue belong to this player
   }
 
   // ------------------------------------------------------------- profile
@@ -144,6 +170,7 @@ class ApiClient {
   Future<void> deleteAccount() async {
     await _send('DELETE', '/v1/me');
     await clearTokens();
+    await cache.clear();
   }
 
   Future<Meta> meta() async => Meta.fromJson(await _send('GET', '/v1/meta', auth: false) as Map<String, dynamic>);

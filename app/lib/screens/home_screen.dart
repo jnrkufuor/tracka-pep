@@ -5,9 +5,11 @@ import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/common.dart';
+import '../widgets/ds.dart' show OfflineBanner;
 import 'guardian_screens.dart' show GuardianCard;
 import 'training_screens.dart';
 import 'upload_screen.dart';
+import 'uploads_screen.dart' show UploadsCard;
 import 'video_screen.dart';
 import 'videos_screen.dart';
 
@@ -43,10 +45,11 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 6),
             Text(me == null ? 'Hello' : 'Hey ${me.profile.firstName}', style: t.displayMedium),
             const SizedBox(height: 18),
+            if (s.offline) ...[const OfflineBanner(), const SizedBox(height: 12)],
             const GuardianCard(),
             const TodayCard(),
             const SizedBox(height: 12),
-            if (s.uploads.isNotEmpty) ...[_UploadingCard(progress: s.uploads.values.first), const SizedBox(height: 12)],
+            const UploadsCard(),
             if (c != null && c.processing > 0) ...[_ProcessingCard(count: c.processing), const SizedBox(height: 12)],
             _ScoreCard(coach: c),
             const SizedBox(height: 12),
@@ -309,30 +312,6 @@ class _MomentRow extends StatelessWidget {
           ),
         ]),
       ),
-    );
-  }
-}
-
-class _UploadingCard extends StatelessWidget {
-  const _UploadingCard({required this.progress});
-
-  final double progress;
-
-  @override
-  Widget build(BuildContext context) {
-    return TCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(children: [
-        const LoopyIcon('upload', color: TColors.neon),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Uploading… ${(progress * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            ScoreBar(progress * 100, height: 6),
-          ]),
-        ),
-      ]),
     );
   }
 }
