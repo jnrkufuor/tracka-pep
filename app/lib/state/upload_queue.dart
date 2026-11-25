@@ -186,30 +186,16 @@ class UploadQueue extends ChangeNotifier {
     return null;
   }
 
-  /// Send whatever can go, one clip at a time. Safe to call often: a call while
-  /// a round is running waits for that round (and asks for one more after it).
+  /// Send whatever can go, one clip at a time. Safe to call often: calls line up,
+  /// and each round starts after the one before finishes (so two rounds never
+  /// send the same clip at once). The returned future completes after your round.
   Future<void> pump({bool retryFailed = false}) {
-    final running = _running;
-    if (running != null) {
-      _again = true;
-      _againRetry |= retryFailed;
-      return running;
-    }
-    final round = _round(retryFailed);
-    _running = round;
-    return round.whenComplete(() {
-      _running = null;
-      if (_again) {
-        final r = _againRetry;
-        _again = _againRetry = false;
-        unawaited(pump(retryFailed: r));
-      }
-    });
+    final round = _chain.then((_) => _round(retryFailed));
+    _chain = round.catchError((_) {});
+    return round;
   }
 
-  Future<void>? _running;
-  bool _again = false;
-  bool _againRetry = false;
+  Future<void> _chain = Future.value();
 
   Future<void> _round(bool retryFailed) async {
     final tried = <String>{}; // each clip at most once per round, so a failing one can't loop
