@@ -116,7 +116,6 @@ class UploadQueue extends ChangeNotifier {
 
   final List<UploadItem> items = [];
   StreamSubscription<Net>? _sub;
-  bool _busy = false;
   static const _key = 'upload_queue';
 
   List<UploadItem> get active => items.where((i) => i.status != UploadStatus.done).toList();
@@ -187,11 +186,33 @@ class UploadQueue extends ChangeNotifier {
     return null;
   }
 
-  /// Send whatever can go, one clip at a time. Safe to call often.
-  Future<void> pump({bool retryFailed = false}) async {
-    if (_busy) return;
-    _busy = true;
-    final tried = <String>{}; // each clip at most once per pump, so a failing one can't loop
+  /// Send whatever can go, one clip at a time. Safe to call often: a call while
+  /// a round is running waits for that round (and asks for one more after it).
+  Future<void> pump({bool retryFailed = false}) {
+    final running = _running;
+    if (running != null) {
+      _again = true;
+      _againRetry |= retryFailed;
+      return running;
+    }
+    final round = _round(retryFailed);
+    _running = round;
+    return round.whenComplete(() {
+      _running = null;
+      if (_again) {
+        final r = _againRetry;
+        _again = _againRetry = false;
+        unawaited(pump(retryFailed: r));
+      }
+    });
+  }
+
+  Future<void>? _running;
+  bool _again = false;
+  bool _againRetry = false;
+
+  Future<void> _round(bool retryFailed) async {
+    final tried = <String>{}; // each clip at most once per round, so a failing one can't loop
     try {
       while (true) {
         final waiting = items.where((i) =>
@@ -214,7 +235,6 @@ class UploadQueue extends ChangeNotifier {
         await _send(next);
       }
     } finally {
-      _busy = false;
       await _save();
       notifyListeners();
     }
