@@ -59,6 +59,9 @@ class AppState extends ChangeNotifier {
   Week? week;
   HealthState? health;
   bool loadingVideos = false;
+
+  /// Unread notifications (the dot on the bell).
+  int unread = 0;
   String? error;
 
   Timer? _poll;
@@ -132,6 +135,13 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadUnread() async {
+    try {
+      unread = (await api.notifications()).unread;
+      notifyListeners();
+    } catch (_) {}
+  }
+
   /// Apply a change the server answered with a new week (move, skip, restore).
   void setWeek(Week w) {
     week = w;
@@ -191,6 +201,7 @@ class AppState extends ChangeNotifier {
       error = null;
       await loadWeek();
       unawaited(queue.pump(retryFailed: true)); // e.g. the guardian just said yes
+      unawaited(loadUnread());
     } catch (e) {
       error = '$e';
     } finally {

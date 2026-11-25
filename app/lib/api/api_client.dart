@@ -45,7 +45,7 @@ class ApiClient {
   /// True while the last call couldn't reach Tracka and a saved copy was shown.
   final ValueNotifier<bool> offline = ValueNotifier(false);
 
-  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian', '/v1/challenges', '/v1/pitches'];
+  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian', '/v1/challenges', '/v1/pitches', '/v1/notifications'];
   static bool _cacheable(String method, String path) => method == 'GET' && _cached.any((p) => path == p || path.startsWith('$p?'));
   String? _access;
   String? _refresh;
@@ -215,6 +215,20 @@ class ApiClient {
   }
 
   // ------------------------------------------------------------- coach
+
+  // ------------------------------------------------------------- notifications
+
+  Future<({List<AppNotification> items, int unread, bool quietNow})> notifications() async {
+    final j = await _send('GET', '/v1/notifications') as Map<String, dynamic>;
+    return (
+      items: [for (final n in j['items'] as List) AppNotification.fromJson(n as Map<String, dynamic>)],
+      unread: (j['unread'] as num?)?.toInt() ?? 0,
+      quietNow: j['quietNow'] as bool? ?? false,
+    );
+  }
+
+  /// Mark these read, or all of them when [ids] is null.
+  Future<void> markRead([List<String>? ids]) => _send('POST', '/v1/notifications/read', body: {if (ids != null) 'ids': ids});
 
   // ------------------------------------------------------------- pitchside
 

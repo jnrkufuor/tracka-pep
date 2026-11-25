@@ -105,6 +105,7 @@ class AppSettings {
     this.findable = false,
     this.notifyOpportunities = false,
     this.notifications = const {},
+    this.quietHours = true,
   });
 
   final String units;
@@ -130,6 +131,9 @@ class AppSettings {
   /// Settings › Notifications: kind → on (tips, reviews, reminders, events, respect).
   final Map<String, bool> notifications;
 
+  /// No push messages 9 pm to 7 am (always on for under-18s).
+  final bool quietHours;
+
   /// Every field has a default, so an older server that doesn't send the new
   /// ones still works (add fields, never rename them: see CLAUDE.md).
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -143,6 +147,7 @@ class AppSettings {
         findable: j['findable'] as bool? ?? false,
         notifyOpportunities: j['notifyOpportunities'] as bool? ?? false,
         notifications: (j['notifications'] as Map<String, dynamic>? ?? const {}).map((k, v) => MapEntry(k, v as bool)),
+        quietHours: j['quietHours'] as bool? ?? true,
       );
 
   /// Speed in the player's chosen unit.
@@ -1232,5 +1237,30 @@ class Pitch {
         needs: _i(j['needs']) ?? 0,
         confirmedByMe: j['confirmedByMe'] as bool? ?? false,
         addedByMe: j['addedByMe'] as bool? ?? false,
+      );
+}
+
+/// One line in the bell (pep/players/notifications.py).
+class AppNotification {
+  AppNotification({required this.id, required this.kind, required this.group, required this.title, required this.createdAt, this.body = '', this.link, this.read = false});
+
+  final String id;
+  final String kind;
+  final String group; // pep | activity
+  final String title;
+  final String body;
+  final Map<String, dynamic>? link; // {"screen": "video", "id": "..."}
+  final DateTime createdAt;
+  bool read;
+
+  factory AppNotification.fromJson(Map<String, dynamic> j) => AppNotification(
+        id: j['id'] as String,
+        kind: j['kind'] as String? ?? '',
+        group: j['group'] as String? ?? 'activity',
+        title: j['title'] as String? ?? '',
+        body: j['body'] as String? ?? '',
+        link: j['link'] as Map<String, dynamic>?,
+        createdAt: DateTime.parse(j['createdAt'] as String).toLocal(),
+        read: j['read'] as bool? ?? false,
       );
 }

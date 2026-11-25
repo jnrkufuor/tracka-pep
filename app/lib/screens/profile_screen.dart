@@ -10,6 +10,7 @@ import '../widgets/profile_fields.dart';
 import '../widgets/skill_areas_view.dart';
 import 'card_screens.dart';
 import 'guardian_screens.dart';
+import 'notifications_screen.dart' show NotificationSettingsScreen;
 
 /// Your profile and settings.
 class ProfileScreen extends StatelessWidget {
@@ -109,10 +110,11 @@ class ProfileScreen extends StatelessWidget {
                 value: st.coachNotes,
                 onChanged: (v) => setting('coachNotes', v),
               ),
-              SwitchListTile(
-                title: const Text('Tell me when a clip is ready'),
-                value: st.notifyWhenReady,
-                onChanged: (v) => setting('notifyWhenReady', v),
+              ListTile(
+                title: const Text('Notifications'),
+                subtitle: const Text('Pep, reviews, reminders · quiet 9 pm to 7 am'),
+                trailing: const TIcon('chevron', size: 14, color: Tk.faint),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())),
               ),
               ListTile(
                 title: const Text('Main colour'),

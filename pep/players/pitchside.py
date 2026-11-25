@@ -522,7 +522,14 @@ def _toggle(table: Table, pid: str, uid: str, on: bool, **extra) -> None:
 
 @router.put("/posts/{pid}/respect", status_code=204)
 def give_respect(pid: str, user: dict = Depends(auth.current_user)) -> None:
+    already = bool(_rows(select(respect).where(respect.c.post_id == pid, respect.c.user_id == user["id"])))
     _toggle(respect, pid, user["id"], True, created_at=now())
+    p = _post(pid)
+    if not already and p["user_id"] != user["id"]:
+        from . import notifications
+
+        n = _rows(select(func.count().label("n")).where(respect.c.post_id == pid))[0]["n"]
+        notifications.respect_given(p["user_id"], pid, author(user["id"])["shirtName"], n)
 
 
 @router.delete("/posts/{pid}/respect", status_code=204)
