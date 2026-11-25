@@ -24,7 +24,7 @@ void main() {
   });
 
   test('meta says whether texts are live', () {
-    final m = Meta.fromJson({'positions': ['CM'], 'regions': ['Ashanti'], 'drills': {}, 'textsLive': false, 'guardianSelfConfirm': true});
+    final m = Meta.fromJson({'positions': ['CM'], 'regions': ['Ashanti'], 'drills': <String, dynamic>{}, 'textsLive': false, 'guardianSelfConfirm': true});
     expect(m.textsLive, isFalse);
     expect(m.guardianSelfConfirm, isTrue);
   });
