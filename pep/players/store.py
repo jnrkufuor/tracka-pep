@@ -34,7 +34,7 @@ from sqlalchemy import (
 )
 
 from .. import db
-from . import details, training
+from . import details, training  # noqa: F401  (their tables must exist before delete_user walks them)
 
 users = Table(
     "users",
@@ -158,9 +158,14 @@ def delete_user(uid: str) -> list[str]:
                     keys += [k for k in (job.overlay_key, job.thumb_key) if k]
                 c.execute(delete(db.jobs).where(db.jobs.c.id == v.job_id))
                 c.execute(delete(db.ratings).where(db.ratings.c.job_id == v.job_id))
-        # Children first: SQLite doesn't enforce ON DELETE CASCADE unless asked to.
-        for table in (*training.TABLES, details.player_details, videos, sessions, profiles):
-            c.execute(delete(table).where(table.c.user_id == uid))
+        # Every row in every table that points at this user, children first
+        # (SQLite doesn't enforce ON DELETE CASCADE unless asked to). Found from the
+        # foreign keys themselves, so a new feature's table is covered the day it's
+        # added: nothing to remember here. (Words to know: *metadata reflection*.)
+        for table in reversed(db.metadata.sorted_tables):
+            for col in table.c:
+                if table is not users and any(fk.column is users.c.id for fk in col.foreign_keys):
+                    c.execute(delete(table).where(col == uid))
         c.execute(delete(users).where(users.c.id == uid))
     return keys
 

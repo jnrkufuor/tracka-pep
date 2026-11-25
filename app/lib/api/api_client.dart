@@ -189,6 +189,25 @@ class ApiClient {
 
   // ------------------------------------------------------------- coach
 
+  // ------------------------------------------------------------- guardian
+
+  Future<GuardianState> guardian() async =>
+      GuardianState.fromJson(await _send('GET', '/v1/guardian') as Map<String, dynamic>);
+
+  Future<GuardianState> setGuardian({required String phone, String? relation, String? name}) async =>
+      GuardianState.fromJson(await _send('PUT', '/v1/guardian', body: {
+        'phone': phone,
+        if (relation != null) 'relation': relation,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      }) as Map<String, dynamic>);
+
+  Future<GuardianState> resendGuardian() async =>
+      GuardianState.fromJson(await _send('POST', '/v1/guardian/resend') as Map<String, dynamic>);
+
+  /// Ask the guardian for something new: post | share_card | search.
+  Future<GuardianState> askGuardian(String kind) async =>
+      GuardianState.fromJson(await _send('POST', '/v1/guardian/requests', body: {'kind': kind}) as Map<String, dynamic>);
+
   Future<List<ReviewTip>> tips() async =>
       [for (final t in await _send('GET', '/v1/tips') as List) ReviewTip.fromJson(t as Map<String, dynamic>)];
 

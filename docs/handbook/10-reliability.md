@@ -96,6 +96,24 @@ Not done yet (good learning projects, also in chapter 12):
 - A tested database restore from Render's backups.
 - Error tracking (Sentry) in the API and the app.
 
+### Keeping children safe: guardian approval (pep/players/guardian.py)
+
+Safety is part of reliability: a system that works but lets a stranger
+approve a 14-year-old's account has failed. The guardian flow uses a few
+standard ideas you'll meet everywhere:
+
+- **Something you have.** The link code in the text (`/g/4F7K`) is short so
+  it can be typed, which also makes it guessable. So it only *finds* the
+  request. To act, the guardian proves they hold the phone with a one-time
+  code (OTP) texted to it: 10 minutes, 5 tries, then ask again.
+- **Hash secrets at rest.** Codes and page sessions are stored as keyed
+  hashes (HMAC), like passwords, so a leaked database leaks no codes.
+- **Rate limits.** One text a minute, so nobody can flood a guardian's phone.
+- **Fail closed.** No answer in 7 days means no; a reply from another number
+  is ignored; the SMS webhook needs a shared secret or it pretends not to exist.
+- **The adapter pattern.** Texts go through `sms.sender()`. Today it's a
+  placeholder that keeps texts in `sms_outbox`; a real provider is one class.
+
 ## Words to know
 SRE · SLI · SLO · SLA · error budget · availability · observability ·
 logs · structured logging · metrics · traces · golden signals · latency ·
@@ -116,6 +134,9 @@ migration · capacity planning · toil
    postmortem: timeline, impact, root cause, what you'll change.
 5. Add Alembic: `alembic init migrations`, generate a first migration
    from `pep/db.py` and `pep/players/store.py`'s tables.
+6. Sign up as a 15-year-old, add a guardian number, then read the text in
+   the `sms_outbox` table. Open `/g/<code>` in a browser and approve. Then
+   try 6 wrong codes: what does the page say, and which constant decides?
 
 **Questions**
 

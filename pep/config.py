@@ -89,6 +89,14 @@ class Settings(BaseSettings):
     device: str = ""  # "" lets Ultralytics choose; "cuda:0", "cpu", "mps"
     models_dir: Path = ROOT / "var" / "models"
 
+    # ---- texts (SMS): PLACEHOLDER until a provider is chosen (pep/players/sms.py)
+    sms_provider: Literal["log"] = "log"
+    sms_webhook_secret: str = ""  # replies like "YES 4F7K" come in at /v1/sms/inbound with this
+    # While texts can't reach guardians, under-18s can tick "they've already said yes".
+    guardian_self_confirm: bool = True
+    # Where guardians and card links open (the public web address of this API for now).
+    web_url: str = ""
+
     # ---- AI coach (language model that watches the clip and writes feedback)
     coach_provider: Literal["gemini", "none"] = "gemini"
     gemini_api_key: str = Field("", validation_alias=AliasChoices("GEMINI_API_KEY", "PEP_GEMINI_API_KEY"))
