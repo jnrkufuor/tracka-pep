@@ -188,3 +188,18 @@ def test_deleting_the_account_removes_training_data():
         with db.engine().connect() as c:
             assert c.execute(select(training.events)).first() is None
             assert c.execute(select(training.health)).first() is None
+
+
+def test_focus_and_tests_view():
+    from fastapi.testclient import TestClient
+    from test_player_api import complete_profile, headers, signup
+
+    from pep.api.app import app
+
+    with TestClient(app) as client:
+        h = signup(client, "focus@example.com")
+        complete_profile(client, h, consent=True)
+        f = client.get("/v1/focus", headers=headers(h)).json()
+        assert len(f["focus"]) >= 1 and all("band" in x for x in f["focus"])
+        assert f["nextTest"]["drill"] in ("sprint_30m", "agility_5105", "juggling", "wall_passes")
+        assert f["bests"] == [] and "score" not in str(f).lower()

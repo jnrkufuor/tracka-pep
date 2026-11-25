@@ -197,6 +197,28 @@ def _initials(shirt: str | None, display: str) -> str:
     return "".join(w[0] for w in words[:2]).upper() or "?"
 
 
+def best_results(videos: list[dict]) -> list[dict]:
+    """Timed and counted bests from the player's clips (numbers Pep measured)."""
+    out = []
+    for metric, (label, unit, lower) in BESTS.items():
+        vals = [
+            v["result"]["metrics"][metric]
+            for v in videos
+            if ((v.get("result") or {}).get("metrics") or {}).get(metric) is not None
+        ]
+        if vals:
+            x = min(vals) if lower else max(vals)
+            out.append(
+                {
+                    "metric": metric,
+                    "label": label,
+                    "value": f"{x:.2f}" if unit == "s" else f"{x:.0f}",
+                    "unit": unit,
+                }
+            )
+    return out
+
+
 def shirt_name(p: dict, d: dict) -> str:
     """What other players see instead of a full name: the shirt name, or 'K. ASANTE'."""
     if d.get("shirt_name"):
@@ -227,16 +249,7 @@ def card_data(uid: str, base: str = "") -> dict:
     measured.sort(key=lambda i: not i["key"])
     best_areas = [i["name"] for i in measured if i["band"] in ("standout", "strong", "above")][:3]
 
-    bests = []
-    for metric, (label, unit, lower) in BESTS.items():
-        vals = [
-            v["result"]["metrics"][metric]
-            for v in videos
-            if ((v.get("result") or {}).get("metrics") or {}).get(metric) is not None
-        ]
-        if vals:
-            x = min(vals) if lower else max(vals)
-            bests.append({"label": label, "value": f"{x:.2f}" if unit == "s" else f"{x:.0f}", "unit": unit})
+    bests = best_results(videos)
 
     by_id = {v["id"]: v for v in videos}
     portfolio_clips = []

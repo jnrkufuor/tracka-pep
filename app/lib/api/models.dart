@@ -1264,3 +1264,60 @@ class AppNotification {
         read: j['read'] as bool? ?? false,
       );
 }
+
+/// A skill area as the Pep tab shows it: name, band, trend. Never a 0-100 score.
+class AreaLine {
+  AreaLine({required this.id, required this.name, required this.group, this.band, this.trend = 'new', this.average, this.state = 'not_seen'});
+
+  final String id;
+  final String name;
+  final String group;
+  final String? band;
+  final String trend; // growing | steady | dipping | new
+  final String? average;
+  final String state;
+
+  String get trendWords => switch (trend) {
+        'growing' => 'Growing',
+        'dipping' => 'Dipping a little',
+        'steady' => 'Steady',
+        _ => state == 'measured' ? 'Just started' : 'Not seen yet',
+      };
+
+  factory AreaLine.fromJson(Map<String, dynamic> j) => AreaLine(
+        id: j['id'] as String,
+        name: j['name'] as String? ?? '',
+        group: j['group'] as String? ?? '',
+        band: j['band'] as String?,
+        trend: j['trend'] as String? ?? 'new',
+        average: j['average'] as String?,
+        state: j['state'] as String? ?? 'not_seen',
+      );
+}
+
+/// GET /v1/focus: what the sessions work on, the next test, your bests, what's growing.
+class FocusState {
+  FocusState({this.focus = const [], this.growing = const [], this.nextTest, this.bests = const [], this.comparedWith = ''});
+
+  final List<AreaLine> focus;
+  final List<AreaLine> growing;
+  final ({String drill, String name, DateTime? date})? nextTest;
+  final List<({String metric, String label, String value, String unit})> bests;
+  final String comparedWith;
+
+  factory FocusState.fromJson(Map<String, dynamic> j) {
+    final t = j['nextTest'] as Map<String, dynamic>?;
+    return FocusState(
+      focus: _list(j['focus'], AreaLine.fromJson),
+      growing: _list(j['growing'], AreaLine.fromJson),
+      nextTest: t == null
+          ? null
+          : (drill: t['drill'] as String, name: t['name'] as String, date: t['date'] == null ? null : DateTime.parse(t['date'] as String)),
+      bests: [
+        for (final b in (j['bests'] as List? ?? const []))
+          (metric: (b as Map)['metric'] as String, label: b['label'] as String, value: b['value'] as String, unit: b['unit'] as String? ?? ''),
+      ],
+      comparedWith: j['comparedWith'] as String? ?? '',
+    );
+  }
+}
