@@ -145,6 +145,9 @@ class SettingsIn(Body):
     # Pitchside: show up when players search (under 18 also needs the guardian's yes)
     findable: bool | None = None
     notify_opportunities: bool | None = None  # "Tell me when there's one near me"
+    # Settings › Notifications: kind → on (tips, reviews, reminders, events, respect)
+    notifications: dict[Literal["tips", "reviews", "reminders", "events", "respect"], bool] | None = None
+    quiet_hours: bool | None = None  # 9 pm to 7 am; always on for under-18s
 
 
 class ProfileIn(Body):
@@ -241,6 +244,11 @@ def update_me(body: ProfileIn, user: dict = Depends(auth.current_user)) -> dict:
     if body.settings is not None:
         current = store.get_profile(user["id"])["settings"]
         changes = {to_camel(k): v for k, v in body.settings.model_dump(exclude_unset=True).items()}
+        if "notifications" in changes:  # one switch at a time: keep the others
+            changes["notifications"] = {
+                **(current.get("notifications") or {}),
+                **(changes["notifications"] or {}),
+            }
         values["settings"] = {**current, **changes}
     store.update_profile(user["id"], values)
     return _me(user)
@@ -489,3 +497,7 @@ from .card import router as card_router  # noqa: E402
 
 router.include_router(card_router)
 router.include_router(pitchside.router)
+
+from .notifications import router as notifications_router  # noqa: E402
+
+router.include_router(notifications_router)

@@ -133,6 +133,10 @@ class Worker:
         finally:
             beat_stop.set()
             beat.join(timeout=5)
+            if job["source"] == "app":  # tell the player (bell + push); never fails the job
+                from .players.notifications import clip_finished
+
+                clip_finished(job["id"])
 
     def _heartbeat(self, job_id: str, stop: threading.Event) -> None:
         s = settings()

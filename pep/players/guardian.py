@@ -382,6 +382,9 @@ def decide(uid: str, kind: str, yes: bool, via: str = "page", relation: str | No
             if relation:
                 values["relation"] = relation
             c.execute(update(guardians).where(guardians.c.user_id == uid).values(**values))
+    from . import notifications  # here, not at the top: notifications imports the player store
+
+    notifications.guardian_answered(uid, kind, yes)
 
 
 def revoke_all(uid: str) -> None:

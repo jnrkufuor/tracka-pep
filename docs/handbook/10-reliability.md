@@ -114,6 +114,16 @@ standard ideas you'll meet everywhere:
 - **The adapter pattern.** Texts go through `sms.sender()`. Today it's a
   placeholder that keeps texts in `sms_outbox`; a real provider is one class.
 
+### Notifications without duplicates (pep/players/notifications.py)
+
+A worker can retry a job; a schedule can run twice; two phones can open the
+bell at once. Each notification has a **dedupe key** ("review:<clip id>",
+"event:<id>:<date>") that's unique per player, so doing it again changes
+nothing. The same trick as the upload queue's idempotency key. Quiet hours
+(9 pm to 7 am, Ghana time; always on for under-18s) only hold back push
+messages; the bell keeps everything. Push itself is a placeholder until
+Firebase Cloud Messaging is set up in the app.
+
 ## Words to know
 SRE · SLI · SLO · SLA · error budget · availability · observability ·
 logs · structured logging · metrics · traces · golden signals · latency ·
@@ -137,6 +147,9 @@ migration · capacity planning · toil
 6. Sign up as a 15-year-old, add a guardian number, then read the text in
    the `sms_outbox` table. Open `/g/<code>` in a browser and approve. Then
    try 6 wrong codes: what does the page say, and which constant decides?
+7. Run `notifications.sweep(uid)` twice in a Python shell and count the rows
+   in `notifications`. Then change a dedupe key to include the time and run
+   it twice again. What goes wrong, and why does the key matter?
 
 **Questions**
 

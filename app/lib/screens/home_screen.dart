@@ -7,6 +7,7 @@ import '../theme/theme.dart';
 import '../widgets/common.dart';
 import '../widgets/ds.dart' show OfflineBanner;
 import 'guardian_screens.dart' show GuardianCard;
+import 'notifications_screen.dart' show BellButton;
 import 'training_screens.dart';
 import 'upload_screen.dart';
 import 'uploads_screen.dart' show UploadsCard;
@@ -34,6 +35,7 @@ class HomeScreen extends StatelessWidget {
             Row(children: [
               const TrackaLogo(size: 30),
               const Spacer(),
+              const BellButton(),
               IconButton(
                 onPressed: () => openUpload(context),
                 icon: const LoopyIcon('plus', color: TColors.neon),
