@@ -11,6 +11,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  material_ui: ^1.11.1           # Material widgets, now their own package (was package:flutter/material.dart)
   provider: ^6.1.2               # app state (ChangeNotifier), same pattern as YesBut
   http: ^1.2.2                   # REST calls + multipart uploads
   flutter_secure_storage: ^9.2.2 # login tokens in the phone's keychain / keystore

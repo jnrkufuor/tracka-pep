@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/auth_screen.dart';
@@ -41,7 +41,11 @@ class TrackaApp extends StatelessWidget {
       theme: trackaTheme(colour: MainColour.fromName(colour)),
       builder: (context, child) {
         final mq = MediaQuery.of(context);
-        return MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear((mq.textScaler.scale(14) / 14 * scale).clamp(0.85, 2.0))), child: child!);
+        // The bridge lets packages that still use the old built-in Material library
+        // (package:flutter/material.dart) find our theme and words.
+        return MaterialUiCompatibilityBridge(
+          child: MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear((mq.textScaler.scale(14) / 14 * scale).clamp(0.85, 2.0))), child: child!),
+        );
       },
       home: AnimatedSwitcher(
         duration: Motion.enter,

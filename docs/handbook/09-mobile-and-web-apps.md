@@ -143,6 +143,16 @@ reports hide a clip until it's reviewed. Pep's review is never sent with
 someone else's clip. Pitches are **crowd-sourced with a check**: one player
 adds it, two others confirm it.
 
+### Material is now its own package
+
+Flutter used to ship its Material widgets inside the SDK
+(`package:flutter/material.dart`). Since Flutter 3.47 they live in their own
+package, `material_ui`, so the design library can update without waiting for
+a new Flutter. Tracka imports `package:material_ui/material_ui.dart`
+everywhere and wraps the app in `MaterialUiCompatibilityBridge`, so packages
+that still use the old library (video player, share sheet) see the same
+theme. Words to know: *decoupling*, *dependency*, *compatibility shim*.
+
 ## Words to know
 client · server · native · cross-platform · Flutter · Dart · React
 Native · PWA · widget · state · state management · Provider · navigation ·
