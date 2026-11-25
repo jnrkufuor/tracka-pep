@@ -9,7 +9,9 @@ import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/common.dart';
+import '../widgets/ds.dart';
 import '../widgets/skill_card.dart';
+import 'review_screens.dart' show ReviewView;
 
 /// One clip: the video (yours, or "what Pep saw"), key moments, and Pep's analysis.
 class VideoScreen extends StatefulWidget {
@@ -176,7 +178,12 @@ class _VideoScreenState extends State<VideoScreen> {
                     Text(v.error ?? 'Something went wrong.', style: const TextStyle(color: TColors.inkSoft)),
                   ]),
                 ),
-              if (v.analysis != null) _AnalysisView(a: v.analysis!, settings: settings, onSeek: _seek),
+              if (v.review != null) ...[
+                ReviewView(review: v.review!, onSeek: _seek),
+                const SizedBox(height: 22),
+                if (v.analysis != null) _Measured(a: v.analysis!, settings: settings),
+              ] else if (v.analysis != null)
+                _AnalysisView(a: v.analysis!, settings: settings, onSeek: _seek),
             ]),
     );
   }
@@ -243,7 +250,7 @@ class _Player extends StatelessWidget {
                           width: 16,
                           height: 16,
                           decoration: BoxDecoration(
-                            color: m.good ? TColors.neon : TColors.cherry,
+                            color: m.good ? context.accent.main : Tk.gold,
                             shape: BoxShape.circle,
                             border: Border.all(color: TColors.bg, width: 3),
                           ),
@@ -274,6 +281,51 @@ class _Watching extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w500)),
         ),
       ]),
+    );
+  }
+}
+
+/// What Pep measured in this clip (numbers from video, never from the AI coach).
+class _Measured extends StatelessWidget {
+  const _Measured({required this.a, required this.settings});
+
+  final Analysis a;
+  final AppSettings settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = a.metrics;
+    final tiles = <(String, String, String)>[
+      if (m['top_speed_ms'] != null) ('Top speed', settings.speed(m['top_speed_ms']), settings.speedUnit),
+      if (m['distance_m'] != null) ('Distance', m['distance_m']!.toStringAsFixed(0), 'm'),
+      if (m['high_speed_runs'] != null) ('Sprints', m['high_speed_runs']!.toStringAsFixed(0), ''),
+      if (m['touches_per_min'] != null) ('Touches a minute', m['touches_per_min']!.toStringAsFixed(0), ''),
+      if (m['sprint_30m_s'] != null) ('30 m sprint', m['sprint_30m_s']!.toStringAsFixed(2), 's'),
+      if (m['split_10m_s'] != null) ('10 m split', m['split_10m_s']!.toStringAsFixed(2), 's'),
+      if (m['agility_5105_s'] != null) ('5-10-5', m['agility_5105_s']!.toStringAsFixed(2), 's'),
+      if (m['juggles_best'] != null) ('Keepy-ups', m['juggles_best']!.toStringAsFixed(0), ''),
+      if (m['dives'] != null) ('Dives', m['dives']!.toStringAsFixed(0), ''),
+    ];
+    if (tiles.isEmpty) return const SizedBox.shrink();
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        title: const Text('What Pep measured', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
+        children: [
+          for (final (label, value, unit) in tiles)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(children: [
+                Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: Tk.muted))),
+                Text('$value${unit.isEmpty ? '' : ' $unit'}',
+                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
+              ]),
+            ),
+          const SizedBox(height: 8),
+          const InfoNote(InfoNote.measured),
+        ],
+      ),
     );
   }
 }

@@ -28,9 +28,9 @@ import numpy as np
 
 from . import MODEL_VERSION
 from .coach.llm import watch
-from .coach.merge import merge, rules_summary
+from .coach.merge import label_moment, merge, rules_summary, tips_from
 from .config import settings
-from .contracts import AnalysisRequest, CoachResult, Moment
+from .contracts import AnalysisRequest, CoachResult
 from .drills.runner import run_drill
 from .log import get_logger
 from .metrics.ball import analyse_ball
@@ -144,7 +144,7 @@ def analyse(video: Path, req: AnalysisRequest, perceiver: Perceiver) -> Analysis
     with timer.stage("scoring"):
         scored = score_skills(metrics, ctx)
         skills = [x.skill for x in scored]
-        moments = [Moment(at_seconds=round(t, 1), kind=k, text=txt) for t, k, txt in kin.events + ball_events]
+        moments = [label_moment(t, k, txt) for t, k, txt in kin.events + ball_events]
 
     # ---------------------------------------------------------------- coach
     with timer.stage("coach"):
@@ -165,6 +165,7 @@ def analyse(video: Path, req: AnalysisRequest, perceiver: Perceiver) -> Analysis
             )
         )
         skills, moments, summary = merge(skills, moments, notes, length)
+        headline, tips = tips_from(notes, length)
 
     if not skills:
         raise CantReadClip(
@@ -193,6 +194,8 @@ def analyse(video: Path, req: AnalysisRequest, perceiver: Perceiver) -> Analysis
         role_fit=fits,
         metrics={k: (round(v, 3) if isinstance(v, float) else v) for k, v in metrics.items()},
         summary=summary or rules_summary(skills),
+        headline=headline,
+        tips=tips,
         coach_source="gemini" if notes else "rules",
     )
     log.info("analysis.done", analysis_id=req.analysis_id, score=score, timings=timer.timings)

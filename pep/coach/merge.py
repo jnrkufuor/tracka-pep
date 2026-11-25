@@ -13,7 +13,7 @@ something useful.
 
 from __future__ import annotations
 
-from ..contracts import Moment, Skill
+from ..contracts import Moment, ReviewTip, Skill
 from .llm import CoachNotes
 
 RATING_TO_SCORE = {1: 35, 2: 48, 3: 62, 4: 76, 5: 90}
@@ -25,6 +25,32 @@ OBSERVED_DRILLS = {
     "Decision making": "Rondos (4 v 1 or 5 v 2): decide your next pass before the ball reaches you.",
     "First touch": "Receive passes from different heights; first touch into space, away from a cone 'defender'.",
 }
+
+
+# Measured moments come from pep/metrics as (seconds, kind, text). Pep knows which
+# skill area each kind of measured event is about, so it labels them here.
+MEASURED_LABELS = {
+    "Heavy touch": ("Heavy touch", "close_control"),
+    "Top speed": ("Top speed", "top_speed"),
+}
+
+
+def label_moment(at: float, kind: str, text: str) -> Moment:
+    title, area = next(((t, a) for k, (t, a) in MEASURED_LABELS.items() if text.startswith(k)), (None, None))
+    return Moment(at_seconds=round(at, 1), kind=kind, text=text[:300], title=title, area=area)
+
+
+def tips_from(notes: CoachNotes | None, length_s: float) -> tuple[str | None, list[ReviewTip]]:
+    """The headline and area tips from the AI notes, trimmed and clamped to the clip.
+    Without notes there are none here: pep/players/review.py writes rule tips instead."""
+    if notes is None:
+        return None, []
+    tips = []
+    for t in notes.area_tips[:3]:
+        at = t.at_seconds if t.at_seconds is not None and 0 <= t.at_seconds <= length_s + 0.5 else None
+        if t.title and t.text:
+            tips.append(ReviewTip(area=t.area, title=t.title[:60], text=t.text[:300], at_seconds=at))
+    return (notes.headline[:60] or None), tips
 
 
 def merge(
@@ -60,7 +86,13 @@ def merge(
         for nm in notes.moments:
             if 0 <= nm.at_seconds <= length_s + 0.5:
                 all_moments.append(
-                    Moment(at_seconds=round(nm.at_seconds, 1), kind=nm.kind, text=nm.text[:300])
+                    Moment(
+                        at_seconds=round(nm.at_seconds, 1),
+                        kind=nm.kind,
+                        text=nm.text[:300],
+                        title=nm.title[:60] or None,
+                        area=nm.area,
+                    )
                 )
 
     return skills[:12], dedupe_moments(all_moments)[:30], summary

@@ -189,6 +189,9 @@ class ApiClient {
 
   // ------------------------------------------------------------- coach
 
+  Future<List<ReviewTip>> tips() async =>
+      [for (final t in await _send('GET', '/v1/tips') as List) ReviewTip.fromJson(t as Map<String, dynamic>)];
+
   Future<CoachSummary> coach() async =>
       CoachSummary.fromJson(await _send('GET', '/v1/coach') as Map<String, dynamic>);
 

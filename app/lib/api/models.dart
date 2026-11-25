@@ -321,6 +321,8 @@ class Video {
     this.overlayUrl,
     this.error,
     this.analysis,
+    this.review,
+    this.reviewNote,
   });
 
   final String id;
@@ -336,6 +338,12 @@ class Video {
   final String? overlayUrl;
   final String? error;
   final Analysis? analysis;
+
+  /// Pep's review as a story (headline, moments, tips): GET /v1/videos/{id} only.
+  final Review? review;
+
+  /// The one line under the clip in Pep › Reviews ("2 things went well, 1 to work on.").
+  final String? reviewNote;
 
   bool get processing => status == 'QUEUED' || status == 'RUNNING';
   String get displayTitle => title.isEmpty ? (clipType == 'drill' ? 'Drill' : 'Clip') : title;
@@ -354,7 +362,143 @@ class Video {
         overlayUrl: j['overlayUrl'] as String?,
         error: j['error'] as String?,
         analysis: j['analysis'] == null ? null : Analysis.fromJson(j['analysis'] as Map<String, dynamic>),
+        review: j['review'] == null ? null : Review.fromJson(j['review'] as Map<String, dynamic>),
+        reviewNote: j['reviewNote'] as String?,
       );
+}
+
+/// A moment Pep pointed out: tap its time to jump the video there.
+class ReviewMoment {
+  ReviewMoment({required this.atSeconds, required this.good, required this.title, required this.text, this.area, this.areaName});
+
+  final double atSeconds;
+  final bool good;
+  final String title;
+  final String text;
+  final String? area;
+  final String? areaName;
+
+  factory ReviewMoment.fromJson(Map<String, dynamic> j) => ReviewMoment(
+        atSeconds: _d(j['atSeconds']) ?? 0,
+        good: j['kind'] == 'GOOD',
+        title: j['title'] as String? ?? '',
+        text: j['text'] as String? ?? '',
+        area: j['area'] as String?,
+        areaName: j['areaName'] as String?,
+      );
+}
+
+/// A drill Pep picked for a tip, from the kit the player has.
+class TipDrill {
+  TipDrill({required this.id, required this.name, required this.minutes, required this.how, this.needs = const []});
+
+  final String id;
+  final String name;
+  final int minutes;
+  final String how;
+  final List<String> needs;
+
+  factory TipDrill.fromJson(Map<String, dynamic> j) => TipDrill(
+        id: j['id'] as String,
+        name: j['name'] as String? ?? '',
+        minutes: _i(j['minutes']) ?? 10,
+        how: j['how'] as String? ?? '',
+        needs: [for (final n in (j['needs'] as List? ?? const [])) n as String],
+      );
+}
+
+/// One thing to practise: from a moment in a clip, about a skill area, with a drill.
+class ReviewTip {
+  ReviewTip({
+    required this.area,
+    required this.areaName,
+    required this.group,
+    required this.title,
+    required this.text,
+    this.atSeconds,
+    this.drill,
+    this.videoId,
+    this.videoTitle,
+    this.clipType,
+    this.thumbnailUrl,
+  });
+
+  final String area;
+  final String areaName;
+  final String group;
+  final String title;
+  final String text;
+  final double? atSeconds;
+  final TipDrill? drill;
+  // Set in GET /v1/tips (which clip the tip came from).
+  final String? videoId;
+  final String? videoTitle;
+  final String? clipType;
+  final String? thumbnailUrl;
+
+  factory ReviewTip.fromJson(Map<String, dynamic> j) => ReviewTip(
+        area: j['area'] as String,
+        areaName: j['areaName'] as String? ?? '',
+        group: j['group'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        text: j['text'] as String? ?? '',
+        atSeconds: _d(j['atSeconds']),
+        drill: j['drill'] == null ? null : TipDrill.fromJson(j['drill'] as Map<String, dynamic>),
+        videoId: j['videoId'] as String?,
+        videoTitle: j['videoTitle'] as String?,
+        clipType: j['clipType'] as String?,
+        thumbnailUrl: j['thumbnailUrl'] as String?,
+      );
+}
+
+class ReviewArea {
+  ReviewArea({required this.id, required this.name, required this.group, required this.good});
+
+  final String id;
+  final String name;
+  final String group;
+  final bool good;
+
+  factory ReviewArea.fromJson(Map<String, dynamic> j) => ReviewArea(
+        id: j['id'] as String,
+        name: j['name'] as String? ?? '',
+        group: j['group'] as String? ?? '',
+        good: j['kind'] == 'GOOD',
+      );
+}
+
+/// Pep's review of one clip (pep/players/review.py). Words and drills, never scores.
+class Review {
+  Review({
+    required this.title,
+    required this.text,
+    this.wentWell = const [],
+    this.workOn = const [],
+    this.tips = const [],
+    this.areas = const [],
+    this.source = 'rules',
+  });
+
+  final String title;
+  final String text;
+  final List<ReviewMoment> wentWell;
+  final List<ReviewMoment> workOn;
+  final List<ReviewTip> tips;
+  final List<ReviewArea> areas;
+  final String source; // gemini (watched by the AI coach) | rules (written from measurements)
+
+  factory Review.fromJson(Map<String, dynamic> j) {
+    final h = j['headline'] as Map<String, dynamic>? ?? const {};
+    return Review(
+      title: h['title'] as String? ?? '',
+      text: h['text'] as String? ?? '',
+      wentWell: _list(j['wentWell'], ReviewMoment.fromJson),
+      workOn: _list(j['workOn'], ReviewMoment.fromJson),
+      tips: _list(j['tips'], ReviewTip.fromJson),
+      areas: _list(j['areas'], ReviewArea.fromJson),
+      source: j['source'] as String? ?? 'rules',
+    );
+  }
 }
 
 class CoachSummary {

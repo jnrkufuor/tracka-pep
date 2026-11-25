@@ -42,6 +42,7 @@ def test_failed_result_has_a_message():
         "moments": [],
         "roleFit": [],
         "metrics": {},
+        "tips": [],
     }
 
 

@@ -28,7 +28,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
-from . import auth, store, training
+from . import auth, review, store, training
 from .skill_areas import skill_areas
 
 # No prefix here: routes.py includes this router into its own /v1 router.
@@ -54,7 +54,8 @@ def _per_week(uid: str) -> int:
 
 def _focus(uid: str, videos: list[dict]) -> list[dict]:
     p = store.get_profile(uid)
-    return training.focus_areas(skill_areas(videos, p["positions"], store.age_on(p["birth_date"]), p["sex"]))
+    areas = skill_areas(videos, p["positions"], store.age_on(p["birth_date"]), p["sex"])
+    return training.focus_areas(areas, prefer=review.recent_work_on(videos))
 
 
 def _find_session(uid: str, key: str) -> tuple[dict, dict]:

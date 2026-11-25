@@ -5,7 +5,9 @@ import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/common.dart';
 import '../widgets/skill_card.dart';
+import '../widgets/ds.dart' show IconTile, Panel;
 import 'home_screen.dart' show openUpload;
+import 'review_screens.dart';
 import 'training_screens.dart';
 
 /// Pep, your coach: every skill across your recent clips, your best roles,
@@ -49,6 +51,20 @@ class PepScreen extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(child: OutlinedButton(onPressed: () => showHealthSheet(context), child: const Text("How's your body?"))),
             ]),
+            const SizedBox(height: 10),
+            _PepLink(
+              icon: 'clip',
+              title: 'Reviews',
+              sub: 'What went well and what to work on, clip by clip',
+              open: (_) => const ReviewsScreen(),
+            ),
+            const SizedBox(height: 8),
+            _PepLink(
+              icon: 'target',
+              title: 'Tips from your clips',
+              sub: 'Each one from a moment, with a drill to try',
+              open: (_) => const TipsScreen(),
+            ),
             const SizedBox(height: 22),
             if (c == null || c.skills.isEmpty)
               TCard(
@@ -123,6 +139,31 @@ class PepScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PepLink extends StatelessWidget {
+  const _PepLink({required this.icon, required this.title, required this.sub, required this.open});
+
+  final String icon;
+  final String title;
+  final String sub;
+  final WidgetBuilder open;
+
+  @override
+  Widget build(BuildContext context) => Panel(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: open)),
+        child: Row(children: [
+          IconTile(icon: icon, color: Tk.pep, background: Tk.pepTile, size: 40),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+              Text(sub, style: const TextStyle(fontSize: 12.5, color: Tk.muted)),
+            ]),
+          ),
+        ]),
+      );
 }
 
 class _HowPepWorks extends StatelessWidget {
