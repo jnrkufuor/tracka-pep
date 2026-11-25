@@ -62,6 +62,7 @@ tracka-pep/
 │   │   ├── guardian_routes.py    /v1/guardian (player), /v1/g/{code} (guardian), /v1/sms/inbound
 │   │   ├── sms.py                texts: PLACEHOLDER outbox until an SMS provider is chosen
 │   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*
+│   │   ├── account.py            Your data: export everything (no secrets) · Report a problem
 │   │   ├── notifications.py      the bell: events (review ready, respect, guardian) + sweep (sessions, games); push placeholder
 │   │   ├── pitchside.py          Feed, posts, respect, follow, block, report, search, challenges, pitches
 │   │   ├── card.py               player card + share link (/v1/card, /v1/c/{token}); only safe fields
@@ -107,6 +108,7 @@ tracka-pep/
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | guardian approval | `pep/players/guardian.py`, `app/lib/screens/guardian_screens.dart`, page in `pep/players/pages.py` |
+| Me, Settings (accessibility, voice, your data, help) | `app/lib/screens/profile_screen.dart`, `settings_screen.dart`, `pep/players/account.py` |
 | Home cards, Customise home, progress | `app/lib/screens/home_screen.dart`, `pep/players/progress.py` (`/v1/progress`) |
 | Pep tab, focus and tests | `app/lib/screens/pep_screen.dart`, `GET /v1/focus` in `pep/players/training_routes.py` |
 | notifications | `pep/players/notifications.py`, `app/lib/screens/notifications_screen.dart` |

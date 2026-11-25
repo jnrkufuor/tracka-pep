@@ -1,132 +1,111 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
-import '../widgets/common.dart';
+import '../widgets/ds.dart';
 import 'home_screen.dart' show openUpload;
 import 'video_screen.dart';
 
-/// Your library: every clip you've uploaded, newest first, with Pep's score.
-class VideosScreen extends StatelessWidget {
+/// Your clips: every clip, newest first, as a grid you can filter by kind.
+/// Only you can see them until you post one on Pitchside. No scores here:
+/// open a clip for Pep's review.
+class VideosScreen extends StatefulWidget {
   const VideosScreen({super.key});
+
+  @override
+  State<VideosScreen> createState() => _VideosScreenState();
+}
+
+class _VideosScreenState extends State<VideosScreen> {
+  String kind = 'all';
 
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
+    final shown = s.videos.where((v) => kind == 'all' || v.clipType == kind).toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Your videos')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => openUpload(context),
-        backgroundColor: TColors.neon,
-        foregroundColor: TColors.onNeon,
-        icon: const LoopyIcon('upload', color: TColors.onNeon, size: 22),
-        label: const Text('Upload', style: TextStyle(fontWeight: FontWeight.w700)),
-      ),
+      appBar: AppBar(actions: [
+        IconButton(tooltip: 'Add a clip', onPressed: () => openUpload(context), icon: const TIcon('plus', size: 22, color: Tk.ink)),
+      ]),
       body: RefreshIndicator(
-        color: TColors.neon,
         onRefresh: s.refresh,
-        child: s.videos.isEmpty
-            ? ListView(children: [
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.6,
-                  child: EmptyState(
-                    icon: 'film',
-                    title: 'No clips yet',
-                    message: 'Your clips live here, with Pep\'s notes on each one. Only you can see them.',
-                    action: FilledButton(onPressed: () => openUpload(context), child: const Text('Upload a clip')),
-                  ),
-                ),
-              ])
-            : LayoutBuilder(builder: (context, box) {
-                final cols = box.maxWidth > 900 ? 4 : (box.maxWidth > 600 ? 3 : 2);
-                return GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: cols,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.78,
-                  ),
-                  itemCount: s.videos.length,
-                  itemBuilder: (_, i) => VideoTile(video: s.videos[i]),
-                );
-              }),
-      ),
-    );
-  }
-}
-
-class VideoTile extends StatelessWidget {
-  const VideoTile({super.key, required this.video});
-
-  final Video video;
-
-  @override
-  Widget build(BuildContext context) {
-    final v = video;
-    return GestureDetector(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => VideoScreen(videoId: v.id))),
-      child: Container(
-        decoration: BoxDecoration(
-          color: TColors.surface,
-          borderRadius: BorderRadius.circular(TRadius.md),
-          border: Border.all(color: TColors.lineSoft),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(
-            child: Stack(fit: StackFit.expand, children: [
-              if (v.thumbnailUrl != null)
-                Image.network(v.thumbnailUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _ThumbFallback())
-              else
-                const _ThumbFallback(),
-              Positioned(left: 8, top: 8, child: _StatusBadge(video: v)),
-              if (v.overallScore != null)
-                Positioned(
-                  right: 10,
-                  bottom: 6,
-                  child: KitNumber(v.overallScore, size: 36, color: TColors.neon),
-                ),
-            ]),
+        child: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+          Text('Your clips', style: Theme.of(context).textTheme.headlineLarge),
+          const SizedBox(height: 4),
+          const Text('Only you can see these until you post them.', style: TextStyle(fontSize: 13, color: Tk.muted)),
+          const SizedBox(height: 14),
+          SingleChips<String>(
+            options: const {'all': 'All', 'match': 'Matches', 'training': 'Training', 'drill': 'Tests and drills', 'highlight': 'Highlights'},
+            value: kind,
+            onChanged: (v) => setState(() => kind = v),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(v.displayTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text('${v.clipType} · ${DateFormat.MMMd().format(v.createdAt)}',
-                  style: const TextStyle(color: TColors.inkFaint, fontSize: 12)),
-            ]),
-          ),
+          const SizedBox(height: 14),
+          if (shown.isEmpty)
+            StateView(
+              icon: 'clip',
+              title: s.videos.isEmpty ? 'No clips yet' : 'None of these yet',
+              message: 'Film a match, a drill or a challenge. Pep watches it and tells you what went well.',
+              actionLabel: 'Add a clip',
+              onAction: () => openUpload(context),
+            )
+          else
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 0.72,
+              children: [for (final v in shown) ClipTile(video: v)],
+            ),
         ]),
       ),
     );
   }
 }
 
-class _ThumbFallback extends StatelessWidget {
-  const _ThumbFallback();
-
-  @override
-  Widget build(BuildContext context) =>
-      const ColoredBox(color: TColors.surface2, child: Center(child: LoopyIcon('film', size: 40, color: TColors.inkFaint)));
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.video});
+class ClipTile extends StatelessWidget {
+  const ClipTile({super.key, required this.video});
 
   final Video video;
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (video.status) {
-      'READY' => (null, TColors.neon),
-      'FAILED' => ('Couldn\'t read', TColors.cherry),
-      _ => ('Pep is watching', TColors.violet),
-    };
-    if (label == null) return const SizedBox.shrink();
-    return Pill(label, color: color, background: TColors.bg.withValues(alpha: 0.85));
+    final v = video;
+    final (label, colour) = v.processing
+        ? ('Pep is watching', Tk.pep)
+        : v.status == 'FAILED'
+            ? ("Couldn't read it", Tk.gold)
+            : ('Analysed', Tk.inkSoft);
+    return Semantics(
+      button: true,
+      label: '${v.displayTitle}, $label',
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => VideoScreen(videoId: v.id))),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(fit: StackFit.expand, children: [
+            if (v.thumbnailUrl != null)
+              Image.network(v.thumbnailUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: Tk.card2))
+            else
+              const ColoredBox(color: Tk.card2, child: Center(child: TIcon('play', size: 18, color: Tk.faint))),
+            const DecoratedBox(
+              decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.center, end: Alignment.bottomCenter, colors: [Color(0x00000000), Color(0xCC000000)])),
+            ),
+            Positioned(
+              left: 8,
+              right: 8,
+              bottom: 8,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(v.displayTitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                Text(label, style: TextStyle(fontSize: 10.5, color: colour)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
   }
 }

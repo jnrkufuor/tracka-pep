@@ -216,6 +216,12 @@ class ApiClient {
 
   // ------------------------------------------------------------- coach
 
+  /// Settings › Your data: everything Tracka holds about you, as JSON.
+  Future<String> exportMe() async => const JsonEncoder.withIndent('  ').convert(await _send('GET', '/v1/me/export'));
+
+  Future<void> feedback(String text, {String kind = 'problem', String? appVersion}) =>
+      _send('POST', '/v1/feedback', body: {'kind': kind, 'text': text, if (appVersion != null) 'appVersion': appVersion});
+
   Future<ProgressState> progress() async => ProgressState.fromJson(await _send('GET', '/v1/progress') as Map<String, dynamic>);
 
   Future<FocusState> focus() async => FocusState.fromJson(await _send('GET', '/v1/focus') as Map<String, dynamic>);
