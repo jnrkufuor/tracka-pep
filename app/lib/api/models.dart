@@ -912,3 +912,115 @@ class FootballEvent {
         durationMin: _i(j['durationMin']) ?? 90,
       );
 }
+
+
+/// A player card as people with the share link see it (pep/players/card.py).
+/// Only safe fields: never the full name, date of birth, town or contact details.
+class PlayerCard {
+  PlayerCard({
+    required this.shirtName,
+    required this.initials,
+    this.shirtNumber,
+    this.positions = const [],
+    this.positionName,
+    this.foot,
+    this.region,
+    this.level,
+    this.ageGroup,
+    this.style,
+    this.pepSees = const [],
+    this.bests = const [],
+    this.skills = const [],
+    this.comparedWith = '',
+    this.clips = const [],
+    this.under18 = false,
+  });
+
+  final String shirtName;
+  final String initials;
+  final int? shirtNumber;
+  final List<String> positions;
+  final String? positionName;
+  final String? foot;
+  final String? region;
+  final String? level;
+  final String? ageGroup;
+  final String? style;
+  final List<String> pepSees;
+  final List<({String label, String value, String unit})> bests;
+  final List<({String name, String band, String? average, String confidence, String trend})> skills;
+  final String comparedWith;
+  final List<({String id, String title, String? thumbnailUrl, String videoUrl, String date})> clips;
+  final bool under18;
+
+  String get line => [
+        if (foot != null) '${foot![0].toUpperCase()}${foot!.substring(1)} foot',
+        if (region != null) region!,
+        if (level != null) level!,
+        if (ageGroup != null) ageGroup!,
+      ].join(' · ');
+
+  factory PlayerCard.fromJson(Map<String, dynamic> j) => PlayerCard(
+        shirtName: j['shirtName'] as String? ?? '',
+        initials: j['initials'] as String? ?? '?',
+        shirtNumber: _i(j['shirtNumber']),
+        positions: [for (final p in (j['positions'] as List? ?? const [])) p as String],
+        positionName: j['positionName'] as String?,
+        foot: j['foot'] as String?,
+        region: j['region'] as String?,
+        level: j['level'] as String?,
+        ageGroup: j['ageGroup'] as String?,
+        style: j['style'] as String?,
+        pepSees: [for (final p in (j['pepSees'] as List? ?? const [])) p as String],
+        bests: [
+          for (final b in (j['bests'] as List? ?? const []))
+            (label: (b as Map)['label'] as String, value: b['value'] as String, unit: b['unit'] as String? ?? ''),
+        ],
+        skills: [
+          for (final s in (j['skills'] as List? ?? const []))
+            (
+              name: (s as Map)['name'] as String,
+              band: s['band'] as String? ?? '',
+              average: s['average'] as String?,
+              confidence: s['confidence'] as String? ?? 'low',
+              trend: s['trend'] as String? ?? 'new',
+            ),
+        ],
+        comparedWith: j['comparedWith'] as String? ?? '',
+        clips: [
+          for (final c in (j['clips'] as List? ?? const []))
+            (
+              id: (c as Map)['id'] as String,
+              title: c['title'] as String? ?? '',
+              thumbnailUrl: c['thumbnailUrl'] as String?,
+              videoUrl: c['videoUrl'] as String,
+              date: c['date'] as String? ?? '',
+            ),
+        ],
+        under18: j['under18'] as bool? ?? false,
+      );
+}
+
+/// GET /v1/card: your card, the share link, and what's shown on it.
+class CardState {
+  CardState({required this.card, required this.linkOn, this.url, this.show = const {}, this.portfolio = const [], this.canShare = false});
+
+  final PlayerCard card;
+  final bool linkOn;
+  final String? url;
+  final Map<String, bool> show; // bests, skills, clips
+  final List<String> portfolio; // video ids, in order
+  final bool canShare;
+
+  factory CardState.fromJson(Map<String, dynamic> j) {
+    final link = j['link'] as Map<String, dynamic>? ?? const {};
+    return CardState(
+      card: PlayerCard.fromJson(j['card'] as Map<String, dynamic>),
+      linkOn: link['on'] as bool? ?? false,
+      url: link['url'] as String?,
+      show: (j['show'] as Map<String, dynamic>? ?? const {}).map((k, v) => MapEntry(k, v as bool)),
+      portfolio: [for (final v in (j['portfolio'] as List? ?? const [])) v as String],
+      canShare: j['canShare'] as bool? ?? false,
+    );
+  }
+}

@@ -62,6 +62,7 @@ tracka-pep/
 │   │   ├── guardian_routes.py    /v1/guardian (player), /v1/g/{code} (guardian), /v1/sms/inbound
 │   │   ├── sms.py                texts: PLACEHOLDER outbox until an SMS provider is chosen
 │   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*
+│   │   ├── card.py               player card + share link (/v1/card, /v1/c/{token}); only safe fields
 │   │   ├── review.py             Pep's review of a clip: headline, moments, tips + kit-aware drills (/v1/tips)
 │   │   ├── details.py            onboarding v2 details (shirt, town, level, goal, style, weaker foot, guardian phone)
 │   │   └── skill_areas.py        Me tab: bands, measured averages, confidence, trend per skill area
@@ -104,6 +105,7 @@ tracka-pep/
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | guardian approval | `pep/players/guardian.py`, `app/lib/screens/guardian_screens.dart`, page in `pep/players/pages.py` |
+| player card, share link, privacy | `pep/players/card.py`, `app/lib/screens/card_screens.dart`, page `/c/{token}` in `pages.py` |
 | Pep's reviews and tips | `pep/players/review.py`, `app/lib/screens/review_screens.dart` |
 | onboarding steps (Meet Pep → 5 steps → All set) | `app/lib/screens/onboarding_screen.dart`, `pep/players/details.py` |
 | what the app gets from the API | `pep/players/routes.py` (and `app/lib/api/models.dart`) |

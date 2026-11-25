@@ -11,8 +11,12 @@ name like "<script>" shows as text instead of running (that attack is called
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from html import escape
+
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
+
+from . import card
 
 router = APIRouter(include_in_schema=False)
 
@@ -80,6 +84,9 @@ function page(d) {
   for (const p of d.pending) {
     nodes.push($('div', {className: 'card'}, $('div', {className: 'eyebrow', textContent: 'New request'}),
       $('p', {textContent: first + ' is asking to ' + WHAT[p.kind] + '.'}),
+      ...(p.kind === 'share_card' && d.card ? [
+        $('div', {className: 'muted', textContent: 'People with the link will see: ' + [d.card.shirtName, d.card.positionName, d.card.ageGroup, d.card.region].filter(Boolean).join(', ') + ', measured skills and best times, and the clips ' + first + ' picks.'}),
+        $('div', {className: 'muted', textContent: "They won't see: the full name, school or town, or any way to message " + first + '.'})] : []),
       $('button', {className: 'go', textContent: 'Say yes', onclick: () => decide(p.kind, true)}),
       $('button', {className: 'ghost', textContent: 'Say no', onclick: () => decide(p.kind, false)})));
   }
@@ -150,6 +157,72 @@ def _page(title: str, body: str, script: str = "") -> HTMLResponse:
 @router.get("/g/{code}")
 def guardian_page(code: str) -> HTMLResponse:
     return _page("Tracka · guardian", '<div id="app"><p class="muted">Loading…</p></div>', GUARDIAN_JS)
+
+
+@router.get("/c/{token}")
+def card_page(token: str, req: Request) -> HTMLResponse:
+    """A shared player card, as a plain page (it opens from WhatsApp on any phone).
+    Built on the server with every value escaped (`html.escape`)."""
+    try:
+        c = card.public(token, str(req.base_url))
+    except HTTPException:
+        return _page(
+            "Tracka",
+            '<h1>This card isn\'t shared any more</h1><p class="muted">Ask the player for a new link.</p>',
+        )
+    e = lambda v: escape(str(v)) if v is not None else ""  # noqa: E731
+    meta = " · ".join(
+        e(x) for x in (c["foot"] and f"{c['foot'].title()} foot", c["region"], c["level"], c["ageGroup"]) if x
+    )
+    rows = [
+        f'<div class="eyebrow">Player card</div><h1>{e(c["shirtName"])}{" · " + e(c["shirtNumber"]) if c["shirtNumber"] else ""}</h1>'
+    ]
+    rows.append(f'<p class="muted">{e(c["positionName"] or "")}<br>{meta}</p>')
+    if c["style"]:
+        rows.append(f'<div class="card"><div class="eyebrow">Their style</div>{e(c["style"])}</div>')
+    if c["pepSees"]:
+        rows.append(
+            '<div class="card"><div class="eyebrow">Pep sees</div>'
+            + " · ".join(e(x) for x in c["pepSees"])
+            + "</div>"
+        )
+    if c["bests"]:
+        rows.append(
+            '<h2>Measured by Pep</h2><div class="card">'
+            + "".join(
+                f'<div class="row"><span>{e(b["label"])}</span><b>{e(b["value"])} {e(b["unit"])}</b></div>'
+                for b in c["bests"]
+            )
+            + "</div>"
+        )
+    if c["skills"]:
+        rows.append(
+            '<h2>What scouts look for</h2><div class="card">'
+            + "".join(
+                f'<div class="row"><span>{e(s["name"])}<br><span class="muted">{e(s["average"])}</span></span><b>{e(s["band"])}</b></div>'
+                for s in c["skills"]
+            )
+            + f'</div><p class="muted">Compared with {e(c["comparedWith"])}. Only skills Pep has measured are shown.</p>'
+        )
+    if c["clips"]:
+        rows.append(
+            "<h2>Clips</h2>"
+            + "".join(
+                f'<div class="card"><video controls preload="none" playsinline style="width:100%;border-radius:12px" '
+                f'{"poster=" + chr(34) + e(v["thumbnailUrl"]) + chr(34) if v["thumbnailUrl"] else ""} src="{e(v["videoUrl"])}"></video>'
+                f'<div class="muted">{e(v["title"])} · {e(v["date"])}</div></div>'
+                for v in c["clips"]
+            )
+        )
+    if c["under18"]:
+        rows.append(
+            '<div class="note">Under 18. Contact goes through the player\'s guardian. No direct messages. Region only, never a home address.</div>'
+        )
+    rows.append(
+        '<p class="muted" style="margin-top:18px">Measured by Tracka from the player\'s own clips. Video measurements can be off, '
+        "and Pep's notes come from an AI. Use them as a guide, not a final judgement.</p>"
+    )
+    return _page("Tracka · player card", "".join(rows))
 
 
 LEGAL = {

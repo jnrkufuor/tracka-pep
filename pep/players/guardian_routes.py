@@ -25,7 +25,7 @@ from pydantic.alias_generators import to_camel
 from ..config import settings
 from ..log import get_logger
 from ..scoring.norms import age_band
-from . import auth, details, guardian, sms, store
+from . import auth, card, details, guardian, sms, store
 from .skill_areas import AGE_LABEL
 
 log = get_logger(__name__)
@@ -178,6 +178,10 @@ def guardian_page(uid: str) -> dict:
             for r in reqs
             if r["status"] == "pending"
         ],
+        # The card as people with the link would see it, so the guardian can judge the request.
+        "card": card.card_data(uid)
+        if any(r["kind"] == "share_card" and r["status"] == "pending" for r in reqs)
+        else None,
         "history": [
             {"kind": r["kind"], "status": r["status"], "decidedAt": _iso(r["decided_at"])}
             for r in reqs

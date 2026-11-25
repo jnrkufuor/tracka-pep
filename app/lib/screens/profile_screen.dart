@@ -8,6 +8,8 @@ import '../widgets/common.dart';
 import '../widgets/ds.dart';
 import '../widgets/profile_fields.dart';
 import '../widgets/skill_areas_view.dart';
+import 'card_screens.dart';
+import 'guardian_screens.dart';
 
 /// Your profile and settings.
 class ProfileScreen extends StatelessWidget {
@@ -52,11 +54,23 @@ class ProfileScreen extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 18),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditProfileScreen())),
-            icon: const LoopyIcon('pencil', size: 20),
-            label: const Text('Edit profile'),
-          ),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+                icon: const LoopyIcon('pencil', size: 20),
+                label: const Text('Edit profile'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ShareCardScreen())),
+                icon: TIcon('share', size: 18, color: context.accent.on),
+                label: const Text('Share'),
+              ),
+            ),
+          ]),
           const SizedBox(height: 22),
           TCard(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -122,12 +136,23 @@ class ProfileScreen extends StatelessWidget {
                 value: st.uploadOnWifiOnly,
                 onChanged: (v) => setting('uploadOnWifiOnly', v),
               ),
-              const SwitchListTile(
-                title: Text('Share my profile with scouts'),
-                subtitle: Text('Coming with Tracka for scouts. Off until you turn it on.'),
-                value: false,
-                onChanged: null,
+              ListTile(
+                title: const Text('Privacy and safety'),
+                subtitle: const Text('Who can see your profile'),
+                trailing: const TIcon('chevron', size: 14, color: Tk.faint),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrivacyScreen())),
               ),
+              if (p.age != null && p.age! < 18)
+                ListTile(
+                  title: const Text('Your guardian'),
+                  subtitle: Text(switch (me.guardianStatus) {
+                    'approved' => 'Approved · can change these settings',
+                    'pending' => 'Waiting for their yes',
+                    _ => 'Not approved yet',
+                  }),
+                  trailing: const TIcon('chevron', size: 14, color: Tk.faint),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GuardianScreen())),
+                ),
             ]),
           ),
           const SizedBox(height: 26),
