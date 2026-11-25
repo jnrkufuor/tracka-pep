@@ -107,6 +107,7 @@ tracka-pep/
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | guardian approval | `pep/players/guardian.py`, `app/lib/screens/guardian_screens.dart`, page in `pep/players/pages.py` |
+| Home cards, Customise home, progress | `app/lib/screens/home_screen.dart`, `pep/players/progress.py` (`/v1/progress`) |
 | Pep tab, focus and tests | `app/lib/screens/pep_screen.dart`, `GET /v1/focus` in `pep/players/training_routes.py` |
 | notifications | `pep/players/notifications.py`, `app/lib/screens/notifications_screen.dart` |
 | Pitchside (feed, challenges, near you) | `pep/players/pitchside.py`, `pep/data/challenges.json`, `app/lib/screens/pitchside_screen.dart`, `feed_screens.dart` |

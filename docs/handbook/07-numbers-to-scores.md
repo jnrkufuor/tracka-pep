@@ -106,6 +106,9 @@ fairness
 5. In `tests/test_skill_areas.py`, add a test for a U17 midfielder with
    head checks of 9, 8 and 3 a minute (newest first). Predict the band,
    confidence and trend before you run it.
+6. In `pep/players/progress.py`, the sprint card says "about 2 metres
+   ahead". Work out the formula by hand for 4.9 s → 4.6 s over 30 m, then
+   check it against `test_sprint_progress_in_plain_words`.
 
 **Questions**
 
