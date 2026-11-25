@@ -42,11 +42,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from .. import db
+from ..config import settings
 from ..contracts import POSITIONS, AnalysisRequest, Calibration, Point
 from ..drills.runner import drill_catalogue
 from ..log import get_logger
 from ..storage import storage
-from . import auth, details, review, store
+from . import auth, details, guardian, review, sms, store
 from .coach import summary
 from .skill_areas import skill_areas
 
@@ -208,7 +209,10 @@ def _me(user: dict) -> dict:
         "profileComplete": bool(
             p["display_name"] and p["birth_date"] and (p["positions"] or d["goal"] in details.CASUAL_GOALS)
         ),
-        "needsGuardian": age is not None and age < 18 and not p["guardian_consent"],
+        # Under 18: the guardian approves the account (guardian.py). The old consent tick
+        # still counts while texts are a placeholder and can't reach guardians.
+        "needsGuardian": not guardian.allowed(user["id"], "account", age, p["guardian_consent"]),
+        "guardianStatus": guardian.status(user["id"]) if age is not None and age < 18 else None,
     }
 
 
@@ -252,7 +256,15 @@ def delete_me(user: dict = Depends(auth.current_user)) -> None:
 
 @router.get("/meta")
 def meta() -> dict:
-    return {"positions": POSITIONS, "regions": GHANA_REGIONS, "drills": drill_catalogue()}
+    return {
+        "positions": POSITIONS,
+        "regions": GHANA_REGIONS,
+        "drills": drill_catalogue(),
+        # Guardian texts are a placeholder until an SMS provider is chosen (sms.py). While they
+        # can't reach phones, the app shows the interim "they've already said yes" tick.
+        "textsLive": sms.live(),
+        "guardianSelfConfirm": settings().guardian_self_confirm and not sms.live(),
+    }
 
 
 # ---------------------------------------------------------------- videos
@@ -442,3 +454,7 @@ def opportunities(user: dict = Depends(auth.current_user)) -> dict:
 from .training_routes import router as training_router  # noqa: E402  (after this router exists)
 
 router.include_router(training_router)
+
+from .guardian_routes import router as guardian_router  # noqa: E402
+
+router.include_router(guardian_router)

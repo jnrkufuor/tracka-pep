@@ -104,6 +104,11 @@ from ..players.routes import router as player_router  # noqa: E402  (after `app`
 
 app.include_router(player_router)
 
+# Web pages for people without the app (a guardian opening /g/4F7K): pep/players/pages.py
+from ..players.pages import router as pages_router  # noqa: E402
+
+app.include_router(pages_router)
+
 
 @app.middleware("http")
 async def observe(request: Request, call_next):

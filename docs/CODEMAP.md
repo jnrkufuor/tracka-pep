@@ -58,6 +58,10 @@ tracka-pep/
 │   │   ├── coach.py              the player's dashboard: overall score, trend, focus skill, drill, roles
 │   │   ├── training.py           the week (computed), Pep sessions, events, health: tables + rules
 │   │   ├── training_routes.py    /v1/week, /v1/sessions, /v1/events, /v1/health
+│   │   ├── guardian.py           guardian approval: link code, texted one-time code, yes/no, revoke
+│   │   ├── guardian_routes.py    /v1/guardian (player), /v1/g/{code} (guardian), /v1/sms/inbound
+│   │   ├── sms.py                texts: PLACEHOLDER outbox until an SMS provider is chosen
+│   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*
 │   │   ├── review.py             Pep's review of a clip: headline, moments, tips + kit-aware drills (/v1/tips)
 │   │   ├── details.py            onboarding v2 details (shirt, town, level, goal, style, weaker foot, guardian phone)
 │   │   └── skill_areas.py        Me tab: bands, measured averages, confidence, trend per skill area
@@ -99,6 +103,7 @@ tracka-pep/
 | …change | go to |
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
+| guardian approval | `pep/players/guardian.py`, `app/lib/screens/guardian_screens.dart`, page in `pep/players/pages.py` |
 | Pep's reviews and tips | `pep/players/review.py`, `app/lib/screens/review_screens.dart` |
 | onboarding steps (Meet Pep → 5 steps → All set) | `app/lib/screens/onboarding_screen.dart`, `pep/players/details.py` |
 | what the app gets from the API | `pep/players/routes.py` (and `app/lib/api/models.dart`) |

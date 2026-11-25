@@ -147,6 +147,7 @@ class Me {
     required this.settings,
     required this.profileComplete,
     required this.needsGuardian,
+    this.guardianStatus,
   });
 
   final String id;
@@ -156,6 +157,9 @@ class Me {
   final bool profileComplete;
   final bool needsGuardian;
 
+  /// Under 18: none | pending | approved | declined | revoked | expired. Null for adults.
+  final String? guardianStatus;
+
   factory Me.fromJson(Map<String, dynamic> j) => Me(
         id: j['id'] as String,
         email: j['email'] as String,
@@ -163,6 +167,56 @@ class Me {
         settings: AppSettings.fromJson(j['settings'] as Map<String, dynamic>),
         profileComplete: j['profileComplete'] as bool? ?? false,
         needsGuardian: j['needsGuardian'] as bool? ?? false,
+        guardianStatus: j['guardianStatus'] as String?,
+      );
+}
+
+/// GET /v1/guardian: where the guardian's approval stands (pep/players/guardian_routes.py).
+class GuardianState {
+  GuardianState({
+    required this.needed,
+    required this.status,
+    this.name,
+    this.relation,
+    this.phone,
+    this.sendStatus,
+    this.resendAt,
+    this.permissions = const {},
+    this.pendingKinds = const [],
+    this.textsLive = false,
+    this.selfConfirm = false,
+  });
+
+  final bool needed;
+  final String status; // none | pending | approved | declined | revoked | expired
+  final String? name;
+  final String? relation;
+  final String? phone; // masked: +233 24 ••• 4567
+  final String? sendStatus; // logged | sent | failed
+  final DateTime? resendAt;
+  final Map<String, bool> permissions; // account, post, shareCard, search
+  final List<String> pendingKinds;
+  final bool textsLive;
+  final bool selfConfirm;
+
+  String get who => (name ?? '').isNotEmpty ? name! : 'your guardian';
+  bool can(String kind) => permissions[kind] ?? false;
+
+  factory GuardianState.fromJson(Map<String, dynamic> j) => GuardianState(
+        needed: j['needed'] as bool? ?? false,
+        status: j['status'] as String? ?? 'none',
+        name: j['name'] as String?,
+        relation: j['relation'] as String?,
+        phone: j['phone'] as String?,
+        sendStatus: j['sendStatus'] as String?,
+        resendAt: j['resendAt'] == null ? null : DateTime.parse(j['resendAt'] as String).toLocal(),
+        permissions: (j['permissions'] as Map<String, dynamic>? ?? const {}).map((k, v) => MapEntry(k, v as bool)),
+        pendingKinds: [
+          for (final r in (j['requests'] as List? ?? const []))
+            if ((r as Map)['status'] == 'pending') r['kind'] as String,
+        ],
+        textsLive: j['textsLive'] as bool? ?? false,
+        selfConfirm: j['selfConfirm'] as bool? ?? false,
       );
 }
 
@@ -187,17 +241,25 @@ class Drill {
 }
 
 class Meta {
-  Meta({required this.positions, required this.regions, required this.drills});
+  Meta({required this.positions, required this.regions, required this.drills, this.textsLive = false, this.guardianSelfConfirm = true});
 
   final List<String> positions;
   final List<String> regions;
   final Map<String, Drill> drills;
+
+  /// Guardian texts reach phones (false while SMS is a placeholder).
+  final bool textsLive;
+
+  /// Show the interim "they've already said yes" tick for under-18s.
+  final bool guardianSelfConfirm;
 
   factory Meta.fromJson(Map<String, dynamic> j) => Meta(
         positions: (j['positions'] as List).cast<String>(),
         regions: (j['regions'] as List).cast<String>(),
         drills: (j['drills'] as Map<String, dynamic>)
             .map((k, v) => MapEntry(k, Drill.fromJson(k, v as Map<String, dynamic>))),
+        textsLive: j['textsLive'] as bool? ?? false,
+        guardianSelfConfirm: j['guardianSelfConfirm'] as bool? ?? true,
       );
 }
 

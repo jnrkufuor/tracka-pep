@@ -120,6 +120,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           if (d.goal == 'fun') 'sessionsPerWeek': help.contains('fit') ? 1 : 0,
         },
       }, finish: false);
+      if (d.minor && d.guardianPhone.trim().isNotEmpty && s.me?.guardianStatus == 'none') {
+        // Texts the guardian a link to approve (a placeholder outbox until SMS is live).
+        try {
+          await s.api.setGuardian(phone: d.guardianPhone, relation: d.guardianRelation);
+        } catch (_) {
+          // Not fatal: they can send it again from the waiting screen.
+        }
+      }
       if (!_eventsSaved) {
         if (d.goal == 'fun' && playDays.isNotEmpty) {
           await s.api.addEvent({'kind': 'game', 'weekdays': playDays.toList()..sort()});
@@ -342,7 +350,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             const Text('Under 18? A parent or guardian OKs your account',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
             const SizedBox(height: 4),
-            const Text('They decide who can see you. Your account stays private until they say yes.',
+            const Text("We'll text them a link to say yes. They decide who can see you, and your account stays private until then.",
                 style: TextStyle(fontSize: 13, color: Tk.muted)),
             const SizedBox(height: 14),
             SingleChips<String>(
@@ -359,7 +367,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               onChanged: (v) => setState(() => d.guardianPhone = v),
             ),
             const SizedBox(height: 6),
-            CheckboxListTile(
+            if (context.read<AppState>().meta?.guardianSelfConfirm ?? true) CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               value: d.guardianConsent,
               controlAffinity: ListTileControlAffinity.leading,
