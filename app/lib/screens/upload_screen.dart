@@ -9,10 +9,8 @@ import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../util/local_video.dart';
 import '../widgets/common.dart';
-import 'uploads_screen.dart';
 import '../widgets/profile_fields.dart' show FieldLabel, Segmented;
 import 'uploads_screen.dart';
-import 'video_screen.dart';
 
 /// Upload a clip: pick it, say what it is, tap yourself (and the cones, for a drill), send it to Pep.
 class UploadScreen extends StatefulWidget {
