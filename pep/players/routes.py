@@ -47,7 +47,7 @@ from ..contracts import POSITIONS, AnalysisRequest, Calibration, Point
 from ..drills.runner import drill_catalogue
 from ..log import get_logger
 from ..storage import storage
-from . import auth, details, guardian, review, sms, store
+from . import auth, details, guardian, pitchside, review, sms, store
 from .coach import summary
 from .skill_areas import skill_areas
 
@@ -142,6 +142,9 @@ class SettingsIn(Body):
     # Onboarding v2: what kit the player has, and how Pep talks to them.
     kit: list[Literal["ball", "wall", "space", "cones", "gym"]] | None = Field(None, max_length=5)
     pep_voice: Literal["street", "coach"] | None = None
+    # Pitchside: show up when players search (under 18 also needs the guardian's yes)
+    findable: bool | None = None
+    notify_opportunities: bool | None = None  # "Tell me when there's one near me"
 
 
 class ProfileIn(Body):
@@ -280,6 +283,8 @@ class UploadMeta(Body):
     # The app's own id for this upload (its upload queue). Sending the same one again
     # (a retry after the connection dropped) returns the clip already made: no duplicates.
     client_id: str | None = Field(None, max_length=40)
+    # A Pitchside challenge attempt (pep/data/challenges.json). Weekly ones are Tracka drills.
+    challenge: str | None = Field(None, max_length=40)
 
 
 def _video_view(v: dict, base: str, full: bool = False, kit: list[str] | None = None) -> dict:
@@ -341,6 +346,15 @@ async def upload(
         m = UploadMeta.model_validate(json.loads(meta or "{}"))
     except ValueError as exc:
         raise HTTPException(422, f"Bad clip details: {exc}") from None
+    if m.challenge:
+        found = pitchside.challenge(m.challenge)
+        if found is None:
+            raise HTTPException(422, "Unknown challenge.")
+        kind, ch = found
+        if kind == "weekly":
+            m.clip_type, m.drill = "drill", ch["drill"]
+        elif m.clip_type == "drill":
+            m.clip_type = "highlight"
     if m.clip_type == "drill" and m.drill not in drill_catalogue():
         raise HTTPException(422, "Pick which drill this is.")
 
@@ -384,6 +398,8 @@ async def upload(
     store.add_video(user["id"], video_id, m.title or "", key, m.clip_type, request.drill, size, job["id"])
     if m.client_id:
         store.remember_client_id(user["id"], m.client_id, video_id)
+    if m.challenge:
+        pitchside.record_attempt(user["id"], video_id, m.challenge)
 
     from ..api.app import kick_workers
 
@@ -472,3 +488,4 @@ router.include_router(guardian_router)
 from .card import router as card_router  # noqa: E402
 
 router.include_router(card_router)
+router.include_router(pitchside.router)

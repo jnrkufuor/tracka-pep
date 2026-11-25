@@ -197,6 +197,16 @@ def _initials(shirt: str | None, display: str) -> str:
     return "".join(w[0] for w in words[:2]).upper() or "?"
 
 
+def shirt_name(p: dict, d: dict) -> str:
+    """What other players see instead of a full name: the shirt name, or 'K. ASANTE'."""
+    if d.get("shirt_name"):
+        return d["shirt_name"]
+    words = (p.get("display_name") or "").split()
+    if not words:
+        return "PLAYER"
+    return (f"{words[0][0]}. {words[-1]}" if len(words) > 1 else words[0]).upper()
+
+
 def card_data(uid: str, base: str = "") -> dict:
     """The public card: only what's listed in the module docstring, nothing else."""
     p = store.get_profile(uid)
@@ -206,9 +216,7 @@ def card_data(uid: str, base: str = "") -> dict:
     show = {**DEFAULT_SHOW, **((link or {}).get("show") or {})}
     videos = store.list_videos(uid)
     positions = p["positions"] or []
-    surname = (p["display_name"] or "").split(" ")[-1] if p["display_name"] else ""
-    first = (p["display_name"] or " ").strip()[:1]
-    shirt = d["shirt_name"] or (f"{first}. {surname}".upper() if surname else "")
+    shirt = shirt_name(p, d)
 
     def link_for(key: str) -> str:
         u = storage().url(key)

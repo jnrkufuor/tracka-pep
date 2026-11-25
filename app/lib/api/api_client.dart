@@ -45,7 +45,7 @@ class ApiClient {
   /// True while the last call couldn't reach Tracka and a saved copy was shown.
   final ValueNotifier<bool> offline = ValueNotifier(false);
 
-  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian'];
+  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian', '/v1/challenges', '/v1/pitches'];
   static bool _cacheable(String method, String path) => method == 'GET' && _cached.any((p) => path == p || path.startsWith('$p?'));
   String? _access;
   String? _refresh;
@@ -215,6 +215,46 @@ class ApiClient {
   }
 
   // ------------------------------------------------------------- coach
+
+  // ------------------------------------------------------------- pitchside
+
+  Future<({List<FeedPost> posts, bool canPost})> feed({String tab = 'for_you'}) async {
+    final j = await _send('GET', '/v1/feed?tab=$tab') as Map<String, dynamic>;
+    return (posts: [for (final p in j['posts'] as List) FeedPost.fromJson(p as Map<String, dynamic>)], canPost: j['canPost'] as bool? ?? false);
+  }
+
+  Future<FeedPost> post(String videoId, {String caption = ''}) async =>
+      FeedPost.fromJson(await _send('POST', '/v1/posts', body: {'videoId': videoId, 'caption': caption}) as Map<String, dynamic>);
+
+  Future<void> deletePost(String id) => _send('DELETE', '/v1/posts/$id');
+  Future<void> respect(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/posts/$id/respect');
+  Future<void> savePost(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/posts/$id/save');
+  Future<void> report(String id, String reason) => _send('POST', '/v1/posts/$id/report', body: {'reason': reason});
+
+  Future<({List<FeedAuthor> players, List<FeedAuthor> nearYou})> searchPlayers(String q) async {
+    final j = await _send('GET', '/v1/players?q=${Uri.encodeQueryComponent(q)}') as Map<String, dynamic>;
+    return (
+      players: [for (final p in j['players'] as List) FeedAuthor.fromJson(p as Map<String, dynamic>)],
+      nearYou: [for (final p in j['nearYou'] as List) FeedAuthor.fromJson(p as Map<String, dynamic>)],
+    );
+  }
+
+  Future<PlayerPage> player(String id) async => PlayerPage.fromJson(await _send('GET', '/v1/players/$id') as Map<String, dynamic>);
+  Future<void> follow(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/players/$id/follow');
+  Future<void> block(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/players/$id/block');
+
+  Future<ChallengesState> challenges() async => ChallengesState.fromJson(await _send('GET', '/v1/challenges') as Map<String, dynamic>);
+
+  Future<List<Pitch>> pitches() async =>
+      [for (final p in ((await _send('GET', '/v1/pitches') as Map)['pitches'] as List)) Pitch.fromJson(p as Map<String, dynamic>)];
+
+  Future<List<Pitch>> addPitch({required String name, required String surface, required String size, required String town}) async => [
+        for (final p in ((await _send('POST', '/v1/pitches', body: {'name': name, 'surface': surface, 'size': size, 'town': town}) as Map)['pitches'] as List))
+          Pitch.fromJson(p as Map<String, dynamic>)
+      ];
+
+  Future<List<Pitch>> confirmPitch(String id) async =>
+      [for (final p in ((await _send('PUT', '/v1/pitches/$id/confirm') as Map)['pitches'] as List)) Pitch.fromJson(p as Map<String, dynamic>)];
 
   // ------------------------------------------------------------- card
 

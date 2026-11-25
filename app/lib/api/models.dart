@@ -102,6 +102,9 @@ class AppSettings {
     this.mainColour = 'volt',
     this.reduceMotion = false,
     this.uploadOnWifiOnly = true,
+    this.findable = false,
+    this.notifyOpportunities = false,
+    this.notifications = const {},
   });
 
   final String units;
@@ -118,6 +121,15 @@ class AppSettings {
   /// Settings › Your data: clips wait for Wi-Fi unless the player chooses mobile data.
   final bool uploadOnWifiOnly;
 
+  /// Pitchside: other players can find you in search (under 18 also needs your guardian).
+  final bool findable;
+
+  /// "Tell me when there's an opportunity near me".
+  final bool notifyOpportunities;
+
+  /// Settings › Notifications: kind → on (tips, reviews, reminders, events, respect).
+  final Map<String, bool> notifications;
+
   /// Every field has a default, so an older server that doesn't send the new
   /// ones still works (add fields, never rename them: see CLAUDE.md).
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -128,6 +140,9 @@ class AppSettings {
         mainColour: j['mainColour'] as String? ?? 'volt',
         reduceMotion: j['reduceMotion'] as bool? ?? false,
         uploadOnWifiOnly: j['uploadOnWifiOnly'] as bool? ?? true,
+        findable: j['findable'] as bool? ?? false,
+        notifyOpportunities: j['notifyOpportunities'] as bool? ?? false,
+        notifications: (j['notifications'] as Map<String, dynamic>? ?? const {}).map((k, v) => MapEntry(k, v as bool)),
       );
 
   /// Speed in the player's chosen unit.
@@ -1023,4 +1038,199 @@ class CardState {
       canShare: j['canShare'] as bool? ?? false,
     );
   }
+}
+
+/// How other players see someone on Pitchside: shirt name, position, age group, region.
+class FeedAuthor {
+  FeedAuthor({required this.id, required this.shirtName, required this.initials, this.position, this.ageGroup, this.region, this.under18 = false, this.following = false});
+
+  final String id;
+  final String shirtName;
+  final String initials;
+  final String? position;
+  final String? ageGroup;
+  final String? region;
+  final bool under18;
+  final bool following;
+
+  String get line => [if (position != null) position!, if (ageGroup != null) ageGroup!, if (region != null) region!].join(' · ');
+
+  factory FeedAuthor.fromJson(Map<String, dynamic> j) => FeedAuthor(
+        id: j['id'] as String,
+        shirtName: j['shirtName'] as String? ?? '',
+        initials: j['initials'] as String? ?? '?',
+        position: j['position'] as String?,
+        ageGroup: j['ageGroup'] as String?,
+        region: j['region'] as String?,
+        under18: j['under18'] as bool? ?? false,
+        following: j['following'] as bool? ?? false,
+      );
+}
+
+/// A posted clip. No Pep here: Pep's notes are only for the player who filmed it.
+class FeedPost {
+  FeedPost({
+    required this.id,
+    required this.author,
+    required this.videoUrl,
+    this.caption = '',
+    this.challenge,
+    this.thumbnailUrl,
+    this.respect = 0,
+    this.respected = false,
+    this.saved = false,
+    this.mine = false,
+  });
+
+  final String id;
+  final FeedAuthor author;
+  final String videoUrl;
+  final String caption;
+  final String? challenge;
+  final String? thumbnailUrl;
+  int respect;
+  bool respected;
+  bool saved;
+  final bool mine;
+
+  factory FeedPost.fromJson(Map<String, dynamic> j) => FeedPost(
+        id: j['id'] as String,
+        author: FeedAuthor.fromJson(j['author'] as Map<String, dynamic>),
+        videoUrl: j['videoUrl'] as String,
+        caption: j['caption'] as String? ?? '',
+        challenge: j['challenge'] as String?,
+        thumbnailUrl: j['thumbnailUrl'] as String?,
+        respect: _i(j['respect']) ?? 0,
+        respected: j['respected'] as bool? ?? false,
+        saved: j['saved'] as bool? ?? false,
+        mine: j['mine'] as bool? ?? false,
+      );
+}
+
+class PlayerPage {
+  PlayerPage({required this.player, this.style, this.level, this.clips = 0, this.respect = 0, this.followers = 0, this.posts = const []});
+
+  final FeedAuthor player;
+  final String? style;
+  final String? level;
+  final int clips;
+  final int respect;
+  final int followers;
+  final List<FeedPost> posts;
+
+  factory PlayerPage.fromJson(Map<String, dynamic> j) {
+    final p = j['player'] as Map<String, dynamic>;
+    return PlayerPage(
+      player: FeedAuthor.fromJson(p),
+      style: p['style'] as String?,
+      level: p['level'] as String?,
+      clips: _i(j['clips']) ?? 0,
+      respect: _i(j['respect']) ?? 0,
+      followers: _i(j['followers']) ?? 0,
+      posts: _list(j['posts'], FeedPost.fromJson),
+    );
+  }
+}
+
+class WeeklyChallenge {
+  WeeklyChallenge({
+    required this.id,
+    required this.name,
+    required this.group,
+    required this.how,
+    required this.drill,
+    required this.endsOn,
+    this.steps = const [],
+    this.best,
+    this.band,
+    this.tries = 0,
+    this.playersIn = 0,
+  });
+
+  final String id;
+  final String name;
+  final String group;
+  final String how;
+  final String drill;
+  final DateTime endsOn;
+  final List<String> steps;
+  final String? best;
+  final String? band;
+  final int tries;
+  final int playersIn;
+
+  factory WeeklyChallenge.fromJson(Map<String, dynamic> j) => WeeklyChallenge(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        group: j['group'] as String? ?? '',
+        how: j['how'] as String? ?? '',
+        drill: j['drill'] as String,
+        endsOn: DateTime.parse(j['endsOn'] as String),
+        steps: [for (final s in (j['steps'] as List? ?? const [])) s as String],
+        best: j['best'] as String?,
+        band: j['band'] as String?,
+        tries: _i(j['tries']) ?? 0,
+        playersIn: _i(j['playersIn']) ?? 0,
+      );
+}
+
+class ChallengesState {
+  ChallengesState({required this.thisWeek, this.fun = const [], this.past = const [], this.comparedWith = ''});
+
+  final WeeklyChallenge thisWeek;
+  final List<({String id, String name, String how, int playersIn})> fun;
+  final List<({String id, String name, String group, String? best, String? band})> past;
+  final String comparedWith;
+
+  factory ChallengesState.fromJson(Map<String, dynamic> j) => ChallengesState(
+        thisWeek: WeeklyChallenge.fromJson(j['thisWeek'] as Map<String, dynamic>),
+        fun: [
+          for (final f in (j['fun'] as List? ?? const []))
+            (id: (f as Map)['id'] as String, name: f['name'] as String, how: f['how'] as String? ?? '', playersIn: _i(f['playersIn']) ?? 0),
+        ],
+        past: [
+          for (final p in (j['past'] as List? ?? const []))
+            (id: (p as Map)['id'] as String, name: p['name'] as String, group: p['group'] as String? ?? '', best: p['best'] as String?, band: p['band'] as String?),
+        ],
+        comparedWith: j['comparedWith'] as String? ?? '',
+      );
+}
+
+class Pitch {
+  Pitch({
+    required this.id,
+    required this.name,
+    required this.surface,
+    required this.size,
+    required this.town,
+    this.confirmations = 0,
+    this.confirmed = false,
+    this.needs = 0,
+    this.confirmedByMe = false,
+    this.addedByMe = false,
+  });
+
+  final String id;
+  final String name;
+  final String surface;
+  final String size;
+  final String town;
+  final int confirmations;
+  final bool confirmed;
+  final int needs;
+  final bool confirmedByMe;
+  final bool addedByMe;
+
+  factory Pitch.fromJson(Map<String, dynamic> j) => Pitch(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        surface: j['surface'] as String? ?? '',
+        size: j['size'] as String? ?? '',
+        town: j['town'] as String? ?? '',
+        confirmations: _i(j['confirmations']) ?? 0,
+        confirmed: j['confirmed'] as bool? ?? false,
+        needs: _i(j['needs']) ?? 0,
+        confirmedByMe: j['confirmedByMe'] as bool? ?? false,
+        addedByMe: j['addedByMe'] as bool? ?? false,
+      );
 }
