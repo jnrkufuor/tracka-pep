@@ -189,6 +189,19 @@ class ApiClient {
 
   // ------------------------------------------------------------- coach
 
+  // ------------------------------------------------------------- card
+
+  Future<CardState> card() async => CardState.fromJson(await _send('GET', '/v1/card') as Map<String, dynamic>);
+
+  Future<CardState> setCardLink(bool on, {bool newLink = false}) async =>
+      CardState.fromJson(await _send('PUT', '/v1/card/link', body: {'on': on, 'newLink': newLink}) as Map<String, dynamic>);
+
+  Future<CardState> updateCard({Map<String, bool>? show, List<String>? portfolio}) async =>
+      CardState.fromJson(await _send('PATCH', '/v1/card', body: {
+        if (show != null) 'show': show,
+        if (portfolio != null) 'portfolio': portfolio,
+      }) as Map<String, dynamic>);
+
   // ------------------------------------------------------------- guardian
 
   Future<GuardianState> guardian() async =>

@@ -458,3 +458,7 @@ router.include_router(training_router)
 from .guardian_routes import router as guardian_router  # noqa: E402
 
 router.include_router(guardian_router)
+
+from .card import router as card_router  # noqa: E402
+
+router.include_router(card_router)
