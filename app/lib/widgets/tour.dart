@@ -103,9 +103,9 @@ class _TourOverlayState extends State<TourOverlay> {
           Text(s.body, style: const TextStyle(fontSize: 14, height: 1.45, color: Tk.inkSoft)),
           const SizedBox(height: 12),
           Row(children: [
-            if (!last) TextButton(onPressed: widget.onDone, child: const Text('Skip tour')),
+            if (!last) TextButton(style: TextButton.styleFrom(minimumSize: const Size(64, 44)), onPressed: widget.onDone, child: const Text('Skip tour')),
             const Spacer(),
-            FilledButton(onPressed: _next, child: Text(last ? 'Got it' : 'Next')),
+            FilledButton(style: FilledButton.styleFrom(minimumSize: const Size(96, 44)), onPressed: _next, child: Text(last ? 'Got it' : 'Next')),
           ]),
         ]),
       );
