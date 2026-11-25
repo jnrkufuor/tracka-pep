@@ -21,6 +21,20 @@ class PepScreen extends StatefulWidget {
 
   @override
   State<PepScreen> createState() => _PepScreenState();
+
+  /// "You have a match on Sunday. Today is your last big training day before it."
+  static String weekLine(Week? w) {
+    if (w == null) return "Here's your week with Pep.";
+    final today = w.days.where((d) => d.isToday).firstOrNull;
+    final match = w.days.where((d) => d.matchDay && !d.date.isBefore(today?.date ?? w.today)).firstOrNull;
+    if (match == null) return 'No match this week. A good week to build.';
+    if (match.isToday) return 'Match day today. Warm up well and enjoy it.';
+    final gap = match.date.difference(today?.date ?? w.today).inDays;
+    if (gap == 1) return 'You have a match tomorrow. Keep today light.';
+    if (gap == 2) return 'You have a match on ${match.weekday}. Today is your last big training day before it.';
+    return 'You have a match on ${match.weekday}.';
+  }
+
 }
 
 class _PepScreenState extends State<PepScreen> {
@@ -49,19 +63,6 @@ class _PepScreenState extends State<PepScreen> {
     final h = DateTime.now().hour;
     final part = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
     return name.isEmpty ? '$part!' : '$part, $name!';
-  }
-
-  /// "You have a match on Sunday. Today is your last big training day before it."
-  static String weekLine(Week? w) {
-    if (w == null) return "Here's your week with Pep.";
-    final today = w.days.where((d) => d.isToday).firstOrNull;
-    final match = w.days.where((d) => d.matchDay && !d.date.isBefore(today?.date ?? w.today)).firstOrNull;
-    if (match == null) return 'No match this week. A good week to build.';
-    if (match.isToday) return 'Match day today. Warm up well and enjoy it.';
-    final gap = match.date.difference(today?.date ?? w.today).inDays;
-    if (gap == 1) return 'You have a match tomorrow. Keep today light.';
-    if (gap == 2) return 'You have a match on ${match.weekday}. Today is your last big training day before it.';
-    return 'You have a match on ${match.weekday}.';
   }
 
   void _go(Widget page) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
@@ -96,7 +97,7 @@ class _PepScreenState extends State<PepScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   EnterFade(child: Text(_greeting(s.me?.profile.firstName ?? ''), style: t.headlineMedium)),
                   const SizedBox(height: 4),
-                  Text(weekLine(s.week), style: const TextStyle(fontSize: 14, height: 1.4, color: Tk.inkSoft)),
+                  Text(PepScreen.weekLine(s.week), style: const TextStyle(fontSize: 14, height: 1.4, color: Tk.inkSoft)),
                 ]),
               ),
             ]),
