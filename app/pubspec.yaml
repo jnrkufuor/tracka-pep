@@ -18,6 +18,8 @@ dependencies:
   video_player: ^2.9.2           # play clips, tap yourself on a frame
   flutter_svg: ^2.0.10           # the Tracka mark and loopy icons
   intl: ^0.20.1                  # dates
+  shared_preferences: ^2.3.2     # the upload queue and saved screens for offline use
+  connectivity_plus: ^6.1.0      # Wi-Fi or mobile data (upload on Wi-Fi only), offline or not
   share_plus: ^10.1.4            # share your card link (WhatsApp, Status, anything)
 
 dev_dependencies:

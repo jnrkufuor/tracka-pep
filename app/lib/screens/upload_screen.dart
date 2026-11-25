@@ -10,7 +10,7 @@ import '../theme/theme.dart';
 import '../util/local_video.dart';
 import '../widgets/common.dart';
 import '../widgets/profile_fields.dart' show FieldLabel, Segmented;
-import 'video_screen.dart';
+import 'uploads_screen.dart';
 
 /// Upload a clip: pick it, say what it is, tap yourself (and the cones, for a drill), send it to Pep.
 class UploadScreen extends StatefulWidget {
@@ -119,10 +119,9 @@ class _UploadScreenState extends State<UploadScreen> {
     setState(() => _progress = 0);
     _video?.pause();
     try {
-      final id = await s.upload(_file!, meta, onProgress: (p) {
-        if (mounted) setState(() => _progress = p);
-      });
-      nav.pushReplacement(MaterialPageRoute(builder: (_) => VideoScreen(videoId: id)));
+      // Saved to the queue first; it sends now, on Wi-Fi, or when you're back online.
+      await s.upload(_file!, meta);
+      nav.pushReplacement(MaterialPageRoute(builder: (_) => const UploadsScreen()));
     } catch (e) {
       if (mounted) {
         setState(() => _progress = null);
@@ -221,7 +220,7 @@ class _UploadScreenState extends State<UploadScreen> {
           ),
           const SizedBox(height: 8),
           if (_progress != null) ...[
-            Text('Uploading… ${(_progress! * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w700)),
+            const Text('Saving your clip…', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             ScoreBar(_progress! * 100),
             const SizedBox(height: 12),

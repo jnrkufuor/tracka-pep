@@ -197,3 +197,23 @@ def test_design_settings_defaults_and_validation():
         # Purple, gold and red are never main colours (they mean Pep, warnings and errors).
         bad = client.patch("/v1/me", json={"settings": {"mainColour": "purple"}}, headers=headers(h))
         assert bad.status_code == 422
+
+
+def test_upload_retries_with_the_same_client_id_make_one_clip(blank_video):
+    with TestClient(app) as client:
+        h = signup(client)
+        complete_profile(client, h, consent=True)
+        ids = []
+        for _ in range(2):  # the app retried after the connection dropped
+            with blank_video.open("rb") as f:
+                r = client.post(
+                    "/v1/videos",
+                    files={"video": ("c.mp4", f, "video/mp4")},
+                    data={"meta": '{"title": "Again", "clientId": "q-123"}'},
+                    headers=headers(h),
+                )
+            assert r.status_code == 202
+            ids.append(r.json()["id"])
+        assert ids[0] == ids[1]
+        assert len(client.get("/v1/videos", headers=headers(h)).json()) == 1
+        assert client.delete(f"/v1/videos/{ids[0]}", headers=headers(h)).status_code == 204
