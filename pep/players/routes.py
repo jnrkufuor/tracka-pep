@@ -148,6 +148,8 @@ class SettingsIn(Body):
     # Settings › Notifications: kind → on (tips, reviews, reminders, events, respect)
     notifications: dict[Literal["tips", "reviews", "reminders", "events", "respect"], bool] | None = None
     quiet_hours: bool | None = None  # 9 pm to 7 am; always on for under-18s
+    # Home: the cards shown, in order (Customise home). Unknown ids are ignored by the app.
+    home_cards: list[str] | None = Field(None, max_length=20)
 
 
 class ProfileIn(Body):
@@ -501,3 +503,7 @@ router.include_router(pitchside.router)
 from .notifications import router as notifications_router  # noqa: E402
 
 router.include_router(notifications_router)
+
+from .progress import router as progress_router  # noqa: E402
+
+router.include_router(progress_router)

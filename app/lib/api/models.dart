@@ -106,6 +106,7 @@ class AppSettings {
     this.notifyOpportunities = false,
     this.notifications = const {},
     this.quietHours = true,
+    this.homeCards,
   });
 
   final String units;
@@ -134,6 +135,9 @@ class AppSettings {
   /// No push messages 9 pm to 7 am (always on for under-18s).
   final bool quietHours;
 
+  /// Home: the cards shown, in order. Null = Pep's suggestion (Customise home).
+  final List<String>? homeCards;
+
   /// Every field has a default, so an older server that doesn't send the new
   /// ones still works (add fields, never rename them: see CLAUDE.md).
   factory AppSettings.fromJson(Map<String, dynamic> j) => AppSettings(
@@ -148,6 +152,7 @@ class AppSettings {
         notifyOpportunities: j['notifyOpportunities'] as bool? ?? false,
         notifications: (j['notifications'] as Map<String, dynamic>? ?? const {}).map((k, v) => MapEntry(k, v as bool)),
         quietHours: j['quietHours'] as bool? ?? true,
+        homeCards: (j['homeCards'] as List?)?.cast<String>(),
       );
 
   /// Speed in the player's chosen unit.
@@ -1318,6 +1323,52 @@ class FocusState {
           (metric: (b as Map)['metric'] as String, label: b['label'] as String, value: b['value'] as String, unit: b['unit'] as String? ?? ''),
       ],
       comparedWith: j['comparedWith'] as String? ?? '',
+    );
+  }
+}
+
+/// GET /v1/progress: Home's progress cards (pep/players/progress.py).
+class ProgressState {
+  ProgressState({this.tests = const [], this.streakWeeks = 0, this.bestStreak = 0, this.weekDone = 0, this.weekPlanned = 0, this.readyDone = 0, this.readyTotal = 5, this.readyNext, this.readySteps = const [], this.nextRetest});
+
+  final List<({String label, String unit, double first, double latest, double change, bool better, int weeks, String? line})> tests;
+  final int streakWeeks;
+  final int bestStreak;
+  final int weekDone;
+  final int weekPlanned;
+  final int readyDone;
+  final int readyTotal;
+  final String? readyNext;
+  final List<({String name, bool done})> readySteps;
+  final String? nextRetest;
+
+  factory ProgressState.fromJson(Map<String, dynamic> j) {
+    final s = j['streak'] as Map<String, dynamic>? ?? const {};
+    final w = s['thisWeek'] as Map<String, dynamic>?;
+    final r = j['readiness'] as Map<String, dynamic>? ?? const {};
+    return ProgressState(
+      tests: [
+        for (final t in (j['tests'] as List? ?? const []))
+          (
+            label: (t as Map)['label'] as String,
+            unit: t['unit'] as String? ?? '',
+            first: (t['first'] as num).toDouble(),
+            latest: (t['latest'] as num).toDouble(),
+            change: (t['change'] as num).toDouble(),
+            better: t['better'] as bool? ?? false,
+            weeks: (t['weeks'] as num?)?.toInt() ?? 1,
+            line: t['line'] as String?,
+          ),
+      ],
+      streakWeeks: _i(s['weeks']) ?? 0,
+      bestStreak: _i(s['best']) ?? 0,
+      weekDone: _i(w?['done']) ?? 0,
+      weekPlanned: _i(w?['planned']) ?? 0,
+      readyDone: _i(r['done']) ?? 0,
+      readyTotal: _i(r['total']) ?? 5,
+      readyNext: r['next'] as String?,
+      readySteps: [for (final x in (r['steps'] as List? ?? const [])) (name: (x as Map)['name'] as String, done: x['done'] as bool? ?? false)],
+      nextRetest: j['nextRetest'] as String?,
     );
   }
 }
