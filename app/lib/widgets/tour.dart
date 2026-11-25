@@ -88,6 +88,8 @@ class _TourOverlayState extends State<TourOverlay> {
       final h = hole;
       final below = h == null || h.center.dy < box.maxHeight / 2;
       final card = Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(maxWidth: 440),
         margin: const EdgeInsets.symmetric(horizontal: 20),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: Tk.card, borderRadius: BorderRadius.circular(Tk.rCard), border: Border.all(color: Tk.pep.withValues(alpha: 0.5))),
@@ -95,7 +97,10 @@ class _TourOverlayState extends State<TourOverlay> {
           Row(children: [
             const TIcon('pep', size: 20, color: Tk.pep),
             const SizedBox(width: 8),
-            Text("Pep's tour · ${step + 1} of ${tourSteps.length}", style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep)),
+            Flexible(
+              child: Text("Pep's tour · ${step + 1} of ${tourSteps.length}",
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep)),
+            ),
           ]),
           const SizedBox(height: 8),
           Text(s.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Tk.ink)),
@@ -103,9 +108,16 @@ class _TourOverlayState extends State<TourOverlay> {
           Text(s.body, style: const TextStyle(fontSize: 14, height: 1.45, color: Tk.inkSoft)),
           const SizedBox(height: 12),
           Row(children: [
-            if (!last) TextButton(style: TextButton.styleFrom(minimumSize: const Size(64, 44)), onPressed: widget.onDone, child: const Text('Skip tour')),
+            if (!last)
+              Flexible(
+                child: TextButton(
+                    style: TextButton.styleFrom(minimumSize: const Size(0, 44)), onPressed: widget.onDone, child: const Text('Skip tour')),
+              ),
             const Spacer(),
-            FilledButton(style: FilledButton.styleFrom(minimumSize: const Size(96, 44)), onPressed: _next, child: Text(last ? 'Got it' : 'Next')),
+            Flexible(
+              child: FilledButton(
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 44)), onPressed: _next, child: Text(last ? 'Got it' : 'Next')),
+            ),
           ]),
         ]),
       );

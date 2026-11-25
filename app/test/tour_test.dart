@@ -6,6 +6,9 @@ import 'package:tracka/widgets/tour.dart';
 void main() {
   testWidgets("Pep's tour walks four steps and can be skipped", (tester) async {
     var done = 0;
+    tester.view.physicalSize = const Size(390 * 3, 844 * 3);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       theme: trackaTheme(),
       home: Scaffold(
