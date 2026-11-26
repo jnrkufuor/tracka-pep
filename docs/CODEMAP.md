@@ -64,6 +64,7 @@ tracka-pep/
 │   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*
 │   │   ├── moderation.py         Lab › Safety: reported clips, keep / take down, pause posting, audit log
 │   │   ├── account.py            Your data: export everything (no secrets) · Report a problem
+│   │   ├── push.py               Firebase Cloud Messaging: service-account token, send, drop dead tokens
 │   │   ├── notifications.py      the bell: events (review ready, respect, guardian) + sweep (sessions, games); push placeholder
 │   │   ├── pitchside.py          Feed, posts, respect, follow, block, report, search, challenges, pitches
 │   │   ├── card.py               player card + share link (/v1/card, /v1/c/{token}); only safe fields

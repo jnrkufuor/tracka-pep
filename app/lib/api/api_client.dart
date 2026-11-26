@@ -237,6 +237,11 @@ class ApiClient {
     );
   }
 
+  Future<void> registerDevice(String token, String platform) =>
+      _send('PUT', '/v1/devices', body: {'token': token, 'platform': platform});
+
+  Future<void> unregisterDevice(String token) => _send('DELETE', '/v1/devices/${Uri.encodeComponent(token)}');
+
   /// Mark these read, or all of them when [ids] is null.
   Future<void> markRead([List<String>? ids]) => _send('POST', '/v1/notifications/read', body: {if (ids != null) 'ids': ids});
 

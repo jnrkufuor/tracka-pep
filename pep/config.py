@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     # Where guardians and card links open (the public web address of this API for now).
     web_url: str = ""
 
+    # ---- push (Firebase Cloud Messaging): pep/players/push.py, docs/PUSH_SETUP.md
+    fcm_service_account: str = ""  # the service account JSON, as text
+    fcm_project_id: str = ""
+
     # ---- AI coach (language model that watches the clip and writes feedback)
     coach_provider: Literal["gemini", "none"] = "gemini"
     gemini_api_key: str = Field("", validation_alias=AliasChoices("GEMINI_API_KEY", "PEP_GEMINI_API_KEY"))

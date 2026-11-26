@@ -7,6 +7,7 @@ import '../api/api_client.dart';
 import '../api/models.dart';
 import '../config.dart';
 import 'net.dart';
+import 'push.dart';
 import 'upload_queue.dart';
 
 enum Stage { starting, signedOut, onboarding, ready }
@@ -114,6 +115,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     await queue.load();
     if (stage == Stage.ready) await refresh();
+    unawaited(Push.start(api, onOpen: (data) => onPushOpened?.call(data), onMessage: loadUnread));
   }
 
   Future<void> signUp(String email, String password) async {
@@ -126,7 +128,11 @@ class AppState extends ChangeNotifier {
     await _afterLogin();
   }
 
+  /// Set by the app: open the screen a tapped push is about.
+  void Function(Map<String, dynamic>)? onPushOpened;
+
   Future<void> logOut() async {
+    await Push.stop(api);
     await api.logOut();
     _signedOut();
   }

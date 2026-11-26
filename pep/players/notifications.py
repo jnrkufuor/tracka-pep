@@ -20,8 +20,8 @@ The player chooses which kinds they get (Settings › Notifications). Quiet
 hours (9 pm to 7 am, Ghana time) hold back push messages; for under-18s
 quiet hours are always on. Guardian and safety notices always come through.
 
-Push is a PLACEHOLDER (`push()` only logs) until the app has Firebase
-Cloud Messaging set up; the in-app list works fully today.
+Push goes through Firebase Cloud Messaging (push.py). Until the Firebase
+settings are in place it only logs; the in-app list works either way.
 """
 
 from __future__ import annotations
@@ -91,11 +91,11 @@ def quiet_now(uid: str, at: datetime | None = None) -> bool:
     return bool(on) and (t >= start or t < end)
 
 
-def push(uid: str, title: str, body: str) -> None:
-    """PLACEHOLDER: send to the player's phones (FCM). For now it only logs."""
-    with db.engine().connect() as c:
-        n = len(c.execute(select(devices.c.token).where(devices.c.user_id == uid)).all())
-    log.info("push.placeholder", user_id=uid, devices=n, title=title)
+def push(uid: str, title: str, body: str, link: dict | None = None) -> None:
+    """Send to the player's phones (pep/players/push.py; only logs until Firebase is set up)."""
+    from . import push as fcm
+
+    fcm.send(uid, title, body, link)
 
 
 def notify(
@@ -137,7 +137,7 @@ def notify(
             )
         )
     if not quiet_now(uid):
-        push(uid, title, body)
+        push(uid, title, body, link)
     return True
 
 
@@ -354,7 +354,7 @@ class DeviceIn(Body):
 
 @router.put("/devices", status_code=204)
 def register_device(body: DeviceIn, user: dict = Depends(auth.current_user)) -> None:
-    """Where push messages go (PLACEHOLDER until FCM is set up in the app)."""
+    """Where push messages go: the Firebase device token from the app."""
     with db.engine().begin() as c:
         c.execute(devices.delete().where(devices.c.token == body.token))
         c.execute(
@@ -362,3 +362,10 @@ def register_device(body: DeviceIn, user: dict = Depends(auth.current_user)) -> 
                 token=body.token, user_id=user["id"], platform=body.platform, created_at=now()
             )
         )
+
+
+@router.delete("/devices/{token}", status_code=204)
+def forget_device(token: str, user: dict = Depends(auth.current_user)) -> None:
+    """Log out: stop sending pushes to this phone."""
+    with db.engine().begin() as c:
+        c.execute(devices.delete().where(devices.c.token == token, devices.c.user_id == user["id"]))

@@ -21,7 +21,9 @@ dependencies:
   intl: ^0.20.1                  # dates
   shared_preferences: ^2.3.2     # the upload queue and saved screens for offline use
   connectivity_plus: ^6.1.0      # Wi-Fi or mobile data (upload on Wi-Fi only), offline or not
-  share_plus: ^10.1.4            # share your card link (WhatsApp, Status, anything)
+  share_plus: ^10.1.4
+  firebase_core: '>=3.6.0 <6.0.0'      # push notifications (set up: docs/PUSH_SETUP.md)
+  firebase_messaging: '>=15.1.0 <18.0.0'            # share your card link (WhatsApp, Status, anything)
 
 dev_dependencies:
   flutter_test:
