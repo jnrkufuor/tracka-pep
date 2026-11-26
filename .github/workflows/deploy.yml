@@ -66,4 +66,6 @@ jobs:
         with: { python-version: "3.12" }
       - name: Deploy to Modal
         if: env.MODAL_TOKEN_ID != ''
+        env:
+          MODAL_GPU: ${{ vars.MODAL_GPU || 'L4' }}   # set the variable to "cpu" if Modal has no payment method
         run: pip install modal && modal deploy deploy/modal_app.py

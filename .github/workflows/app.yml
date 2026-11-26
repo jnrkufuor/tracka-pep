@@ -56,7 +56,10 @@ jobs:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@3 pages deploy build/web --project-name tracka --branch main
+        run: |
+          # First deploy: make the Pages project (fails harmlessly if it exists already).
+          npx --yes wrangler@3 pages project create tracka --production-branch main || true
+          npx --yes wrangler@3 pages deploy build/web --project-name tracka --branch main
 
   android:
     needs: check
@@ -90,6 +93,10 @@ jobs:
         env:
           GRADLE_OPTS: -Dorg.gradle.internal.http.connectionTimeout=180000 -Dorg.gradle.internal.http.socketTimeout=180000 -Dorg.gradle.internal.repository.max.retries=8
         run: |
+          # Values pasted into GitHub variables sometimes carry a line break or spaces:
+          # squash all whitespace (and Windows-style \r) so each --dart-define stays one argument.
+          FCM=$(echo $FCM | tr -d '\r')
+          PEP_API_URL=$(echo $PEP_API_URL | tr -d '\r')
           for i in 1 2 3; do
             flutter build apk --release --split-per-abi --dart-define=PEP_API_URL=$PEP_API_URL --dart-define=APP_VERSION=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1) $FCM 2>&1 | tee build.log
             [ "${PIPESTATUS[0]}" = 0 ] && exit 0
