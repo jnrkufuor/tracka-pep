@@ -106,7 +106,9 @@ presigned URL
    `docker run -p 8000:8000 pep-api`, and open `/healthz`. Then read the
    `Dockerfile` line by line and explain each one.
 2. Deploy to Render from `render.yaml` (New → Blueprint). Open your
-   service's Logs while you call `/readyz`.
+   service's Logs while you call `/readyz`. Then compare `render.yaml` with
+   `render.prod.yaml`: list every difference, and for each one say what a
+   player would notice (hint: the first call after 15 quiet minutes).
 3. Create an R2 bucket, set the `PEP_S3_*` variables, upload a clip, and
    find it in the bucket. Open its presigned link, wait an hour, and try
    again.

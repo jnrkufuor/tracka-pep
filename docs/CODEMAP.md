@@ -104,7 +104,8 @@ tracka-pep/
 ├── Dockerfile                    API image (Render builds this)
 ├── Dockerfile.worker             worker image (PyTorch, YOLO, ffmpeg)
 ├── docker-compose.yml            Postgres + MinIO + API + worker, locally
-├── render.yaml                   Render Blueprint (API, Postgres, optional CPU worker), Frankfurt
+├── render.yaml                   Render Blueprint for free testing (API + free Postgres; clips on Modal), Frankfurt
+├── render.prod.yaml              Render Blueprint for launch (paid plans, optional CPU worker)
 ├── .github/workflows/            ci.yml, app.yml (Flutter: test, web, Android), deploy.yml,
 │                                 evaluate.yml, screenshots.yml; dependabot.yml
 └── pyproject.toml                dependencies (extras: vision, coach, train, dev) + tool settings
