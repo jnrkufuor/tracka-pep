@@ -68,7 +68,7 @@ class WelcomeScreen extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   _Cta(icon: 'you', label: 'Start with your phone number', onTap: () => go(const PhoneScreen())),
                   const SizedBox(height: 10),
-                  _Cta(icon: 'text', label: 'Continue with email', ghost: true, onTap: () => go(const AuthScreen(signUp: true))),
+                  _Cta(icon: 'mail', label: 'Continue with email', ghost: true, onTap: () => go(const AuthScreen(signUp: true))),
                   const SizedBox(height: 10),
                   const _SocialRow(),
                   const SizedBox(height: 12),

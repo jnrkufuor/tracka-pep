@@ -250,27 +250,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // ───────────────────────────── Meet Pep
 
+  /// Meet Pep (canvas: Meet Pep): Pep big and alone at the top, breathing,
+  /// then what he does in three lines.
   Widget _meet() {
     Widget row(String ic, String t, String sub) => Padding(
           padding: const EdgeInsets.only(bottom: 14),
           child: Row(children: [
-            IconTile(icon: ic, color: Tk.pep, background: Tk.pepTile, size: 44),
+            IconTile(icon: ic, color: Tk.pep, background: Tk.pepTile, size: 40),
             const SizedBox(width: 14),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(t, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-                Text(sub, style: const TextStyle(fontSize: 13.5, color: Tk.muted)),
+                Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+                Text(sub, style: const TextStyle(fontSize: 13, color: Tk.muted)),
               ]),
             ),
           ]),
         );
-    return ListView(padding: const EdgeInsets.fromLTRB(24, 48, 24, 24), children: [
-      const EnterFade(child: PepTile(PepMood.justHere, size: 72)),
-      const SizedBox(height: 22),
-      const Text('YOUR COACH', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8)),
+    final h = MediaQuery.sizeOf(context).height;
+    final top = (h * 0.42).clamp(220.0, 400.0); // the board's 430 on an 844 phone, less on short ones
+    return ListView(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24), children: [
+      SizedBox(
+        height: top,
+        child: Center(child: EnterFade(child: PepFace(PepMood.justHere, size: (top * 0.42).clamp(110.0, 170.0)))),
+      ),
+      const Center(child: Text('YOUR COACH', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8))),
       const SizedBox(height: 6),
-      Text('Meet Pep.', style: Theme.of(context).textTheme.displayMedium),
-      const SizedBox(height: 26),
+      Center(child: Text('Meet Pep.', style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 36))),
+      const SizedBox(height: 24),
       row('clip', 'I watch your clips', 'And show you what to work on'),
       row('calendar', 'I plan your week', 'Around your team and your time'),
       row('chart', 'I track how you grow', 'With real tests, not guesses'),
