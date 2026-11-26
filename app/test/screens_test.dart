@@ -297,6 +297,13 @@ void main() {
             await tester.pump(const Duration(milliseconds: 200));
           }
           expect(tester.takeException(), isNull, reason: '$name at $width px, $label');
+          // Fitting isn't enough: a part that grows too big hides the rest without
+          // any error. The tab bar must stay a bar at the bottom of the screen.
+          if (name.startsWith('Tabs')) {
+            final bar = tester.getRect(find.byType(TabBarT));
+            expect(bar.height, lessThan(140), reason: 'tab bar height at $width px, $label');
+            expect(bar.bottom, closeTo(800, 1), reason: 'tab bar sits at the bottom');
+          }
         }
         await tester.pumpWidget(const SizedBox());
         s!.dispose();
