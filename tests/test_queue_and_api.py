@@ -108,3 +108,18 @@ def test_callback_is_signed_and_retried():
         c.execute(db.jobs.update().values(callback_next_at=db.now()))
     assert callbacks.deliver(db.callbacks_due()[0], client)
     assert db.get_job(job["id"])["callback_status"] == "SENT"
+
+
+def test_prod_refuses_development_secrets(monkeypatch):
+    import pytest
+
+    from pep.api import app as app_module
+    from pep.config import settings
+
+    monkeypatch.setattr(settings(), "env", "prod")
+    with pytest.raises(RuntimeError, match="jwt_secret"):
+        app_module._refuse_unsafe_prod_settings()
+    monkeypatch.setattr(settings(), "jwt_secret", "x" * 40)
+    monkeypatch.setattr(settings(), "api_key", "y" * 40)
+    monkeypatch.setattr(settings(), "lab_password", "z" * 20)
+    app_module._refuse_unsafe_prod_settings()
