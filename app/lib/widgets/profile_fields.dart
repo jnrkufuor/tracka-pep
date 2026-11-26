@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 
 import '../theme/theme.dart';
-import 'common.dart';
 
 /// Profile form pieces, shared by onboarding (one step at a time) and Edit profile (all at once).
 /// Each holds no state of its own: the parent keeps a [ProfileDraft] and rebuilds.
@@ -92,14 +91,17 @@ class ProfileDraft {
       };
 }
 
+/// A small label above a field (same look as [SectionLabel]).
 class FieldLabel extends StatelessWidget {
   const FieldLabel(this.text, {super.key});
 
   final String text;
 
   @override
-  Widget build(BuildContext context) =>
-      Padding(padding: const EdgeInsets.only(bottom: 10, top: 6), child: Eyebrow(text));
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 6),
+        child: Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink)),
+      );
 }
 
 class BirthDateField extends StatelessWidget {
@@ -111,7 +113,7 @@ class BirthDateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      borderRadius: BorderRadius.circular(TRadius.sm),
+      borderRadius: BorderRadius.circular(Tk.rField),
       onTap: () async {
         final now = DateTime.now();
         final picked = await showDatePicker(
@@ -126,85 +128,13 @@ class BirthDateField extends StatelessWidget {
       child: InputDecorator(
         decoration: const InputDecoration(labelText: 'Date of birth'),
         child: Text(value == null ? 'Choose a date' : DateFormat.yMMMMd().format(value!),
-            style: TextStyle(color: value == null ? TColors.inkFaint : TColors.ink)),
+            style: TextStyle(color: value == null ? Tk.faint : Tk.ink)),
       ),
     );
   }
 }
 
-class PositionsPicker extends StatelessWidget {
-  const PositionsPicker({super.key, required this.all, required this.selected, required this.onChanged});
-
-  final List<String> all;
-  final Set<String> selected;
-  final ValueChanged<Set<String>> onChanged;
-
-  static const names = {
-    'GK': 'Goalkeeper', 'CB': 'Centre-back', 'LB': 'Left-back', 'RB': 'Right-back', 'LWB': 'Left wing-back',
-    'RWB': 'Right wing-back', 'CDM': 'Defensive mid', 'CM': 'Central mid', 'CAM': 'Attacking mid',
-    'LM': 'Left mid', 'RM': 'Right mid', 'LW': 'Left wing', 'RW': 'Right wing', 'CF': 'Centre-forward', 'ST': 'Striker',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(spacing: 8, runSpacing: 8, children: [
-      for (final p in all)
-        ChoiceChipT(
-          label: '$p · ${names[p] ?? p}',
-          selected: selected.contains(p),
-          onTap: () {
-            final next = {...selected};
-            if (!next.remove(p)) {
-              if (next.length >= 4) return; // up to four positions
-              next.add(p);
-            }
-            onChanged(next);
-          },
-        ),
-    ]);
-  }
-}
-
-class Segmented<T> extends StatelessWidget {
-  const Segmented({super.key, required this.options, required this.value, required this.onChanged});
-
-  final Map<T, String> options;
-  final T? value;
-  final ValueChanged<T> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: TColors.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: TColors.line),
-      ),
-      child: Row(children: [
-        for (final e in options.entries)
-          Expanded(
-            child: GestureDetector(
-              onTap: () => onChanged(e.key),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(vertical: 11),
-                decoration: BoxDecoration(
-                  color: value == e.key ? TColors.ink : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                alignment: Alignment.center,
-                child: Text(e.value,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 13, color: value == e.key ? TColors.bg : TColors.inkSoft)),
-              ),
-            ),
-          ),
-      ]),
-    );
-  }
-}
-
+/// Height with a slider. Pep uses it as a ruler to measure speed from video.
 class HeightField extends StatelessWidget {
   const HeightField({super.key, required this.value, required this.onChanged});
 
@@ -216,21 +146,18 @@ class HeightField extends StatelessWidget {
     final v = value ?? 1.72;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        KitNumber((v * 100).round(), size: 54),
+        Text('${(v * 100).round()}', style: TType.stat),
         const SizedBox(width: 6),
-        const Padding(padding: EdgeInsets.only(bottom: 6), child: Text('cm', style: TextStyle(color: TColors.inkSoft))),
+        const Padding(padding: EdgeInsets.only(bottom: 4), child: Text('cm', style: TextStyle(color: Tk.muted))),
       ]),
       Slider(
         value: v.clamp(1.3, 2.1),
         min: 1.3,
         max: 2.1,
         divisions: 80,
-        activeColor: TColors.neon,
-        inactiveColor: TColors.surface3,
         onChanged: (x) => onChanged(double.parse(x.toStringAsFixed(2))),
       ),
-      const Text('Pep uses your height as a ruler to measure speed from your videos.',
-          style: TextStyle(color: TColors.inkFaint, fontSize: 12.5)),
+      const Text('Pep uses your height as a ruler to measure speed from your videos.', style: TextStyle(color: Tk.faint, fontSize: 12.5)),
     ]);
   }
 }
@@ -247,51 +174,10 @@ class RegionPicker extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
-      dropdownColor: TColors.surface2,
+      dropdownColor: Tk.card2,
       decoration: const InputDecoration(labelText: 'Region'),
       items: [for (final r in regions) DropdownMenuItem(value: r, child: Text(r))],
       onChanged: onChanged,
     );
-  }
-}
-
-class GuardianFields extends StatelessWidget {
-  const GuardianFields({super.key, required this.draft, required this.onChanged});
-
-  final ProfileDraft draft;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text(
-        'You\'re under 18, so a parent or guardian needs to agree before you upload clips. '
-        'We\'ll email them to let them know about your account.',
-        style: TextStyle(color: TColors.inkSoft),
-      ),
-      const SizedBox(height: 16),
-      TextFormField(
-        initialValue: draft.guardianEmail,
-        keyboardType: TextInputType.emailAddress,
-        decoration: const InputDecoration(labelText: "Parent or guardian's email"),
-        onChanged: (v) {
-          draft.guardianEmail = v;
-          onChanged();
-        },
-      ),
-      const SizedBox(height: 8),
-      CheckboxListTile(
-        contentPadding: EdgeInsets.zero,
-        value: draft.guardianConsent,
-        activeColor: TColors.neon,
-        checkColor: TColors.onNeon,
-        controlAffinity: ListTileControlAffinity.leading,
-        title: const Text('My parent or guardian agrees to me using Tracka and uploading my clips'),
-        onChanged: (v) {
-          draft.guardianConsent = v ?? false;
-          onChanged();
-        },
-      ),
-    ]);
   }
 }

@@ -6,41 +6,6 @@ import 'tokens.dart';
 export 'tokens.dart';
 export 'motion.dart';
 
-/// Older colour names, kept so screens not yet rebuilt in the new design still
-/// compile. They now point at the new tokens (pure black, no red).
-/// New code: use [T] and `context.accent` instead (see tokens.dart).
-class TColors {
-  static const bg = Tk.bg;
-  static const surface = Tk.card;
-  static const surface2 = Tk.card2;
-  static const surface3 = Tk.field;
-  static const line = Tk.lineStrong;
-  static const lineSoft = Tk.line;
-
-  static const ink = Tk.ink;
-  static const inkSoft = Tk.muted;
-  static const inkFaint = Tk.faint;
-
-  static const neon = Color(0xFFE5FF00); // Volt; new code reads context.accent.main
-  static const onNeon = Tk.bg;
-  static const cherry = Tk.gold; // "work on" and errors are gold now: no red in Tracka
-  static const sun = Tk.stone;
-  static const violet = Tk.pep;
-
-  static Color forConfidence(String? c) => switch (c) {
-        'HIGH' => neon,
-        'MEDIUM' => sun,
-        _ => cherry,
-      };
-}
-
-class TRadius {
-  static const sm = 14.0;
-  static const md = 20.0;
-  static const lg = 26.0;
-  static const xl = 40.0;
-}
-
 /// Type: Bricolage Grotesque (extra bold) for headings and big numbers,
 /// Figtree for everything you read.
 class TType {

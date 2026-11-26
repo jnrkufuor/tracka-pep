@@ -47,7 +47,9 @@ from ..config import settings
 from . import sms
 
 # Things a guardian decides. "account" first; the others are asked for later.
+# "delete" isn't a permission: it's a one-off yes to deleting an under-18's account.
 KINDS = ("account", "post", "share_card", "search")
+ASK_KINDS = (*KINDS, "delete")
 ANSWER_DAYS = 7
 CODE_MINUTES = 10
 CODE_TRIES = 5
@@ -181,6 +183,15 @@ def allowed(uid: str, kind: str, age: int | None, self_confirmed: bool = False) 
     return r is not None and r["status"] == "yes"
 
 
+def needs_guardian_to_delete(uid: str, age: int | None) -> bool:
+    """
+    Under 18 with a guardian who approved the account: deleting it needs their yes
+    too (canvas: Settings › Your data). If no guardian ever approved, there's nobody
+    to ask, and the account never opened up, so the player can delete it themselves.
+    """
+    return age is not None and age < 18 and status(uid) == "approved"
+
+
 def permissions(uid: str, age: int | None, self_confirmed: bool = False) -> dict[str, bool]:
     return {to_camel(k): allowed(uid, k, age, self_confirmed) for k in KINDS}
 
@@ -279,6 +290,8 @@ def text_guardian(uid: str, child_first: str, sex: str | None, kind: str = "acco
         "post": f"{child_first} is asking to post clips on Tracka for other players to see.",
         "share_card": f"{child_first} is asking to share {his} player card with a link.",
         "search": f"{child_first} is asking to let other players {his} age find {his} profile.",
+        "delete": f"{child_first} has asked to delete {his} Tracka account. Everything is deleted for good: "
+        "profile, clips and training.",
     }[kind]
     reply = "approve" if kind == "account" else "say yes"
     text = (
@@ -385,6 +398,16 @@ def decide(uid: str, kind: str, yes: bool, via: str = "page", relation: str | No
     from . import notifications  # here, not at the top: notifications imports the player store
 
     notifications.guardian_answered(uid, kind, yes)
+
+
+def withdraw(request_id: str) -> None:
+    """The player takes a request back before it's answered."""
+    with db.engine().begin() as c:
+        c.execute(
+            update(guardian_requests)
+            .where(guardian_requests.c.id == request_id, guardian_requests.c.status == "pending")
+            .values(status="withdrawn", decided_at=now(), via="player")
+        )
 
 
 def revoke_all(uid: str) -> None:

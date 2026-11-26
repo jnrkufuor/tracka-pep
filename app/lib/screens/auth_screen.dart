@@ -3,14 +3,17 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../theme/theme.dart';
-import '../widgets/common.dart';
+import '../widgets/brand.dart';
+import '../widgets/ds.dart';
 
+/// Welcome (canvas: Welcome). Plain words, the main colour once, no scores.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final a = context.accent;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -18,22 +21,22 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const TrackaLogo(),
             const Spacer(),
-            const Eyebrow('Your game, coached', color: TColors.neon),
+            Text('YOUR GAME, COACHED', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: a.main)),
             const SizedBox(height: 14),
-            Text.rich(
-              TextSpan(children: [
-                const TextSpan(text: 'Film it.\nGet coached.\n'),
-                TextSpan(text: 'Get better.', style: t.displayLarge!.copyWith(color: TColors.neon)),
-              ]),
-              style: t.displayLarge,
+            EnterFade(
+              child: Text.rich(
+                TextSpan(children: [
+                  const TextSpan(text: 'Film it.\nGet coached.\n'),
+                  TextSpan(text: 'Keep growing.', style: TextStyle(color: a.main)),
+                ]),
+                style: t.displayLarge,
+              ),
             ),
-            const SizedBox(height: 18),
-            const Tape(),
             const SizedBox(height: 22),
             const Text(
-              'Upload your clips and Pep, your AI coach, measures your speed, touches and movement, '
-              'scores you against players your age, and tells you exactly what to practise.',
-              style: TextStyle(color: TColors.inkSoft, fontSize: 16, height: 1.45),
+              'Film your football and Pep, your AI coach, shows you what went well, what to work on, '
+              'and a plan for your week. You see how you compare with players your age.',
+              style: TextStyle(color: Tk.inkSoft, fontSize: 16, height: 1.45),
             ),
             const Spacer(),
             FilledButton(
@@ -90,7 +93,7 @@ class _AuthScreenState extends State<AuthScreen> {
       }
       nav.popUntil((r) => r.isFirst);
     } catch (e) {
-      if (mounted) showSnack(context, '$e');
+      if (mounted) showToast(context, widget.signUp ? "Couldn't create your account" : "Couldn't log you in", detail: '$e', ok: false, aboveTabs: false);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -108,8 +111,8 @@ class _AuthScreenState extends State<AuthScreen> {
             Text(widget.signUp ? 'Create your\naccount' : 'Welcome\nback', style: t.displayMedium),
             const SizedBox(height: 10),
             Text(
-              widget.signUp ? 'Just an email and a password. Your profile comes next.' : 'Log in to see your clips and Pep\'s notes.',
-              style: const TextStyle(color: TColors.inkSoft),
+              widget.signUp ? 'Just an email and a password. Your profile comes next.' : "Log in to see your clips and Pep's notes.",
+              style: const TextStyle(color: Tk.inkSoft),
             ),
             const SizedBox(height: 28),
             TextFormField(
@@ -128,8 +131,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 labelText: 'Password',
                 helperText: widget.signUp ? 'At least 8 characters' : null,
                 suffixIcon: IconButton(
+                  tooltip: _hide ? 'Show password' : 'Hide password',
                   onPressed: () => setState(() => _hide = !_hide),
-                  icon: LoopyIcon(_hide ? 'eye' : 'lock', size: 22, color: TColors.inkSoft),
+                  icon: TIcon(_hide ? 'eye2' : 'lock', size: 20, color: Tk.muted),
                 ),
               ),
               validator: (v) => (v ?? '').length >= 8 ? null : 'Use at least 8 characters',
@@ -144,10 +148,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             if (widget.signUp) ...[
               const SizedBox(height: 18),
-              const Text(
-                'Under 18? You can sign up, and we\'ll ask for a parent or guardian\'s email before you upload clips.',
-                style: TextStyle(color: TColors.inkFaint, fontSize: 12.5),
-              ),
+              const InfoNote("Under 18? You can sign up. We'll ask a parent or guardian to say yes before your account opens up."),
             ],
           ]),
         ),

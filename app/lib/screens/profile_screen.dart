@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -5,8 +7,8 @@ import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
-import '../widgets/common.dart';
 import '../widgets/ds.dart';
+import '../widgets/pitch_picker.dart';
 import '../widgets/profile_fields.dart';
 import '../widgets/skill_areas_view.dart';
 import 'card_screens.dart';
@@ -190,6 +192,9 @@ class _ClipStrip extends StatelessWidget {
   }
 }
 
+/// Edit profile (canvas: Me › Edit). Saves as you go, like every edit
+/// screen in the app: no Save or Cancel. Each change is sent a moment after
+/// you stop typing; the little note at the top says when it's saved.
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -198,96 +203,188 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final draft = ProfileDraft();
-  bool _busy = false;
+  final Map<String, dynamic> _pending = {};
+  Timer? _timer;
+  String _status = 'Saves as you go';
+  late Profile p;
+  late List<String> positions;
+  String? sex, foot, region, level, goal, style;
+  int? weakFoot;
+  double? height;
+  DateTime? birth;
+
+  static const _levels = {'fun': 'Just for fun', 'amateur': 'Amateur league', 'school': 'School team', 'club': 'Local club', 'academy': 'Academy', 'pro': 'Semi-pro or pro'};
+  static const _goals = {'fun': 'Play more, have fun', 'school': 'Make my school team', 'academy': 'Get into an academy', 'standout': 'Stand out where I play', 'better': 'Just get better', 'looking': 'Just looking around'};
 
   @override
   void initState() {
     super.initState();
-    final p = context.read<AppState>().me!.profile;
-    draft
-      ..name = p.displayName
-      ..birthDate = p.birthDate
-      ..positions = {...p.positions}
-      ..sex = p.sex
-      ..heightM = p.heightM
-      ..foot = p.foot
-      ..region = p.region
-      ..club = p.club ?? ''
-      ..guardianEmail = p.guardianEmail ?? ''
-      ..guardianConsent = p.guardianConsent;
+    p = context.read<AppState>().me!.profile;
+    positions = [...p.positions];
+    sex = p.sex;
+    foot = p.foot;
+    region = p.region;
+    level = p.level;
+    goal = p.goal;
+    style = p.style;
+    weakFoot = p.weakFoot;
+    height = p.heightM;
+    birth = p.birthDate;
   }
 
-  Future<void> _save() async {
-    setState(() => _busy = true);
-    final nav = Navigator.of(context);
+  @override
+  void dispose() {
+    _timer?.cancel();
+    if (_pending.isNotEmpty) _flush();
+    super.dispose();
+  }
+
+  void _set(String key, Object? value, {bool now = false}) {
+    _pending[key] = value;
+    _timer?.cancel();
+    setState(() => _status = 'Saving…');
+    _timer = Timer(Duration(milliseconds: now ? 0 : 700), _flush);
+  }
+
+  Future<void> _flush() async {
+    if (_pending.isEmpty) return;
+    final changes = {..._pending};
+    _pending.clear();
+    final s = context.read<AppState>();
     try {
-      await context.read<AppState>().saveProfile(draft.toJson());
-      nav.pop();
+      await s.saveProfile(changes);
+      if (mounted) setState(() => _status = 'Saved');
     } catch (e) {
-      if (mounted) showSnack(context, '$e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _status = "Couldn't save");
+        showToast(context, "Couldn't save that", detail: '$e', ok: false, aboveTabs: false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final meta = context.watch<AppState>().meta;
+    Widget gap() => const SizedBox(height: 18);
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit profile')),
-      body: SafeArea(
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 28), children: [
-          TextFormField(
-            initialValue: draft.name,
-            decoration: const InputDecoration(labelText: 'Your name'),
-            onChanged: (v) => draft.name = v,
+      appBar: AppBar(actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: Center(child: Text(_status, style: TextStyle(fontSize: 12.5, color: _status == "Couldn't save" ? Tk.gold : Tk.faint))),
+        ),
+      ]),
+      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+        Text('Edit profile', style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 16),
+        const FieldLabel('Your name'),
+        TextFormField(initialValue: p.displayName, textCapitalization: TextCapitalization.words, onChanged: (v) => _set('displayName', v.trim())),
+        gap(),
+        const FieldLabel('Name and number on your shirt'),
+        Row(children: [
+          Expanded(
+            flex: 3,
+            child: TextFormField(
+              initialValue: p.shirtName,
+              maxLength: 20,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(counterText: '', hintText: 'K. ASANTE'),
+              onChanged: (v) => _set('shirtName', v.trim()),
+            ),
           ),
-          const SizedBox(height: 14),
-          BirthDateField(value: draft.birthDate, onChanged: (d) => setState(() => draft.birthDate = d)),
-          const FieldLabel('Positions'),
-          PositionsPicker(all: meta?.positions ?? const [], selected: draft.positions, onChanged: (v) => setState(() => draft.positions = v)),
-          const SizedBox(height: 8),
-          const FieldLabel('You play in'),
-          Segmented<String>(
-            options: const {'male': "Boys' / men's", 'female': "Girls' / women's"},
-            value: draft.sex,
-            onChanged: (v) => setState(() => draft.sex = v),
-          ),
-          const SizedBox(height: 8),
-          const FieldLabel('Height'),
-          HeightField(value: draft.heightM, onChanged: (v) => setState(() => draft.heightM = v)),
-          const FieldLabel('Stronger foot'),
-          Segmented<String>(
-            options: const {'left': 'Left', 'right': 'Right', 'both': 'Both'},
-            value: draft.foot,
-            onChanged: (v) => setState(() => draft.foot = v),
-          ),
-          const SizedBox(height: 18),
-          RegionPicker(regions: meta?.regions ?? const [], value: draft.region, onChanged: (v) => setState(() => draft.region = v)),
-          const SizedBox(height: 14),
-          TextFormField(
-            initialValue: draft.club,
-            decoration: const InputDecoration(labelText: 'Club, academy or school'),
-            onChanged: (v) => draft.club = v,
-          ),
-          if (draft.minor) ...[
-            const SizedBox(height: 18),
-            GuardianFields(draft: draft, onChanged: () => setState(() {})),
-          ],
-          const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _busy || draft.positions.isEmpty ? null : _save,
-            child: _busy
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-                : const Text('Save'),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextFormField(
+              initialValue: p.shirtNumber?.toString(),
+              keyboardType: TextInputType.number,
+              maxLength: 2,
+              decoration: const InputDecoration(counterText: '', hintText: 'No.'),
+              onChanged: (v) {
+                final n = int.tryParse(v);
+                if (n != null && n >= 1 && n <= 99) _set('shirtNumber', n);
+              },
+            ),
           ),
         ]),
-      ),
+        gap(),
+        BirthDateField(value: birth, onChanged: (d) {
+          setState(() => birth = d);
+          _set('birthDate', DateFormat('yyyy-MM-dd').format(d), now: true);
+        }),
+        gap(),
+        const FieldLabel('You play in'),
+        SingleChips<String>(
+          options: const {'male': "Boys' or men's", 'female': "Girls' or women's"},
+          value: sex ?? '',
+          scroll: false,
+          onChanged: (v) {
+            setState(() => sex = v);
+            _set('sex', v, now: true);
+          },
+        ),
+        gap(),
+        const FieldLabel('Your positions'),
+        PitchPicker(positions: positions, onChanged: (v) {
+          setState(() => positions = v);
+          if (v.isNotEmpty) _set('positions', v, now: true);
+        }),
+        gap(),
+        const FieldLabel('Stronger foot'),
+        SingleChips<String>(
+          options: const {'left': 'Left', 'right': 'Right', 'both': 'Both'},
+          value: foot ?? '',
+          scroll: false,
+          onChanged: (v) {
+            setState(() => foot = v);
+            _set('foot', v, now: true);
+          },
+        ),
+        gap(),
+        const FieldLabel('Weaker foot, 1 to 5'),
+        SingleChips<int>(
+          options: const {1: '1', 2: '2', 3: '3', 4: '4', 5: '5'},
+          value: weakFoot ?? 0,
+          scroll: false,
+          onChanged: (v) {
+            setState(() => weakFoot = v);
+            _set('weakFoot', v, now: true);
+          },
+        ),
+        gap(),
+        const FieldLabel('Height'),
+        HeightField(value: height, onChanged: (v) {
+          setState(() => height = v);
+          _set('heightM', v);
+        }),
+        gap(),
+        const FieldLabel('Your style'),
+        TextFormField(initialValue: style, maxLength: 40, decoration: const InputDecoration(counterText: '', hintText: 'Playmaker'), onChanged: (v) => _set('style', v.trim())),
+        gap(),
+        RegionPicker(regions: meta?.regions ?? const [], value: region, onChanged: (v) {
+          setState(() => region = v);
+          if (v != null) _set('region', v, now: true);
+        }),
+        const SizedBox(height: 12),
+        TextFormField(initialValue: p.town, decoration: const InputDecoration(labelText: 'Town (private)'), onChanged: (v) => _set('town', v.trim())),
+        const SizedBox(height: 12),
+        TextFormField(initialValue: p.club, decoration: const InputDecoration(labelText: 'Club, academy or school'), onChanged: (v) => _set('club', v.trim())),
+        gap(),
+        const FieldLabel('Your level now'),
+        SingleChips<String>(options: _levels, value: level ?? '', scroll: false, onChanged: (v) {
+          setState(() => level = v);
+          _set('level', v, now: true);
+        }),
+        gap(),
+        const FieldLabel('Your goal'),
+        SingleChips<String>(options: _goals, value: goal ?? '', scroll: false, onChanged: (v) {
+          setState(() => goal = v);
+          _set('goal', v, now: true);
+        }),
+        const SizedBox(height: 14),
+        const InfoNote('Others only ever see your shirt name, position, age group and region. Your full name, date of birth and town stay private.'),
+      ]),
     );
   }
 }
-
 
 /// Settings › Main colour (canvas: "Settings › Main colour"). Tap a colour and
 /// the whole app re-colours at once; it saves straight away. Pep stays purple

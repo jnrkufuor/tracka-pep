@@ -52,7 +52,7 @@ const $ = (tag, props = {}, ...kids) => { const e = document.createElement(tag);
 const root = document.getElementById('app');
 const show = (...nodes) => { root.replaceChildren(...nodes); window.scrollTo(0, 0); };
 const err = $('div', {className: 'err'});
-const WHAT = {post: 'post clips that other players can see', share_card: 'share a link to their player card', search: 'let other players their age find their profile'};
+const WHAT = {post: 'post clips that other players can see', share_card: 'share a link to their player card', search: 'let other players their age find their profile', delete: 'delete their Tracka account. Everything is deleted for good: profile, clips and training'};
 
 async function start() {
   try { const d = await api(''); d.needsCode ? askCode(d) : page(d); }
@@ -76,6 +76,9 @@ function askCode(d) {
 const switchEl = (on, onchange) => $('button', {className: 'switch' + (on ? ' on' : ''), role: 'switch', ariaChecked: String(on), onclick: onchange});
 
 function page(d) {
+  if (d.deleted) return show($('div', {className: 'eyebrow', textContent: 'Tracka · guardian'}),
+    $('h1', {textContent: d.childFirstName + "'s account is deleted"}),
+    $('p', {className: 'muted', textContent: 'The profile, clips and training are gone for good. We sent you a text to confirm. Thank you.'}));
   const c = d.child, first = c.firstName;
   const account = d.pending.find(p => p.kind === 'account');
   if (account || d.status === 'pending' || d.status === 'expired') return approve(d);
@@ -87,7 +90,8 @@ function page(d) {
       ...(p.kind === 'share_card' && d.card ? [
         $('div', {className: 'muted', textContent: 'People with the link will see: ' + [d.card.shirtName, d.card.positionName, d.card.ageGroup, d.card.region].filter(Boolean).join(', ') + ', measured skills and best times, and the clips ' + first + ' picks.'}),
         $('div', {className: 'muted', textContent: "They won't see: the full name, school or town, or any way to message " + first + '.'})] : []),
-      $('button', {className: 'go', textContent: 'Say yes', onclick: () => decide(p.kind, true)}),
+      $('button', {className: 'go', textContent: p.kind === 'delete' ? 'Yes, delete it' : 'Say yes', onclick: () => {
+        if (p.kind !== 'delete' || confirm("This can't be undone. Delete everything?")) decide(p.kind, true); }}),
       $('button', {className: 'ghost', textContent: 'Say no', onclick: () => decide(p.kind, false)})));
   }
   if (d.status === 'approved') {
@@ -103,10 +107,12 @@ function page(d) {
       $('div', {className: 'row'}, $('div', {}, $('div', {textContent: t}), $('div', {className: 'muted', textContent: s})),
         switchEl(!!d.prefs[k], async () => page(await api('/prefs', {method: 'PATCH', body: JSON.stringify({[k]: !d.prefs[k]})})))))));
   if (d.history.length) nodes.push($('h2', {textContent: "What you've answered"}), $('div', {className: 'card'},
-    ...d.history.map(h => $('div', {className: 'row'}, $('span', {textContent: ({account: 'Account', post: 'Posting clips', share_card: 'Sharing the player card', search: 'Showing up in search'})[h.kind] + ': ' + h.status}),
+    ...d.history.map(h => $('div', {className: 'row'}, $('span', {textContent: ({account: 'Account', post: 'Posting clips', share_card: 'Sharing the player card', search: 'Showing up in search', delete: 'Deleting the account'})[h.kind] + ': ' + h.status}),
       $('span', {className: 'muted', textContent: new Date(h.decidedAt).toLocaleDateString()})))));
   if (d.status === 'approved') nodes.push($('button', {className: 'ghost', textContent: 'Take back all approvals', onclick: async () => {
     if (confirm('This turns ' + first + "'s account back to private mode. Training stays.")) page(await api('/revoke', {method: 'POST'})); }}));
+  if (d.status === 'approved' && !d.pending.some(p => p.kind === 'delete')) nodes.push($('button', {className: 'ghost', textContent: 'Delete ' + first + "'s account", onclick: () => {
+    if (confirm('Delete ' + first + "'s profile, clips and training for good? This can't be undone.")) decide('delete', true); }}));
   nodes.push(err);
   show(...nodes);
 }
