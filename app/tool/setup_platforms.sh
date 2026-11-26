@@ -16,11 +16,20 @@ fi
 echo "▶ Android: name, permissions"
 M=android/app/src/main/AndroidManifest.xml
 perl -pi -e 's/android:label="[^"]*"/android:label="Tracka"/' "$M"
-for p in INTERNET CAMERA RECORD_AUDIO READ_MEDIA_VIDEO POST_NOTIFICATIONS; do
+# Only what the app needs (Google Play's Data safety form lists every permission).
+# No camera, microphone or media-library permission: image_picker uses the
+# system photo picker and camera app, which need none. Google Play only allows
+# READ_MEDIA_VIDEO for gallery-type apps (its Photo and Video Permissions policy).
+for p in INTERNET POST_NOTIFICATIONS; do
   grep -q "permission.$p\"" "$M" || perl -0pi -e "s|<application|<uses-permission android:name=\"android.permission.$p\"/>\n    <application|" "$M"
 done
-# Local development talks to http://10.0.2.2:8000; production is https only.
-grep -q usesCleartextTraffic "$M" || perl -0pi -e 's|<application|<application android:usesCleartextTraffic="true"|' "$M"
+# Plain http only in debug builds (your laptop at http://10.0.2.2:8000). Release
+# builds talk https only, so nobody on the café Wi-Fi can read a player's data.
+D=android/app/src/debug/AndroidManifest.xml
+if [ -f "$D" ] && ! grep -q usesCleartextTraffic "$D"; then
+  perl -0pi -e 's|</manifest>|    <application android:usesCleartextTraffic="true"/>\n</manifest>|' "$D"
+fi
+perl -pi -e 's/ android:usesCleartextTraffic="true"//' "$M"
 
 echo "▶ iOS: name and privacy strings (required by Apple to pick or record video)"
 P=ios/Runner/Info.plist

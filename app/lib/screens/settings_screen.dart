@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../api/models.dart';
+import '../config.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
@@ -23,7 +24,7 @@ import 'profile_screen.dart' show MainColourPicker;
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const version = '1.0';
+  static const version = AppConfig.version;
 
   void _go(BuildContext context, Widget page) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 

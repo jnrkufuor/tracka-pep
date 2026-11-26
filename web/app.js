@@ -62,6 +62,7 @@ const routes = [
   [/^#\/calibrate$/, pageCalibrate, "calibrate"],
   [/^#\/health$/, pageHealth, "health"],
   [/^#\/safety$/, pageSafety, "safety"],
+  [/^#\/errors$/, pageErrors, "errors"],
 ];
 
 const NAV = [
@@ -70,6 +71,7 @@ const NAV = [
   ["calibrate", "#/calibrate", "target", "Calibrate"],
   ["health", "#/health", "pulse", "Health"],
   ["safety", "#/safety", "whistle", "Safety"],
+  ["errors", "#/errors", "pulse", "App errors"],
 ];
 
 async function route() {
@@ -621,6 +623,33 @@ async function pageHealth() {
   };
   await draw();
   timers.push(setInterval(() => draw().catch(() => {}), 10000));
+}
+
+// ---------------------------------------------------------------- App errors
+// Crashes the player app sent in the last week (pep/players/app_errors.py),
+// one row per kind, most frequent first. Tap one for its stack trace.
+async function pageErrors() {
+  const rows = await api("/lab/app-errors");
+  app.innerHTML = `
+    <section class="hero fade-in" style="padding-bottom:20px">
+      <span class="eyebrow neon">Player app · last 7 days</span>
+      <h1>App errors</h1>
+      <p>Crashes reported by the app. Emails and phone numbers are hidden before they're saved. Fix the ones that hit the most players first.</p>
+    </section>
+    ${rows.length ? rows.map((r) => `
+      <div class="card stack" style="margin-bottom:10px">
+        <div class="row spread"><span class="eyebrow">${r.count} time${r.count === 1 ? "" : "s"} · ${r.players} player${r.players === 1 ? "" : "s"}</span>
+          <span class="faint">${esc(r.version || "")} · last ${esc(new Date(r.last).toLocaleString())}</span></div>
+        <p style="margin:0">${esc(r.message)}</p>
+        <div class="row"><button class="btn ghost" data-fp="${esc(r.fingerprint)}">Show stack trace</button></div>
+        <pre class="faint" data-stack="${esc(r.fingerprint)}" style="display:none;white-space:pre-wrap;font-size:12px"></pre>
+      </div>`).join("") : `<p class="muted">No crashes reported this week.</p>`}`;
+  $$("[data-fp]").forEach((b) => b.addEventListener("click", async () => {
+    const pre = $(`[data-stack="${b.dataset.fp}"]`);
+    const one = await api(`/lab/app-errors/${b.dataset.fp}`);
+    pre.textContent = `${one.platform || ""} ${one.screen || ""}\n${one.stack || "(no stack trace)"}`;
+    pre.style.display = "block";
+  }));
 }
 
 // ---------------------------------------------------------------- Safety (moderation)

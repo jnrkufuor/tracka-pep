@@ -82,6 +82,10 @@ restart or stop sending traffic to a broken copy.
 | Graceful degradation | Gemini down → rule-written notes; GPU workers down → clips wait in the queue and run later, nothing is lost |
 | Timings | Each result stores per-stage timings (`timings`): where did the 40 s go? |
 | Cost guard | Modal `max_containers=4` caps GPU spend in a traffic spike |
+| Error tracking | `pep/errors.py`: Sentry or GlitchTip when `PEP_SENTRY_DSN` is set, with personal details stripped before anything leaves |
+| App crash reports | The app sends crashes to our own `POST /v1/app-errors` (`pep/players/app_errors.py`), grouped in Pep Lab › App errors |
+| Backups | `scripts/backup.py`: backup, restore, check; the monthly restore drill is in `docs/RUNBOOK.md` |
+| Load testing | `scripts/load_test.py`: pretend players open the app's busiest screens and report p50/p95/p99 |
 
 Suggested first SLOs:
 - **Upload availability**: 99.5% of `POST /v1/videos` succeed (30 days).
@@ -93,8 +97,35 @@ Not done yet (good learning projects, also in chapter 12):
 - Alembic migrations (tables are created with `create_all` today, which
   can't change existing tables safely).
 - Grafana dashboards and alerts on the metrics above.
-- A tested database restore from Render's backups.
-- Error tracking (Sentry) in the API and the app.
+- Running the restore drill every month and writing it down (the tools are
+  ready: `docs/RUNBOOK.md`).
+
+### Error tracking that respects children (pep/errors.py, pep/players/app_errors.py)
+
+An **error tracker** collects crashes from everywhere, groups the same crash
+into one *issue* (by a **fingerprint**: the message plus the top of the stack
+trace), and counts how many people it hit. That turns 3,000 log lines into
+"one bug, 41 players, since version 0.3".
+
+Crash reports leave your servers, so they must not carry personal data. Tracka
+strips request bodies, headers, query strings, user details and stack
+variables, and replaces emails and phone numbers in messages (`scrub_text`).
+The app doesn't include a crash SDK at all: it sends reports to our own API,
+which applies the same scrubbing, keeps at most 20 a day per player
+(a **rate limit**), and only then forwards them.
+
+### Backups, restores and load tests (scripts/)
+
+A **backup** is a copy you can go back to; **RPO** (recovery point objective)
+is how much data you can afford to lose (a nightly backup means up to a day),
+and **RTO** (recovery time objective) is how long getting back may take. The
+only way to know your RTO is to time a real restore: that is the **restore
+drill**. `scripts/backup.py check` proves a restore worked: row counts, the
+newest row, and **orphans** (rows pointing at a player who isn't there).
+
+A **load test** shows where the system slows down before real players find
+out. Look at **percentiles**: p95 is the time 95 out of 100 calls beat.
+Averages hide the slow calls people actually feel.
 
 ### Keeping children safe: guardian approval (pep/players/guardian.py)
 
@@ -164,6 +195,16 @@ migration · capacity planning · toil
 9. Report a clip from three accounts, then open Pep Lab › Safety and keep it.
    Read `/lab/moderation/log`. What would you add to the log so a parent's
    complaint could be answered a month later?
+10. Run `pep serve`, then `python scripts/load_test.py --players 20 --seconds 30`.
+    Which call has the highest p95? Double the players: which numbers grow
+    first, and why is sign-up slow on purpose (hint: password hashing)?
+11. Do the restore drill from `docs/RUNBOOK.md` on your laptop with SQLite:
+    `backup`, `restore --into sqlite:////tmp/drill.db`, `check`. Then delete
+    a user row from the restored copy with `sqlite3` and run `check` again.
+    What does it report, and why does that matter after a real restore?
+12. Send `POST /v1/app-errors` with a message containing an email address,
+    then open Pep Lab › App errors. What was saved? Send the same error 25
+    times: how many are kept, and which constant decides?
 
 **Questions**
 
@@ -191,3 +232,15 @@ restarts a failing `/healthz` and stops routing traffic to a failing
 *Answer:* If people are punished for mistakes, they hide them, and the
 system never improves. Most incidents come from systems that made the
 mistake easy.
+
+**5. Why does the app send crashes to our API instead of straight to a crash service?**
+
+*Answer:* Most players are children. Our API can strip personal details and
+limit how much is sent before anything leaves, and the store privacy forms
+stay simple because no outside SDK collects data from the phone.
+
+**6. Your backups run every night, but you've never restored one. What do you actually know?**
+
+*Answer:* Only that a file is being written. You don't know it's complete,
+that it restores, or how long a restore takes (your RTO). The monthly drill
+turns the backup from a hope into a fact.

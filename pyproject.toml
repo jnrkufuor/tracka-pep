@@ -33,6 +33,7 @@ dependencies = [
   "scipy>=1.12",
   "boto3>=1.34",
   "pyjwt[crypto]>=2.8",          # [crypto]: RS256, to sign the Firebase service-account token
+  "sentry-sdk>=2.10",            # error tracking; only switched on when PEP_SENTRY_DSN is set
 ]
 
 [project.optional-dependencies]

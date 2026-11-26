@@ -54,6 +54,7 @@ from .. import MODEL_VERSION, db
 from ..config import ROOT, settings
 from ..contracts import POSITIONS, AnalysisRequest
 from ..drills.runner import drill_catalogue
+from ..errors import setup_error_tracking
 from ..log import get_logger, setup_logging
 from ..scoring.roles import roles
 from ..storage import LocalStorage, storage, verify_local
@@ -74,6 +75,7 @@ OLDEST = Gauge("pep_oldest_queued_seconds", "Age of the oldest queued job")
 async def lifespan(app: FastAPI):
     """Runs once at start-up (before `yield`) and once at shutdown (after)."""
     setup_logging()
+    setup_error_tracking()  # off unless PEP_SENTRY_DSN is set: pep/errors.py
     db.engine()  # create tables, fail fast if the DB is unreachable
     if settings().inline_worker:
         from ..worker import start_inline_worker
@@ -100,7 +102,8 @@ app.add_middleware(
 )
 
 # The player app's API (accounts, profile, videos, coach): pep/players/routes.py
-from ..players.routes import router as player_router  # noqa: E402  (after `app` exists; routes import kick_workers)
+# (imported after `app` exists, because routes import kick_workers)
+from ..players.routes import router as player_router  # noqa: E402
 
 app.include_router(player_router)
 
@@ -113,6 +116,11 @@ app.include_router(pages_router)
 from ..players.moderation import router as moderation_router  # noqa: E402
 
 app.include_router(moderation_router)
+
+# Staff view of app crash reports (Lab › App errors): pep/players/app_errors.py
+from ..players.app_errors import lab_router as app_errors_lab  # noqa: E402
+
+app.include_router(app_errors_lab)
 
 
 @app.middleware("http")

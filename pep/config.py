@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
     # Password for the Pep Lab web UI (HTTP Basic, user "lab"). Empty = no password (dev only).
     lab_password: str = ""
+    # Error tracking (Sentry, or anything that speaks its protocol, like GlitchTip).
+    # Empty = off: errors still go to the logs. See pep/errors.py and docs/RUNBOOK.md.
+    sentry_dsn: str = ""
+    # Shown on the public pages (/delete-account, /child-safety) and in the store listings.
+    support_email: str = "support@tracka.app"
 
     # ---- data
     # SQLite needs no setup, which is perfect locally. In production use Postgres:

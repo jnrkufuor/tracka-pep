@@ -523,3 +523,8 @@ router.include_router(progress_router)
 from .account import router as account_router  # noqa: E402
 
 router.include_router(account_router)
+
+# Crash reports from the app (POST /v1/app-errors): pep/players/app_errors.py
+from .app_errors import router as app_errors_router  # noqa: E402
+
+router.include_router(app_errors_router)

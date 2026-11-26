@@ -16,6 +16,7 @@ from html import escape
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 
+from ..config import settings
 from . import card
 
 router = APIRouter(include_in_schema=False)
@@ -246,4 +247,58 @@ def legal(doc: str) -> HTMLResponse:
         '<p class="muted">The full text is being reviewed by a lawyer and will be published here before launch. '
         "In short: Tracka never sells personal data, under-18s need a guardian's approval, only a player's region "
         "is ever shown, and you can delete your account and clips at any time.</p>",
+    )
+
+
+# ---------------------------------------------------------------- store-required pages
+# Google Play asks every app with accounts for a web page where people can ask
+# for their account to be deleted without the app (for example after deleting
+# the app), and asks social apps used by children to publish their child
+# safety standards. Apple asks for a way to contact the developer about
+# content. docs/STORE.md lists which form each link goes into.
+
+
+@router.get("/delete-account")
+def delete_account_page() -> HTMLResponse:
+    mail = escape(settings().support_email)
+    return _page(
+        "Tracka · delete your account",
+        '<div class="eyebrow">Tracka</div><h1>Delete your Tracka account</h1>'
+        '<h2>In the app (fastest)</h2><div class="card">Me › Settings › Your data › <b>Delete my account</b>. '
+        "Your profile, clips, Pep's notes and training are deleted straight away and can't be brought back. "
+        "Copies in our backups are gone within 35 days.</div>"
+        '<h2>Under 18</h2><div class="card">If a guardian approved your account, they agree to the delete too: '
+        "we text them a link, or they reply YES.</div>"
+        '<h2>No app any more?</h2><div class="card">Email '
+        f'<a href="mailto:{mail}?subject=Delete%20my%20account">{mail}</a> from the email address you signed up '
+        "with, and write \u201cDelete my account\u201d. A guardian can ask for their child\u2019s account the same way. "
+        "We reply within 7 days to confirm it is done.</div>"
+        '<p class="muted">Want a copy first? Settings › Your data › Download my data.</p>',
+    )
+
+
+@router.get("/child-safety")
+def child_safety_page() -> HTMLResponse:
+    mail = escape(settings().support_email)
+    points = [
+        "Most Tracka players are under 18. Players under 18 need a guardian's approval before anyone else can "
+        "see their clips, find their profile or open their player card.",
+        "There are no private messages. Players can only post clips with short captions, and captions can't "
+        "include phone numbers, emails, links or social media names.",
+        "Only a player's shirt name, position, age group and region are ever shown. Never their full name, "
+        "school, town or birthday.",
+        "Every clip and player can be reported or blocked in one tap. A clip reported a few times is hidden "
+        "straight away until our team reviews it. Reports about a child's safety are reviewed first, the same day.",
+        "We have zero tolerance for child sexual abuse and exploitation (CSAE). Any such content is removed, the "
+        "account is closed, and we report it to the relevant authorities, including Ghana's Cyber Security "
+        "Authority and the Ghana Police Service.",
+        "Our team can pause a player's posting while a report is looked at. Every decision is logged.",
+    ]
+    items = "".join(f'<div class="card">{escape(p)}</div>' for p in points)
+    return _page(
+        "Tracka · child safety",
+        '<div class="eyebrow">Tracka</div><h1>Keeping young players safe</h1>' + items + "<h2>Contact</h2>"
+        f'<p>Worried about a player or a clip? Report it in the app, or email <a href="mailto:{mail}">{mail}</a>. '
+        "If a child is in danger now, call the police on 191 or 18555. To report online abuse of a child, "
+        "call or text the Cyber Security Authority on 292.</p>",
     )
