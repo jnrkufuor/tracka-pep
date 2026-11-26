@@ -8,6 +8,7 @@ import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
+import '../widgets/pep.dart';
 import '../widgets/pitch_picker.dart';
 import '../widgets/profile_fields.dart';
 import '../widgets/skill_areas_view.dart';
@@ -175,7 +176,7 @@ class _ClipStrip extends StatelessWidget {
                     Image.network(v.thumbnailUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: Tk.card2))
                   else
                     const ColoredBox(color: Tk.card2),
-                  if (v.processing) const ColoredBox(color: Color(0x88000000), child: Center(child: TIcon('pep', size: 20, color: Tk.pep))),
+                  if (v.processing) const ColoredBox(color: Color(0x88000000), child: Center(child: PepFace(PepMood.analysing, size: 22))),
                   Positioned(
                     left: 6,
                     right: 6,

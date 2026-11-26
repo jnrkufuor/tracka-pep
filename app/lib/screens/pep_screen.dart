@@ -5,6 +5,7 @@ import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
+import '../widgets/pep.dart';
 import 'home_screen.dart' show openUpload;
 import 'review_screens.dart';
 import 'training_screens.dart';
@@ -91,7 +92,15 @@ class _PepScreenState extends State<PepScreen> {
           },
           child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 32), children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const IconTile(icon: 'pep', color: Tk.pep, background: Tk.pepTile, size: 44),
+              PepTile(
+                // Pep's mood says what's going on: hurt → concerned; something new → excited.
+                switch (s.health?.status) {
+                  'pain' || 'injured' => PepMood.concerned,
+                  'sore' => PepMood.calm,
+                  _ => newest != null ? PepMood.excited : pepIdleMood(),
+                },
+                size: 44,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -36,10 +36,12 @@ ThemeData trackaTheme({MainColour colour = MainColour.volt}) {
   const d = TType.display;
   const t = TextTheme(
     displayLarge: TextStyle(fontFamily: d, fontSize: 46, fontWeight: FontWeight.w800, letterSpacing: -1.8, height: 1.0),
-    displayMedium: TextStyle(fontFamily: d, fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: -1.4, height: 1.02),
-    headlineLarge: TextStyle(fontFamily: d, fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1.0, height: 1.05),
-    headlineMedium: TextStyle(fontFamily: d, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.7, height: 1.1),
-    titleLarge: TextStyle(fontFamily: d, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.4),
+    // Weights and spacing from the canvas (.h1 is Bricolage 600, -0.025em):
+    // headings are confident, not heavy. 800 is kept for the one big number.
+    displayMedium: TextStyle(fontFamily: d, fontSize: 38, fontWeight: FontWeight.w600, letterSpacing: -0.95, height: 1.04),
+    headlineLarge: TextStyle(fontFamily: d, fontSize: 30, fontWeight: FontWeight.w600, letterSpacing: -0.75, height: 1.1),
+    headlineMedium: TextStyle(fontFamily: d, fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.65, height: 1.1),
+    titleLarge: TextStyle(fontFamily: d, fontSize: 20, fontWeight: FontWeight.w600, letterSpacing: -0.4),
     titleMedium: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
     titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     bodyLarge: TextStyle(fontSize: 15.5, height: 1.45),
