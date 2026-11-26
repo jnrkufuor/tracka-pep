@@ -5,6 +5,7 @@ import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
+import '../widgets/pep.dart';
 import 'home_screen.dart' show openUpload;
 import 'training_screens.dart' show WeekScreen;
 import 'video_screen.dart';
@@ -58,7 +59,7 @@ class ReviewView extends StatelessWidget {
     final planned = r.tips.where((t) => t.drill != null).map((t) => t.drill!).firstOrNull;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const IconTile(icon: 'pep', color: Tk.pep, background: Tk.pepTile, size: 40),
+        const PepTile(PepMood.proud, size: 40),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -289,7 +290,7 @@ Future<void> showTipDrill(BuildContext context, ReviewTip tip) {
         color: Tk.pepTile,
         border: Tk.pepTile,
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const TIcon('pep', size: 20, color: Tk.pep),
+          const PepFace(PepMood.cheeky, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

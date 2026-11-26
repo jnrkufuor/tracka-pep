@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
+import '../widgets/pep.dart';
 import '../widgets/pitch_picker.dart';
 import '../widgets/profile_fields.dart';
 
@@ -22,7 +23,11 @@ import '../widgets/profile_fields.dart';
 /// Everything is saved with one PATCH /v1/me, plus their football as events
 /// (POST /v1/events) so Pep can plan the week around it.
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  const OnboardingScreen({super.key, this.startPage = 0});
+
+  /// Which step to open on (0 = Meet Pep). Only the screen pictures in
+  /// test/shots_test.dart use another value.
+  final int startPage;
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -32,7 +37,7 @@ enum _Page { meet, personal, location, journey, profile, schedule, casual, ready
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final d = ProfileDraft();
-  _Page page = _Page.meet;
+  late _Page page = _Page.values[widget.startPage.clamp(0, _Page.values.length - 1)];
   bool busy = false;
 
   // Location
@@ -245,27 +250,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // ───────────────────────────── Meet Pep
 
+  /// Meet Pep (canvas: Meet Pep): Pep big and alone at the top, breathing,
+  /// then what he does in three lines.
   Widget _meet() {
     Widget row(String ic, String t, String sub) => Padding(
           padding: const EdgeInsets.only(bottom: 14),
           child: Row(children: [
-            IconTile(icon: ic, color: Tk.pep, background: Tk.pepTile, size: 44),
+            IconTile(icon: ic, color: Tk.pep, background: Tk.pepTile, size: 40),
             const SizedBox(width: 14),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(t, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-                Text(sub, style: const TextStyle(fontSize: 13.5, color: Tk.muted)),
+                Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+                Text(sub, style: const TextStyle(fontSize: 13, color: Tk.muted)),
               ]),
             ),
           ]),
         );
-    return ListView(padding: const EdgeInsets.fromLTRB(24, 48, 24, 24), children: [
-      const EnterFade(child: IconTile(icon: 'pep', color: Tk.pep, background: Tk.pepTile, size: 72)),
-      const SizedBox(height: 22),
-      const Text('YOUR COACH', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8)),
+    final h = MediaQuery.sizeOf(context).height;
+    final top = (h * 0.42).clamp(220.0, 400.0); // the board's 430 on an 844 phone, less on short ones
+    return ListView(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24), children: [
+      SizedBox(
+        height: top,
+        child: Center(child: EnterFade(child: PepFace(PepMood.justHere, size: (top * 0.42).clamp(110.0, 170.0)))),
+      ),
+      const Center(child: Text('YOUR COACH', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8))),
       const SizedBox(height: 6),
-      Text('Meet Pep.', style: Theme.of(context).textTheme.displayMedium),
-      const SizedBox(height: 26),
+      Center(child: Text('Meet Pep.', style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 36))),
+      const SizedBox(height: 24),
       row('clip', 'I watch your clips', 'And show you what to work on'),
       row('calendar', 'I plan your week', 'Around your team and your time'),
       row('chart', 'I track how you grow', 'With real tests, not guesses'),
@@ -334,7 +345,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Text("You're $age · $group age group", style: TextStyle(fontSize: 13, color: context.accent.main, fontWeight: FontWeight.w600)),
       ],
       const SizedBox(height: 10),
-      const InfoNote('Pep compares you with players your age, not adults. Scouts need it to be accurate, so use your real date of birth.'),
+      const PepNote(
+        mood: PepMood.listening,
+        title: 'Why your real age matters',
+        child: Text('I compare you with players your age, not adults. Scouts need it to be accurate, so use your real date of birth.'),
+      ),
       const SizedBox(height: 18),
       _label('You play in'),
       SingleChips<String>(
@@ -473,15 +488,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
       if (d.goal != null) ...[
         const SizedBox(height: 10),
-        Panel(
-          color: Tk.pepTile,
-          border: Tk.pepTile,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('How Pep will coach you · ${_mode.$1}', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Tk.pep)),
-            const SizedBox(height: 6),
-            Text(_mode.$2, style: const TextStyle(fontSize: 14, height: 1.45, color: Tk.ink)),
-          ]),
-        ),
+        PepNote(mood: PepMood.excited, title: 'How Pep will coach you · ${_mode.$1}', child: Text(_mode.$2)),
       ],
     ]);
   }
@@ -554,8 +561,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           scroll: false,
         ),
         const SizedBox(height: 8),
-        const Text("This is how you see your game. After a few clips I'll give you my read too, and you can compare.",
-            style: TextStyle(fontSize: 12.5, color: Tk.faint)),
+        const PepNote(
+          mood: PepMood.thinking,
+          child: Text("This is how you see your game. After a few clips I'll give you my read too, and you can compare."),
+        ),
       ],
     ]);
   }
@@ -614,14 +623,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         }),
       ),
       const SizedBox(height: 16),
-      Panel(
-        color: Tk.pepTile,
-        border: Tk.pepTile,
+      PepNote(
+        mood: PepMood.reading,
         child: Text(
           sessions == 0
-              ? "No extra sessions for now. You can add them any time."
+              ? 'No extra sessions for now. You can add them any time.'
               : '$sessions short sessions a week, none on match days, light the day before a match.',
-          style: const TextStyle(fontSize: 14, height: 1.45, color: Tk.ink),
         ),
       ),
     ]);

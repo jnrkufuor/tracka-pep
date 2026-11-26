@@ -252,6 +252,7 @@ LINE_ICONS: dict[str, str] = {
     "mind": '<circle cx="24" cy="24" r="16"/><path d="M24 14 V24 L31 29"/>',
     "nosignal": '<path d="M8 40 H14 V34 M20 40 V26 M28 40 V18 M36 40 V10"/><path d="M6 6 L42 42"/>',
     "pace": '<path d="M27 5 L11 27 H22 L19 43 L37 19 H26 Z" fill="C" stroke="none"/>',
+    "mail": '<path d="M6 12 H42 V38 H6 Z"/><path d="M6 13 L24 27 L42 13"/>',
     "pass": '<path d="M6 24 H40 M31 15 L40 24 L31 33"/>',
     "pencil": '<path d="M10 38 L12 30 L32 10 L38 16 L18 36 Z M28 14 L34 20"/>',
     "pep": '<path d="M10 24 H38" stroke-width="3"/><circle cx="24" cy="24" r="13" stroke-width="6"/><circle cx="24" cy="24" r="6.5" fill="C" stroke="none"/>',

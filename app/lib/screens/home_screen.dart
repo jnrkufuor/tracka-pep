@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/ds.dart';
+import '../widgets/pep.dart';
 import '../widgets/tour.dart' show TourKeys;
 import 'feed_screens.dart';
 import 'guardian_screens.dart' show GuardianCard;
@@ -211,7 +212,7 @@ class _NoticedCard extends StatelessWidget {
       return Panel(
         onTap: () => openUpload(context),
         child: const Row(children: [
-          IconTile(icon: 'pep', color: Tk.pep, background: Tk.pepTile, size: 40),
+          PepTile(PepMood.thinking, size: 40),
           SizedBox(width: 12),
           Expanded(child: Text("Send me a clip and I'll tell you one thing I noticed.", style: TextStyle(color: Tk.inkSoft))),
         ]),
@@ -220,7 +221,7 @@ class _NoticedCard extends StatelessWidget {
     return Panel(
       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => VideoScreen(videoId: v.id))),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const IconTile(icon: 'pep', color: Tk.pep, background: Tk.pepTile, size: 40),
+        const PepTile(PepMood.thinking, size: 40),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

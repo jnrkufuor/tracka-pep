@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/theme.dart';
-import 'ds.dart';
+import 'pep.dart';
 
 /// Pep's tour ("Show me around"), canvas: Pep's tour 1 to 4.
 ///
@@ -95,7 +95,7 @@ class _TourOverlayState extends State<TourOverlay> {
         decoration: BoxDecoration(color: Tk.card, borderRadius: BorderRadius.circular(Tk.rCard), border: Border.all(color: Tk.pep.withValues(alpha: 0.5))),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const TIcon('pep', size: 20, color: Tk.pep),
+            const PepFace(PepMood.justHere, size: 22),
             const SizedBox(width: 8),
             Flexible(
               child: Text("Pep's tour · ${step + 1} of ${tourSteps.length}",
