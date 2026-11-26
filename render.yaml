@@ -1,18 +1,24 @@
-# Render Blueprint: the API, its Postgres database, and (optionally) a CPU worker.
+# Render Blueprint for FREE TESTING: the API and a database, at no cost.
 #
-# In Render: New > Blueprint > pick jnrkufuor/tracka-pep. Render creates
-# everything below and asks for the values marked `sync: false` (secrets).
-# Every push to `main` redeploys automatically (or let CI do it: see
-# .github/workflows/deploy.yml and docs/handbook/03-platforms.md).
+# In Render: New > Blueprint > pick jnrkufuor/tracka-pep, branch main.
+# Render asks for the values marked `sync: false`. For launch, use
+# render.prod.yaml (paid plans) instead.
 #
-# Region: Frankfurt is Render's closest region to Ghana (Render runs in
-# Oregon, Ohio, Virginia, Frankfurt and Singapore). Services in the same
-# region talk over a private network, so keep the API and DB together.
+# What "free" means on Render (docs/handbook/03-the-cloud.md):
+#   - the API falls asleep after 15 minutes with no visitors; the first call
+#     after that takes about a minute while it wakes up;
+#   - the free database stops working 30 days after you create it, and is
+#     deleted 14 days later unless you upgrade. Fine for testing, never for
+#     real players' data;
+#   - background workers can't be free, so there's no worker here. Clips are
+#     analysed by the GPU worker on Modal (its free plan includes monthly
+#     credits): see "Clips" in docs/RUNBOOK.md. Without it, clips upload but
+#     wait in the queue.
 
 databases:
   - name: pep-db
-    region: frankfurt
-    plan: basic-256mb        # the free plan expires after 30 days: fine to try, not to keep
+    region: frankfurt         # Render's closest region to Ghana
+    plan: free
     databaseName: pep
     user: pep
 
@@ -21,36 +27,29 @@ services:
     name: pep-api
     runtime: docker
     region: frankfurt
-    plan: starter            # free plans sleep after 15 min idle; Tracka's calls would wake it slowly
+    plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /readyz # Render only switches traffic to a new deploy once this answers 200
+    healthCheckPath: /readyz
     envVars:
       - key: PEP_ENV
         value: prod
       - key: PEP_DATABASE_URL
         fromDatabase: { name: pep-db, property: connectionString }
-      - key: COACH_API_KEY          # same value as tracka-api's COACH_API_KEY
-        sync: false
-      - key: COACH_WEBHOOK_SECRET   # same value as tracka-api's COACH_WEBHOOK_SECRET
-        sync: false
-      - key: PEP_LAB_PASSWORD
+      - key: COACH_API_KEY          # any long random text (or tracka-api's value, if it still sends clips)
         generateValue: true
-      # Signs players' logins. Render makes a long random one; never change it
-      # after launch (everyone would be logged out). The API refuses to start
-      # in prod with the development default.
-      - key: PEP_JWT_SECRET
+      - key: COACH_WEBHOOK_SECRET
         generateValue: true
-      - key: PEP_PUBLIC_URL         # this service's address, e.g. https://pep-api.onrender.com (or api.tracka.app)
+      - key: PEP_JWT_SECRET         # signs logins
+        generateValue: true
+      - key: PEP_LAB_PASSWORD       # Pep Lab: user "lab", this password (see it under Environment)
+        generateValue: true
+      - key: PEP_KICK_TOKEN         # lets the API wake the Modal worker; copy it into Modal's secret
+        generateValue: true
+      - key: PEP_KICK_URL           # the Modal "kick" address, once the worker is deployed (empty is fine)
+        sync: false
+      - key: PEP_PUBLIC_URL         # this service's address, e.g. https://pep-api.onrender.com
         sync: false
       - key: PEP_CORS_ORIGINS       # the web app's address, as a list: ["https://tracka.pages.dev"]
-        sync: false
-      - key: GEMINI_API_KEY         # optional: without it Pep writes rule-based notes
-        sync: false
-      - key: PEP_FCM_SERVICE_ACCOUNT  # optional: push notifications (docs/PUSH_SETUP.md)
-        sync: false
-      - key: PEP_SENTRY_DSN         # optional: error tracking (docs/RUNBOOK.md)
-        sync: false
-      - key: PEP_SUPPORT_EMAIL      # shown on /delete-account and /child-safety
         sync: false
       - key: PEP_STORAGE
         value: s3
@@ -62,34 +61,11 @@ services:
         sync: false
       - key: PEP_S3_SECRET_KEY
         sync: false
-
-  # A CPU worker on Render. Simple, always on, slow (~0.25 s per frame: a 30 s clip
-  # takes about a minute and a half). Use it to start; move to the Modal GPU worker
-  # (deploy/modal_app.py) when clips queue up. Delete this block if you use Modal only.
-  - type: worker
-    name: pep-worker
-    runtime: docker
-    region: frankfurt
-    plan: standard           # PyTorch + YOLO needs ~2 GB of RAM; smaller plans run out of memory
-    dockerfilePath: ./Dockerfile.worker
-    envVars:
-      - key: PEP_ENV
-        value: prod
-      - key: PEP_DATABASE_URL
-        fromDatabase: { name: pep-db, property: connectionString }
-      - key: COACH_WEBHOOK_SECRET
+      - key: GEMINI_API_KEY         # optional: without it Pep writes rule-based notes
         sync: false
-      - key: GEMINI_API_KEY
+      - key: PEP_FCM_SERVICE_ACCOUNT  # optional: push notifications (docs/PUSH_SETUP.md)
         sync: false
-      - key: PEP_STORAGE
-        value: s3
-      - key: PEP_S3_BUCKET
-        value: pep-clips
-      - key: PEP_S3_ENDPOINT
+      - key: PEP_SENTRY_DSN         # optional: error tracking
         sync: false
-      - key: PEP_S3_ACCESS_KEY
+      - key: PEP_SUPPORT_EMAIL
         sync: false
-      - key: PEP_S3_SECRET_KEY
-        sync: false
-      - key: PEP_SAMPLES_PER_SECOND
-        value: "8"               # a little cheaper on CPU

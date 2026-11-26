@@ -96,6 +96,27 @@ Baseline on a laptop (one process, SQLite, November 2026): 50 players, about
 `/v1/progress` at about 310 ms. Sign-up is slow on purpose (password hashing).
 Re-run against staging on Postgres before launch and write the numbers here.
 
+## Clips while testing for free (Modal)
+
+The free Render setup (`render.yaml`) has no worker, because Render's
+background workers are never free. Clips are analysed on Modal instead,
+whose free plan includes monthly credits:
+
+1. Sign up at modal.com, then on your laptop: `pip install modal && modal token new`.
+2. In Render, open `pep-db` › Connect and copy the **External** database URL.
+   Change `postgresql://` at the start to `postgresql+psycopg://`.
+3. Create the secret Modal reads (one line; values from Render's Environment tab):
+   `modal secret create pep-secrets PEP_DATABASE_URL=… PEP_STORAGE=s3 PEP_S3_BUCKET=pep-clips PEP_S3_ENDPOINT=… PEP_S3_ACCESS_KEY=… PEP_S3_SECRET_KEY=… PEP_KICK_TOKEN=… COACH_WEBHOOK_SECRET=…`
+4. `modal deploy deploy/modal_app.py`. It prints a `kick` address: put it in
+   Render as `PEP_KICK_URL`, so clips start within seconds.
+5. Upload a clip in the app. Modal's dashboard shows the run; Pep's notes
+   appear when it finishes.
+
+Watch the credits in Modal's dashboard. `max_containers=4` caps how many
+GPUs run at once. The 2-minute safety-net run costs a little even when the
+queue is empty: while testing, you can change `schedule=modal.Period(minutes=2)`
+in `deploy/modal_app.py` to 30 minutes, since the kick starts clips anyway.
+
 ## Pushes not arriving
 
 `docs/PUSH_SETUP.md`. Check `PEP_FCM_SERVICE_ACCOUNT` is set, look for
