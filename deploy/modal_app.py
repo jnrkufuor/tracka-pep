@@ -51,7 +51,10 @@ secrets = [modal.Secret.from_name("pep-secrets")]
     secrets=secrets,
     timeout=60 * 30,  # one drain may process many clips
     max_containers=4,  # never more than 4 GPUs at once: a hard cap on spend
-    schedule=modal.Period(minutes=2),
+    # A safety net in case a kick is missed. Every run starts a GPU for a moment, even
+    # with nothing queued, so while testing on free credits it runs every 30 minutes;
+    # the API's kick starts clips within seconds anyway. Use 2-5 minutes at launch.
+    schedule=modal.Period(minutes=30),
 )
 def drain() -> int:
     """Process queued jobs until the queue is empty, then exit (and stop paying)."""
