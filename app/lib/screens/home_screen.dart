@@ -257,11 +257,13 @@ class _ProgressCard extends StatelessWidget {
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(fmt(x.latest, x.unit), style: const TextStyle(fontFamily: TType.display, fontSize: 32, fontWeight: FontWeight.w800, color: Tk.ink)),
             const SizedBox(width: 10),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                x.better ? '${fmt(x.change, x.unit)} ${x.unit == 's' ? 'faster' : 'more'}' : 'from ${fmt(x.first, x.unit)}',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: x.better ? context.accent.main : Tk.muted),
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  x.better ? '${fmt(x.change, x.unit)} ${x.unit == 's' ? 'faster' : 'more'}' : 'from ${fmt(x.first, x.unit)}',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: x.better ? context.accent.main : Tk.muted),
+                ),
               ),
             ),
           ]),
@@ -347,9 +349,11 @@ class _StreakCard extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('${x.streakWeeks}', style: const TextStyle(fontFamily: TType.display, fontSize: 32, fontWeight: FontWeight.w800, color: Tk.ink)),
           const SizedBox(width: 8),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(x.streakWeeks == 1 ? 'week in a row' : 'weeks in a row', style: const TextStyle(fontSize: 13, color: Tk.muted)),
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(x.streakWeeks == 1 ? 'week in a row' : 'weeks in a row', style: const TextStyle(fontSize: 13, color: Tk.muted)),
+            ),
           ),
         ]),
         Text(

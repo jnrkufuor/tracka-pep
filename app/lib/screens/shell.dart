@@ -120,7 +120,10 @@ class TabBarT extends StatelessWidget {
             tab(0),
             tab(1),
             Expanded(
+              // heightFactor 1: as tall as the button, not the whole screen. A plain
+              // Center grows to fill all the height the bottom bar is offered.
               child: Center(
+                heightFactor: 1,
                 child: Semantics(
                   button: true,
                   label: 'Add a clip',

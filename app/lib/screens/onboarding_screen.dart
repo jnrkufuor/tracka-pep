@@ -717,7 +717,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ]),
           ),
         ]);
-    Widget line() => Container(margin: const EdgeInsets.only(left: 12), width: 2, height: 28, color: const Color(0xFF2A2A2A));
+    // Align: a list stretches its children to full width, so a bare 2 px line
+    // would draw as a wide grey bar.
+    Widget line() => Align(
+          alignment: Alignment.centerLeft,
+          child: Container(margin: const EdgeInsets.only(left: 12), width: 2, height: 28, color: const Color(0xFF2A2A2A)),
+        );
     return ListView(padding: const EdgeInsets.fromLTRB(24, 48, 24, 24), children: [
       Text('All set, ${d.firstName.trim()}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: a.main)),
       const SizedBox(height: 8),
