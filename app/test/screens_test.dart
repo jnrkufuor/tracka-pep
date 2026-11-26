@@ -278,6 +278,11 @@ void main() {
         addTearDown(tester.view.reset);
         final s = await tester.runAsync(readyState);
         for (final MapEntry(key: name, value: make) in screens.entries) {
+          // Keep the full report of the first layout error, so a failure names the
+          // widget and the file:line that overflowed.
+          final errors = <FlutterErrorDetails>[];
+          final previous = FlutterError.onError;
+          FlutterError.onError = errors.add;
           await tester.pumpWidget(ChangeNotifierProvider<AppState>.value(
             value: s!,
             child: MaterialApp(
@@ -296,6 +301,8 @@ void main() {
           for (var i = 0; i < 6; i++) {
             await tester.pump(const Duration(milliseconds: 200));
           }
+          FlutterError.onError = previous;
+          expect(errors.isEmpty ? null : errors.first.toString(), isNull, reason: '$name at $width px, $label');
           expect(tester.takeException(), isNull, reason: '$name at $width px, $label');
           // Fitting isn't enough: a part that grows too big hides the rest without
           // any error. The tab bar must stay a bar at the bottom of the screen.
