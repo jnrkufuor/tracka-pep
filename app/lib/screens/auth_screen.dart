@@ -520,7 +520,7 @@ class _AuthScreenState extends State<AuthScreen> {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           TIcon(ok ? 'check' : 'close', size: 14, color: ok ? context.accent.main : Tk.faint, stroke: 5),
           const SizedBox(width: 5),
-          Text(text, style: TextStyle(fontSize: 13, color: ok ? Tk.ink : Tk.faint)),
+          Flexible(child: Text(text, style: TextStyle(fontSize: 13, color: ok ? Tk.ink : Tk.faint))),
         ]),
       );
 
