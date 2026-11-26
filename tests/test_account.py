@@ -33,3 +33,11 @@ def test_feedback_needs_words():
     with TestClient(app) as client:
         h = signup(client)
         assert client.post("/v1/feedback", json={"text": ""}, headers=headers(h)).status_code == 422
+
+
+def test_store_pages_say_how_to_delete_and_how_children_are_kept_safe():
+    with TestClient(app) as client:
+        d = client.get("/delete-account")
+        assert d.status_code == 200 and "Delete my account" in d.text and "support@tracka.app" in d.text
+        c = client.get("/child-safety")
+        assert c.status_code == 200 and "CSAE" in c.text and "292" in c.text

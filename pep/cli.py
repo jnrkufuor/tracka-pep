@@ -17,11 +17,13 @@ import sys
 import uuid
 from pathlib import Path
 
+from .errors import setup_error_tracking
 from .log import setup_logging
 
 
 def main(argv: list[str] | None = None) -> int:
     setup_logging()
+    setup_error_tracking()  # the worker's crashes are tracked too (pep/errors.py)
     ap = argparse.ArgumentParser(prog="pep", description="Tracka's AI coach")
     sub = ap.add_subparsers(dest="cmd", required=True)
 

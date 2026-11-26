@@ -136,3 +136,19 @@ def test_pitches_show_once_two_other_players_confirm():
         client.put(f"/v1/pitches/{pid}/confirm", headers=headers(b))
         v = client.put(f"/v1/pitches/{pid}/confirm", headers=headers(c)).json()
         assert v["pitches"][0]["confirmed"] and v["pitches"][0]["confirmedByMe"]
+
+
+def test_captions_cannot_carry_contact_details():
+    from pep.players.pitchside import has_contact_details
+
+    for bad in [
+        "call me 024 123 4567",
+        "+233241234567",
+        "kofi@gmail.com",
+        "follow @kofi_fc",
+        "www.site.com",
+        "kofi.com",
+    ]:
+        assert has_contact_details(bad), bad
+    for ok in ["Took me weeks.", "Left foot, top corner!", "3 goals in 10 minutes", "U15 final 2026"]:
+        assert not has_contact_details(ok), ok

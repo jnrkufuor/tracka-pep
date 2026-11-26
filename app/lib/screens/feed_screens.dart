@@ -548,6 +548,9 @@ Future<void> showPostSheet(BuildContext context, String videoId) async {
           onChanged: (v) => caption = v,
         ),
         const InfoNote("Players see your shirt name, position, age group and region. Pep's notes on this clip stay with you."),
+        const SizedBox(height: 10),
+        // Shown before anyone posts (Google Play asks apps used by children for this).
+        const SafetyNote(SafetyNote.online, icon: 'lock'),
         const SizedBox(height: 14),
         FilledButton(
           onPressed: () async {

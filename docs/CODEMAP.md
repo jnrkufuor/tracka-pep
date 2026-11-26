@@ -24,6 +24,7 @@ tracka-pep/
 │   ├── pipeline.py               ★ START HERE: the whole analysis, stage by stage, timed
 │   ├── cli.py                    `pep analyse | worker | drain | serve`
 │   ├── log.py                    structured logging (JSON in production)
+│   ├── errors.py                 error tracking (Sentry/GlitchTip via PEP_SENTRY_DSN), personal details stripped
 │   ├── db.py                     tables + the job queue (SKIP LOCKED, leases, backoff, callbacks)
 │   ├── worker.py                 claim → download → analyse → save → callback; heartbeat; SIGTERM
 │   ├── callbacks.py              signed webhooks back to Tracka (HMAC-SHA256), with retries
@@ -61,9 +62,10 @@ tracka-pep/
 │   │   ├── guardian.py           guardian approval: link code, texted one-time code, yes/no, revoke
 │   │   ├── guardian_routes.py    /v1/guardian (player), /v1/g/{code} (guardian), /v1/sms/inbound
 │   │   ├── sms.py                texts: PLACEHOLDER outbox until an SMS provider is chosen
-│   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*
+│   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*, /delete-account, /child-safety
 │   │   ├── moderation.py         Lab › Safety: reported clips, keep / take down, pause posting, audit log
 │   │   ├── account.py            Your data: export everything (no secrets) · Report a problem
+│   │   ├── app_errors.py         crash reports from the app (/v1/app-errors), grouped in Lab › App errors
 │   │   ├── push.py               Firebase Cloud Messaging: service-account token, send, drop dead tokens
 │   │   ├── notifications.py      the bell: events (review ready, respect, guardian) + sweep (sessions, games); push placeholder
 │   │   ├── pitchside.py          Feed, posts, respect, follow, block, report, search, challenges, pitches
@@ -91,10 +93,14 @@ tracka-pep/
 ├── scripts/
 │   ├── make_test_clip.py         a clip with a known top speed (25.2 km/h)
 │   ├── seed_demo.py              a demo player with analysed clips (demo@tracka.app / tracka-demo-123)
+│   ├── load_test.py              pretend players on the busiest screens; p50/p95/p99 and errors
+│   ├── backup.py                 back up, restore and check the database (the restore drill)
 │   └── build_brand.py            generates logo, app icon and icon sets for web AND app (single source of truth)
 ├── deploy/modal_app.py           GPU workers on Modal (drain + kick)
 ├── tests/                        pytest: contracts, kinematics, geometry, drills, scoring, queue, API, training
 ├── docs/handbook/                the learning handbook (00 → 12): concept first, then Tracka as the example, then a workbook
+├── docs/RUNBOOK.md               on call: daily checks, error tracking, backups, the restore drill, load tests
+├── docs/STORE.md                 Play and App Store: decisions, listing text, Data safety answers, checklist
 ├── Dockerfile                    API image (Render builds this)
 ├── Dockerfile.worker             worker image (PyTorch, YOLO, ffmpeg)
 ├── docker-compose.yml            Postgres + MinIO + API + worker, locally

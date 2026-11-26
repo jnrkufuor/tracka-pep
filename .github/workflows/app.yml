@@ -46,7 +46,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - run: ./tool/setup_platforms.sh
-      - run: flutter build web --release --dart-define=PEP_API_URL=$PEP_API_URL
+      - run: flutter build web --release --dart-define=PEP_API_URL=$PEP_API_URL --dart-define=APP_VERSION=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
       - uses: actions/upload-artifact@v4
         with: { name: tracka-web, path: app/build/web }
       - name: Deploy to Cloudflare Pages
@@ -90,7 +90,7 @@ jobs:
           GRADLE_OPTS: -Dorg.gradle.internal.http.connectionTimeout=180000 -Dorg.gradle.internal.http.socketTimeout=180000 -Dorg.gradle.internal.repository.max.retries=8
         run: |
           for i in 1 2 3; do
-            flutter build apk --release --split-per-abi --dart-define=PEP_API_URL=$PEP_API_URL $FCM 2>&1 | tee build.log
+            flutter build apk --release --split-per-abi --dart-define=PEP_API_URL=$PEP_API_URL --dart-define=APP_VERSION=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1) $FCM 2>&1 | tee build.log
             [ "${PIPESTATUS[0]}" = 0 ] && exit 0
             grep -qE '\.dart:[0-9]+:[0-9]+: Error' build.log && exit 1
             sleep $((i * 45))

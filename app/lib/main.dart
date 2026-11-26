@@ -7,6 +7,7 @@ import 'screens/onboarding_screen.dart';
 import 'screens/shell.dart';
 import 'screens/splash_screen.dart';
 import 'state/app_state.dart';
+import 'state/crash_report.dart';
 import 'theme/theme.dart';
 
 /// Tracka, the player app. One codebase: Android, iOS and the web.
@@ -20,16 +21,14 @@ import 'theme/theme.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
+  final state = AppState()
+    ..onPushOpened = ((data) {
+      final nav = navigatorKey.currentState;
+      if (nav != null) openLink(nav, data);
+    });
+  CrashReport.install(state.api); // release builds send crashes to /v1/app-errors
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState()
-        ..onPushOpened = ((data) {
-          final nav = navigatorKey.currentState;
-          if (nav != null) openLink(nav, data);
-        })
-        ..start(),
-      child: const TrackaApp(),
-    ),
+    ChangeNotifierProvider.value(value: state..start(), child: const TrackaApp()),
   );
 }
 

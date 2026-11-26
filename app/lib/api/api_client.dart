@@ -222,6 +222,14 @@ class ApiClient {
   Future<void> feedback(String text, {String kind = 'problem', String? appVersion}) =>
       _send('POST', '/v1/feedback', body: {'kind': kind, 'text': text, if (appVersion != null) 'appVersion': appVersion});
 
+  /// A crash report (lib/state/crash_report.dart). Works logged out too.
+  Future<void> reportError({required String message, String? stack, String? appVersion, String? platform}) async {
+    final s = stack == null || stack.length <= 8000 ? stack : stack.substring(0, 8000);
+    await _send('POST', '/v1/app-errors',
+        auth: false,
+        body: {'message': message, if (s != null) 'stack': s, if (appVersion != null) 'appVersion': appVersion, if (platform != null) 'platform': platform});
+  }
+
   Future<ProgressState> progress() async => ProgressState.fromJson(await _send('GET', '/v1/progress') as Map<String, dynamic>);
 
   Future<FocusState> focus() async => FocusState.fromJson(await _send('GET', '/v1/focus') as Map<String, dynamic>);

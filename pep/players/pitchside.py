@@ -27,6 +27,7 @@ Safety rules this module keeps (and tests check, tests/test_pitchside.py):
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from functools import cache
@@ -51,6 +52,7 @@ from sqlalchemy import (
 )
 
 from .. import db
+from ..errors import EMAIL, PHONE
 from ..scoring.norms import age_band, standing
 from ..storage import storage
 from . import auth, card, details, guardian, store
@@ -468,10 +470,30 @@ class PostIn(Body):
     caption: str = Field("", max_length=200)
 
 
+LINK = re.compile(r"(https?://|www\.|\b\w+\.(com|gh|net|org|me|ly)\b|@\w{3,})", re.I)
+
+
+def has_contact_details(text: str) -> bool:
+    """
+    Phone numbers, emails, links or @handles in a caption.
+
+    WHY: a stranger who wants to reach a child off the app starts by asking
+    for a number or a handle. Pitchside has no messages on purpose, so a
+    caption is the only place contact details could be shared. Blocking them
+    keeps every conversation on the app, where Report works (handbook 12).
+    """
+    return bool(PHONE.search(text) or EMAIL.search(text) or LINK.search(text))
+
+
 @router.post("/posts", status_code=201)
 def create_post(body: PostIn, req: Request, user: dict = Depends(auth.current_user)) -> dict:
     if not can_post(user["id"]):
         raise HTTPException(403, "Your guardian needs to say yes before you can post clips.")
+    if has_contact_details(body.caption):
+        raise HTTPException(
+            422,
+            "Captions can't have phone numbers, emails, links or @names. Keep your contact details private.",
+        )
     v = store.get_video(user["id"], body.video_id)
     if v is None:
         raise HTTPException(404, "Video not found.")

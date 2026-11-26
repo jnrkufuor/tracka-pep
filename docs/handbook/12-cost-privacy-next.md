@@ -180,6 +180,13 @@ learning · re-identification · action recognition
 7. Settings › Your data › Download your data. Open the file: which tables
    are in it, and which are left out on purpose (`SKIP_TABLES` in
    `pep/players/account.py`)? Why would leaving `sessions` in be a problem?
+8. Try posting a clip on Pitchside with the caption "call me 024 123 4567",
+   then "follow @kofi". Both are refused (`has_contact_details` in
+   `pep/players/pitchside.py`). Think like someone trying to get around it:
+   what would you write instead ("zero two four…")? What else, besides the
+   filter, keeps a child safe when a filter misses?
+9. Open `docs/STORE.md` and fill in Play's Data safety form on paper for one
+   new feature you'd like to add. Which rows change?
 
 **Questions**
 

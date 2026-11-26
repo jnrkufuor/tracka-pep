@@ -480,17 +480,20 @@ class InfoNote extends StatelessWidget {
 
 /// The gold safety note where you train: "Stop if anything hurts."
 class SafetyNote extends StatelessWidget {
-  const SafetyNote(this.text, {super.key});
+  const SafetyNote(this.text, {super.key, this.icon = 'hurt'});
 
   final String text;
+  final String icon;
 
   static const training = "Stop if anything hurts. Pep can't see injuries, so rest and tell an adult or your coach.";
   static const drill = 'Warm up first. Stop if anything hurts, and tell an adult.';
+  static const online =
+      "Stay safe: never share your number, school or where you live. If anyone makes you feel uncomfortable, report them and tell an adult you trust.";
 
   @override
   Widget build(BuildContext context) => _Note(
         text: text,
-        icon: 'hurt',
+        icon: icon,
         iconColor: Tk.gold,
         textColor: Tk.goldInk,
         background: Tk.goldTile,
