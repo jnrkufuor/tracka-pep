@@ -166,7 +166,9 @@ class Panel extends StatelessWidget {
         borderRadius: BorderRadius.circular(Tk.rCard),
         border: Border.all(color: border ?? Tk.line),
       ),
-      child: child,
+      // A see-through Material inside the card, so list rows and buttons in it
+      // draw their tap ripple on the card instead of underneath it.
+      child: Material(type: MaterialType.transparency, child: child),
     );
     return onTap == null ? box : Pressable(onTap: onTap, child: box);
   }
@@ -285,8 +287,8 @@ class _Chip extends StatelessWidget {
         child: AnimatedContainer(
           duration: Motion.of(context, Motion.select),
           curve: Motion.change,
-          height: 40, // a comfortable tap target; the row inside is centred in it
-          padding: const EdgeInsets.symmetric(horizontal: 15),
+          constraints: const BoxConstraints(minHeight: 40), // a comfortable tap target; grows with big text
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
           decoration: BoxDecoration(
             color: selected ? a.main : Tk.field,
             borderRadius: BorderRadius.circular(999),
@@ -294,12 +296,18 @@ class _Chip extends StatelessWidget {
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (check && selected) ...[TIcon('check', size: 14, color: a.on, stroke: 5), const SizedBox(width: 6)],
-            Text(label,
+            // Long labels wrap instead of running off a small phone (chips also sit in
+            // sideways-scrolling rows, where Flexible can't be used).
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width - 90),
+              child: Text(label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   color: selected ? a.on : Tk.ink,
                 )),
+            ),
           ]),
         ),
       ),

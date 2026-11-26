@@ -191,7 +191,11 @@ contrast ratio
 11. Pep's tour finds what to point at with GlobalKeys (`lib/widgets/tour.dart`).
    Hide "Tests and PBs" in Customise home, then run the tour from Settings ›
    Help. What does step 2 do when its card isn't there, and which line decides?
-12. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
+12. `test/screens_test.dart` builds every main screen at 360, 390, 412 and
+   430 px, with XL text and with higher contrast, using a fake API. Make a
+   title in one screen much longer and run it: what does the failure say,
+   and how would you fix the layout (hint: `Expanded`, `Flexible`, `maxLines`)?
+13. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
    to the contrast test's list. Does it pass? Even if it did, why would
    Tracka still not offer it as a main colour?
 
