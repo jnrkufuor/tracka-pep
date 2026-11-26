@@ -30,11 +30,18 @@ import modal
 
 app = modal.App("tracka-pep")
 
+# GPU or CPU. Modal asks for a payment method before it runs any GPU, even on
+# free credits. Without one, set MODAL_GPU=cpu (a GitHub variable, read when CI
+# deploys): clips take a few minutes each instead of under a minute, and still
+# come out of the free monthly credits. With a card on file, use L4.
+GPU = os.environ.get("MODAL_GPU", "L4").strip()
+ON_GPU = GPU.lower() not in {"", "cpu", "none"}
+
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .apt_install("ffmpeg", "libgl1", "libglib2.0-0")
     .pip_install_from_pyproject("pyproject.toml", optional_dependencies=["vision", "coach", "train"])
-    .env({"PEP_MODELS_DIR": "/models", "PEP_ENV": "prod", "PEP_DEVICE": "cuda:0"})
+    .env({"PEP_MODELS_DIR": "/models", "PEP_ENV": "prod", "PEP_DEVICE": "cuda:0" if ON_GPU else "cpu"})
     # Bake the weights into the image: no download on cold start.
     .run_commands(
         "mkdir -p /models && cd /models && python -c \"from ultralytics import YOLO; YOLO('yolo26s.pt'); YOLO('yolo26n-pose.pt')\""
@@ -47,7 +54,9 @@ secrets = [modal.Secret.from_name("pep-secrets")]
 
 @app.function(
     image=image,
-    gpu="L4",
+    gpu=GPU if ON_GPU else None,
+    cpu=None if ON_GPU else 4.0,  # without a GPU, 4 CPU cores keep a clip to a few minutes
+    memory=None if ON_GPU else 6144,
     secrets=secrets,
     timeout=60 * 30,  # one drain may process many clips
     max_containers=4,  # never more than 4 GPUs at once: a hard cap on spend
