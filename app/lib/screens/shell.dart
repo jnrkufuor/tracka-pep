@@ -91,15 +91,16 @@ class TabBarT extends StatelessWidget {
           excludeSemantics: true,
           child: Pressable(
             onTap: () => onTab(i),
-            child: SizedBox(
-              height: 52,
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            child: ConstrainedBox(
+              // At least 52 tall for the thumb; taller when the text is big, so labels never get cut.
+              constraints: const BoxConstraints(minHeight: 52),
+              child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
                 TIcon(_tabs[i].$1, size: 21, color: colour, stroke: 3),
                 const SizedBox(height: 3),
                 AnimatedDefaultTextStyle(
                   duration: Motion.of(context, Motion.select),
                   style: TextStyle(fontFamily: TType.text, fontSize: 10.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: colour),
-                  child: Text(_tabs[i].$2),
+                  child: Text(_tabs[i].$2, maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ]),
             ),
