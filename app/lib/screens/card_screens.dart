@@ -1,4 +1,7 @@
 import 'package:material_ui/material_ui.dart';
+import 'dart:ui' as ui;
+
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -153,6 +156,25 @@ class ShareCardScreen extends StatefulWidget {
 class _ShareCardScreenState extends State<ShareCardScreen> {
   CardState? c;
   bool failed = false;
+  final _cardKey = GlobalKey();
+
+  /// Save image: draws the card (as shown above) into a PNG and opens the share sheet,
+  /// so it can go on WhatsApp Status. The picture shows only what the card shows.
+  Future<void> _saveImage(CardState v) async {
+    try {
+      final boundary = _cardKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: 3);
+      final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      if (png == null) throw StateError('no image');
+      await Share.shareXFiles(
+        [XFile.fromData(png.buffer.asUint8List(), name: 'tracka-card.png', mimeType: 'image/png')],
+        text: v.linkOn && v.url != null ? 'My Tracka player card: ${v.url}' : 'My Tracka player card',
+      );
+    } catch (e) {
+      if (mounted) showToast(context, "Couldn't make the image", detail: '$e', ok: false, aboveTabs: false);
+    }
+  }
 
   @override
   void initState() {
@@ -196,7 +218,20 @@ class _ShareCardScreenState extends State<ShareCardScreen> {
         const SizedBox(height: 4),
         const Text('Send it to a coach, a scout or your friends.', style: TextStyle(fontSize: 13.5, color: Tk.muted)),
         const SizedBox(height: 18),
-        PlayerCardView(card: v.card),
+        RepaintBoundary(
+          key: _cardKey,
+          child: ColoredBox(
+            color: Tk.bg,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                PlayerCardView(card: v.card),
+                const SizedBox(height: 6),
+                const Text('tracka.app', textAlign: TextAlign.right, style: TextStyle(fontSize: 11, color: Tk.faint)),
+              ]),
+            ),
+          ),
+        ),
         const SizedBox(height: 16),
         if (!v.canShare) ...[
           Panel(
@@ -243,6 +278,12 @@ class _ShareCardScreenState extends State<ShareCardScreen> {
             ]),
             const SizedBox(height: 8),
           ],
+          OutlinedButton.icon(
+            onPressed: () => _saveImage(v),
+            icon: const TIcon('download', size: 18, color: Tk.ink),
+            label: const Text('Save image'),
+          ),
+          const SizedBox(height: 8),
           Panel(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             child: Column(children: [
