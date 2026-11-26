@@ -181,8 +181,11 @@ def _age(p: dict) -> int | None:
 
 
 def can_post(uid: str) -> bool:
+    """Guardian's yes for under-18s, and not paused by moderation (moderation.py)."""
+    from .moderation import on_hold
+
     p = store.get_profile(uid)
-    return guardian.allowed(uid, "post", _age(p), p["guardian_consent"])
+    return guardian.allowed(uid, "post", _age(p), p["guardian_consent"]) and not on_hold(uid)
 
 
 def findable(uid: str) -> bool:

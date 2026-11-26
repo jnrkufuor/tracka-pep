@@ -109,6 +109,11 @@ from ..players.pages import router as pages_router  # noqa: E402
 
 app.include_router(pages_router)
 
+# Staff moderation of Pitchside (Lab › Safety): pep/players/moderation.py
+from ..players.moderation import router as moderation_router  # noqa: E402
+
+app.include_router(moderation_router)
+
 
 @app.middleware("http")
 async def observe(request: Request, call_next):

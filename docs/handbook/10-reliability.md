@@ -124,6 +124,13 @@ nothing. The same trick as the upload queue's idempotency key. Quiet hours
 messages; the bell keeps everything. Push itself is a placeholder until
 Firebase Cloud Messaging is set up in the app.
 
+### Moderation with an audit trail (pep/players/moderation.py)
+
+Three reports hide a clip automatically, which is fast but blunt. A person
+then decides in Pep Lab › Safety: keep it, take it down, or pause the player's
+posting. Every decision goes into `moderation_log` with who and why: an
+**audit trail**, so mistakes can be found and decisions explained to a parent.
+
 ## Words to know
 SRE · SLI · SLO · SLA · error budget · availability · observability ·
 logs · structured logging · metrics · traces · golden signals · latency ·
@@ -154,6 +161,9 @@ migration · capacity planning · toil
    Your data › Delete my account. Follow the request to the guardian page
    and say yes. Why does `delete_account` read the guardian's number
    *before* deleting (look at `_delete_by_guardian`)?
+9. Report a clip from three accounts, then open Pep Lab › Safety and keep it.
+   Read `/lab/moderation/log`. What would you add to the log so a parent's
+   complaint could be answered a month later?
 
 **Questions**
 
