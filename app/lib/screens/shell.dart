@@ -5,6 +5,7 @@ import '../config.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
+import '../widgets/pep.dart';
 import '../widgets/tour.dart';
 import 'home_screen.dart';
 import 'pep_screen.dart';
@@ -95,7 +96,12 @@ class TabBarT extends StatelessWidget {
               // At least 52 tall for the thumb; taller when the text is big, so labels never get cut.
               constraints: const BoxConstraints(minHeight: 52),
               child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
-                TIcon(_tabs[i].$1, size: 21, color: colour, stroke: 3),
+                // Pep's own tab: when open he's awake and alive (canvas "Bottom tabs":
+                // he blinks and looks around); otherwise the still line icon.
+                if (i == 2 && on)
+                  PepFace(pepIdleMood(), size: 21)
+                else
+                  TIcon(_tabs[i].$1, size: 21, color: colour, stroke: 3),
                 const SizedBox(height: 3),
                 AnimatedDefaultTextStyle(
                   duration: Motion.of(context, Motion.select),

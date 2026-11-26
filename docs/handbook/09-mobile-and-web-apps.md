@@ -115,3 +115,9 @@ Exercises added as features were built. Each one points at real code.
 13. In `test/design_system_test.dart`, add `Color(0xFF7A2BFF)` (a purple)
    to the contrast test's list. Does it pass? Even if it did, why would
    Tracka still not offer it as a main colour?
+14. Pep's moves live in `lib/widgets/pep.dart`, copied from the design's
+   CSS keyframes (`pepBlink`: closed at 49% of a 5.5-second loop). Change
+   the blink period to 2 seconds and watch Pep on Meet Pep. Why does a
+   fast blink make him feel nervous rather than alive? Then turn on
+   "Remove animations": what does Pep look like, and why is standing still
+   at full size the right fallback?
