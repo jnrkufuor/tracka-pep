@@ -40,12 +40,13 @@ class WelcomeScreen extends StatelessWidget {
     void go(Widget page) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     return Scaffold(
       backgroundColor: Tk.bg,
-      // A fixed-height page that scrolls only if the text is very large. (Not
-      // IntrinsicHeight: the picture uses a LayoutBuilder, which can't report one.)
+      // Fills the screen with the buttons at the bottom; on a short phone or
+      // with very large text it scrolls instead of cutting anything off.
       body: SingleChildScrollView(
-        child: SizedBox(
-          height: math.max(mq.size.height, heroH + mq.padding.top + 440 * mq.textScaler.scale(1) + mq.padding.bottom),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: mq.size.height),
+          child: IntrinsicHeight(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               _Hero(height: heroH, topInset: mq.padding.top),
               Transform.translate(
                 offset: const Offset(0, -14),
@@ -75,6 +76,7 @@ class WelcomeScreen extends StatelessWidget {
                 ]),
               ),
             ]),
+          ),
         ),
       ),
     );
@@ -91,10 +93,12 @@ class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final a = context.accent;
+    // The screen's width, not a LayoutBuilder: the page measures its height
+    // first (IntrinsicHeight), and a LayoutBuilder can't be measured that way.
+    final w = MediaQuery.sizeOf(context).width;
     return SizedBox(
       height: height + topInset,
-      child: LayoutBuilder(builder: (context, box) {
-        final w = box.maxWidth;
+      child: Builder(builder: (context) {
         final k = height / 460; // board positions are for a 460-tall picture
         double y(double v) => topInset + v * k;
         final cardW = math.min(w * 0.43, 168.0) * (0.85 + 0.15 * k);
