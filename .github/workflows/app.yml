@@ -94,7 +94,7 @@ jobs:
           GRADLE_OPTS: -Dorg.gradle.internal.http.connectionTimeout=180000 -Dorg.gradle.internal.http.socketTimeout=180000 -Dorg.gradle.internal.repository.max.retries=8
         run: |
           # Values pasted into GitHub variables sometimes carry a line break or spaces:
-          # squash all whitespace (and Windows-style \\r) so each --dart-define stays one argument.
+          # squash all whitespace (and Windows-style \r) so each --dart-define stays one argument.
           FCM=$(echo $FCM | tr -d '\r')
           PEP_API_URL=$(echo $PEP_API_URL | tr -d '\r')
           for i in 1 2 3; do
