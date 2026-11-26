@@ -48,7 +48,7 @@ jobs:
         with: { channel: stable, cache: true }
       - run: ./tool/setup_platforms.sh
       - run: flutter build web --release --dart-define=PEP_API_URL=$PEP_API_URL --dart-define=APP_VERSION=$(grep '^version:' pubspec.yaml | cut -d' ' -f2 | cut -d+ -f1)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: tracka-web, path: app/build/web }
       - name: Deploy to Cloudflare Pages
         if: github.ref == 'refs/heads/main' && env.CF_TOKEN != ''
@@ -108,5 +108,5 @@ jobs:
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/Tracka.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/Tracka-older-phones.apk
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with: { name: tracka-android, path: app/dist/*.apk }
