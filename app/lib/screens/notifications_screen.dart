@@ -57,15 +57,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       setState(() => n.read = true);
       s.api.markRead([n.id]).then((_) => s.loadUnread()).catchError((_) {});
     }
-    final link = n.link ?? const {};
-    final Widget? page = switch (link['screen']) {
-      'video' when link['id'] != null => VideoScreen(videoId: link['id'] as String),
-      'week' => const WeekScreen(),
-      'guardian' => const GuardianScreen(),
-      'tips' => const TipsScreen(),
-      _ => null,
-    };
-    if (page != null) await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    await openLink(Navigator.of(context), n.link ?? const {});
   }
 
   String _ago(DateTime t) {
@@ -174,6 +166,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
+}
+
+/// Open what a notification (or a tapped push) is about.
+Future<void> openLink(NavigatorState nav, Map<String, dynamic> link) async {
+  final id = link['id']?.toString();
+  final Widget page = switch (link['screen']) {
+    'video' when id != null => VideoScreen(videoId: id),
+    'week' => const WeekScreen(),
+    'guardian' => const GuardianScreen(),
+    'tips' => const TipsScreen(),
+    _ => const NotificationsScreen(),
+  };
+  await nav.push(MaterialPageRoute(builder: (_) => page));
 }
 
 /// The bell on Home, with a dot when something's unread.

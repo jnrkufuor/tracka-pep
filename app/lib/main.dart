@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/auth_screen.dart';
+import 'screens/notifications_screen.dart' show openLink;
 import 'screens/onboarding_screen.dart';
 import 'screens/shell.dart';
 import 'screens/splash_screen.dart';
@@ -15,10 +16,18 @@ import 'theme/theme.dart';
 ///   signedOut  → welcome + sign up / log in
 ///   onboarding → build your profile (Pep needs age and positions)
 ///   ready      → the tabs: Home, Pitchside, + (add a clip), Pep, Me
+/// Lets a tapped push open a screen from outside the widget tree.
+final navigatorKey = GlobalKey<NavigatorState>();
+
 void main() {
   runApp(
     ChangeNotifierProvider(
-      create: (_) => AppState()..start(),
+      create: (_) => AppState()
+        ..onPushOpened = ((data) {
+          final nav = navigatorKey.currentState;
+          if (nav != null) openLink(nav, data);
+        })
+        ..start(),
       child: const TrackaApp(),
     ),
   );
@@ -37,6 +46,7 @@ class TrackaApp extends StatelessWidget {
     final scale = context.select<AppState, double>((s) => s.settings.textScale);
     final contrast = context.select<AppState, bool>((s) => s.settings.highContrast);
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Tracka',
       debugShowCheckedModeBanner: false,
       theme: trackaTheme(colour: MainColour.fromName(colour)),

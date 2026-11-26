@@ -16,7 +16,7 @@ fi
 echo "▶ Android: name, permissions"
 M=android/app/src/main/AndroidManifest.xml
 perl -pi -e 's/android:label="[^"]*"/android:label="Tracka"/' "$M"
-for p in INTERNET CAMERA RECORD_AUDIO READ_MEDIA_VIDEO; do
+for p in INTERNET CAMERA RECORD_AUDIO READ_MEDIA_VIDEO POST_NOTIFICATIONS; do
   grep -q "permission.$p\"" "$M" || perl -0pi -e "s|<application|<uses-permission android:name=\"android.permission.$p\"/>\n    <application|" "$M"
 done
 # Local development talks to http://10.0.2.2:8000; production is https only.
