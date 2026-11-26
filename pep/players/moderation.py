@@ -173,7 +173,7 @@ def queue() -> dict:
             {
                 "userId": h.user_id,
                 "reason": h.reason,
-                "until": _aware(h.until).isoformat() if h.until else None,
+                "until": h.until.isoformat() if h.until else None,
             }
             for h in holds
         ],
