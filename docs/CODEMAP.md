@@ -62,6 +62,7 @@ tracka-pep/
 │   │   ├── guardian_routes.py    /v1/guardian (player), /v1/g/{code} (guardian), /v1/sms/inbound
 │   │   ├── sms.py                texts: PLACEHOLDER outbox until an SMS provider is chosen
 │   │   ├── pages.py              web pages without the app: /g/{code} (guardian), /legal/*
+│   │   ├── moderation.py         Lab › Safety: reported clips, keep / take down, pause posting, audit log
 │   │   ├── account.py            Your data: export everything (no secrets) · Report a problem
 │   │   ├── notifications.py      the bell: events (review ready, respect, guardian) + sweep (sessions, games); push placeholder
 │   │   ├── pitchside.py          Feed, posts, respect, follow, block, report, search, challenges, pitches
