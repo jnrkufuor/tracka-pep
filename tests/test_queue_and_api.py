@@ -123,3 +123,12 @@ def test_prod_refuses_development_secrets(monkeypatch):
     monkeypatch.setattr(settings(), "api_key", "y" * 40)
     monkeypatch.setattr(settings(), "lab_password", "z" * 20)
     app_module._refuse_unsafe_prod_settings()
+
+
+def test_blank_settings_use_the_defaults(monkeypatch):
+    from pep.config import Settings
+
+    monkeypatch.setenv("PEP_CORS_ORIGINS", "")
+    monkeypatch.setenv("PEP_PUBLIC_URL", "")
+    s = Settings()
+    assert s.cors_origins == ["*"] and s.public_url == "http://localhost:8000"

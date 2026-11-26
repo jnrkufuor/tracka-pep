@@ -27,7 +27,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_prefix="PEP_", extra="ignore")
+    # env_ignore_empty: a setting left blank (an empty box in Render) means "use
+    # the default", instead of crashing on start-up for lists like cors_origins.
+    model_config = SettingsConfigDict(
+        env_file=".env", env_prefix="PEP_", extra="ignore", env_ignore_empty=True
+    )
 
     # ---- service
     env: Literal["dev", "test", "prod"] = "dev"
