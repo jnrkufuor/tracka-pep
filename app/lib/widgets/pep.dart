@@ -113,6 +113,10 @@ class PepFace extends StatefulWidget {
   final Color color;
   final bool breathe;
 
+  /// Off in tests (test/flutter_test_config.dart): a breath never ends, and
+  /// tests that wait for every animation to finish would wait forever.
+  static bool breathing = true;
+
   @override
   State<PepFace> createState() => _PepFaceState();
 }
@@ -123,7 +127,7 @@ class _PepFaceState extends State<PepFace> with SingleTickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (widget.breathe && !Motion.reduced(context)) {
+    if (widget.breathe && PepFace.breathing && !Motion.reduced(context)) {
       if (!_c.isAnimating) _c.repeat(reverse: true);
     } else {
       _c.stop();
