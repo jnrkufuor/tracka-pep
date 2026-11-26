@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/theme.dart';
-import 'ds.dart';
 import 'pep.dart';
 
 /// Pep's tour ("Show me around"), canvas: Pep's tour 1 to 4.
