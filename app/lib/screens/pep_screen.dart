@@ -102,30 +102,29 @@ class _PepScreenState extends State<PepScreen> {
               ),
             ]),
             const SizedBox(height: 18),
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.15,
-              children: [
+            LayoutBuilder(builder: (context, box) {
+              final w = (box.maxWidth - 20) / 3; // three across, natural height (grows with big text)
+              return Wrap(spacing: 10, runSpacing: 10, children: [
                 for (final (icon, label, count, onTap) in shortcuts)
-                  Panel(
-                    padding: const EdgeInsets.all(12),
-                    onTap: onTap,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Row(children: [
-                        TIcon(icon, size: 20, color: Tk.pep),
-                        const Spacer(),
-                        if (count != null && count > 0)
-                          Text('$count', style: const TextStyle(fontFamily: TType.display, fontSize: 16, fontWeight: FontWeight.w800, color: Tk.ink)),
+                  SizedBox(
+                    width: w,
+                    child: Panel(
+                      padding: const EdgeInsets.all(12),
+                      onTap: onTap,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          TIcon(icon, size: 20, color: Tk.pep),
+                          const Spacer(),
+                          if (count != null && count > 0)
+                            Text('$count', style: const TextStyle(fontFamily: TType.display, fontSize: 16, fontWeight: FontWeight.w800, color: Tk.ink)),
+                        ]),
+                        const SizedBox(height: 14),
+                        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Tk.ink)),
                       ]),
-                      Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-                    ]),
+                    ),
                   ),
-              ],
-            ),
+              ]);
+            }),
             const SizedBox(height: 22),
             if (f != null && f.growing.isNotEmpty) ...[
               const SectionLabel('Your game is growing'),
