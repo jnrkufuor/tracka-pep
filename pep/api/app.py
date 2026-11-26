@@ -71,10 +71,31 @@ QUEUE = Gauge("pep_jobs", "Jobs by status", ["status"])
 OLDEST = Gauge("pep_oldest_queued_seconds", "Age of the oldest queued job")
 
 
+DEV_DEFAULTS = {"jwt_secret": "dev-jwt-secret-change-me-please-32b", "api_key": "dev-key"}
+
+
+def _refuse_unsafe_prod_settings() -> None:
+    """
+    Fail fast (handbook chapter 10): in production, refuse to start with a
+    development secret. Anyone could sign a login token with the default
+    JWT secret and act as any player. A crash at deploy time is caught by the
+    health check and the old version keeps running; a silent start is not.
+    """
+    s = settings()
+    if s.env != "prod":
+        return
+    bad = [k for k, v in DEV_DEFAULTS.items() if getattr(s, k) == v]
+    if not s.lab_password:
+        bad.append("lab_password")
+    if bad:
+        raise RuntimeError(f"Refusing to start in prod with development settings: {', '.join(bad)}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Runs once at start-up (before `yield`) and once at shutdown (after)."""
     setup_logging()
+    _refuse_unsafe_prod_settings()
     setup_error_tracking()  # off unless PEP_SENTRY_DSN is set: pep/errors.py
     db.engine()  # create tables, fail fast if the DB is unreachable
     if settings().inline_worker:
