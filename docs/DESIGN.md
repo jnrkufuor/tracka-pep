@@ -2,9 +2,9 @@
 
 ## Player app: design system v2 (November 2026)
 
-The player app is being rebuilt from the design canvas ("Tracka player app:
+The player app is built from the design canvas ("Tracka player app:
 screen concepts v2"). The sections further down describe the first version
-and still apply to the Lab (staff console).
+and apply only to the Lab (staff console).
 
 - **Colours have jobs** (`app/lib/theme/tokens.dart`, class `Tk`):
   - **main colour** = you: your buttons, progress, "Strong" and "Standout".
@@ -70,13 +70,17 @@ sportier Tracka, still with the neon.
 - **Mobile**: the nav becomes a floating bottom pill (thumb reach).
 
 ## In the Flutter app
-The app (`app/`) is the main product, and uses the same system:
-- tokens in `app/lib/theme/theme.dart` (`TColors`, `TRadius`, `TType`)
-  mirror `web/app.css :root`; change both together;
-- the icon set is generated into `app/lib/widgets/loopy_icons.g.dart`;
-- five tabs in a floating pill: Home, Videos, Pep, Chances, Profile;
-- one neon card per screen (the Pep score on Home, the clip score on a
-  video, the "on its way" card on Chances).
+The app uses **only design system v2** (top of this file). The v1 pieces
+(`TColors`, `TRadius`, loopy icons, kit-number scores, tape stripes, score
+bars, `common.dart`, `skill_card.dart`) were removed in November 2026; the
+Lab keeps v1 on the web.
+- tokens: `app/lib/theme/tokens.dart` (`Tk`, `MainColour`, `Band`, `Confidence`);
+- components: `app/lib/widgets/ds.dart`; brand: `app/lib/widgets/brand.dart`
+  (`TrackaMark`, `TrackaLogo`: the mark in your main colour, then "Tracka");
+- icons: the line pack, `TIcon('name')` (`line_icons.g.dart`, generated);
+- accessibility: text size on top of the phone's (`textSize`), higher
+  contrast (`highContrast`: a colour filter that lifts every grey, black stays
+  black), less motion (`reduceMotion` plus the phone's setting).
 
 ## The logo
 `scripts/build_brand.py` redraws Tracka's mark as clean vectors (head

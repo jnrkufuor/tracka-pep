@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tracka/api/models.dart';
 import 'package:tracka/theme/theme.dart';
-import 'package:tracka/widgets/common.dart';
+import 'package:tracka/widgets/brand.dart';
 
 void main() {
   test('parses a video with its analysis', () {
@@ -54,14 +54,10 @@ void main() {
     expect(c.confidence, 'LOW');
   });
 
-  testWidgets('kit number and score bar render', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: trackaTheme(),
-      home: const Scaffold(body: Column(children: [KitNumber(74), ScoreBar(74), Pill('High')])),
-    ));
+  testWidgets('the logo draws the mark in your main colour', (tester) async {
+    await tester.pumpWidget(MaterialApp(theme: trackaTheme(), home: const Scaffold(body: TrackaLogo())));
     await tester.pumpAndSettle();
-    expect(find.text('74'), findsOneWidget);
-    expect(find.text('HIGH'), findsOneWidget);
+    expect(find.text('Tracka'), findsOneWidget);
   });
 
   test('the week finds the next planned Pep session from today', () {

@@ -150,6 +150,10 @@ migration · capacity planning · toil
 7. Run `notifications.sweep(uid)` twice in a Python shell and count the rows
    in `notifications`. Then change a dedupe key to include the time and run
    it twice again. What goes wrong, and why does the key matter?
+8. Sign up as a 15-year-old whose guardian approves, then try Settings ›
+   Your data › Delete my account. Follow the request to the guardian page
+   and say yes. Why does `delete_account` read the guardian's number
+   *before* deleting (look at `_delete_by_guardian`)?
 
 **Questions**
 

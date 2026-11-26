@@ -108,6 +108,7 @@ tracka-pep/
 |---|---|
 | a screen in the app | `app/lib/screens/<name>_screen.dart` |
 | guardian approval | `pep/players/guardian.py`, `app/lib/screens/guardian_screens.dart`, page in `pep/players/pages.py` |
+| brand (mark and logo), accessibility filter | `app/lib/widgets/brand.dart`, `app/lib/main.dart` (`highContrastFilter`) |
 | Pep's tour (Show me around) | `app/lib/widgets/tour.dart`, keys in `home_screen.dart` and `shell.dart` |
 | Me, Settings (accessibility, voice, your data, help) | `app/lib/screens/profile_screen.dart`, `settings_screen.dart`, `pep/players/account.py` |
 | Home cards, Customise home, progress | `app/lib/screens/home_screen.dart`, `pep/players/progress.py` (`/v1/progress`) |

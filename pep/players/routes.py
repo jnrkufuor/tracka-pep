@@ -260,15 +260,23 @@ def update_me(body: ProfileIn, user: dict = Depends(auth.current_user)) -> dict:
     return _me(user)
 
 
-@router.delete("/me", status_code=204)
-def delete_me(user: dict = Depends(auth.current_user)) -> None:
-    keys = store.delete_user(user["id"])
+def delete_account(uid: str, by: str = "player") -> None:
+    """Delete the account, every row that points at it, and its files in storage."""
+    keys = store.delete_user(uid)
     for key in keys:
         try:
             storage().delete(key)
         except Exception as exc:  # keep going: the account is already gone
             log.warning("delete.storage_failed", key=key, error=str(exc))
-    log.info("player.deleted", user_id=user["id"], files=len(keys))
+    log.info("player.deleted", user_id=uid, files=len(keys), by=by)
+
+
+@router.delete("/me", status_code=204)
+def delete_me(user: dict = Depends(auth.current_user)) -> None:
+    p = store.get_profile(user["id"])
+    if guardian.needs_guardian_to_delete(user["id"], store.age_on(p["birth_date"])):
+        raise HTTPException(409, "Your guardian needs to agree first. Ask them from Settings › Your data.")
+    delete_account(user["id"])
 
 
 @router.get("/meta")

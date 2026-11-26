@@ -120,7 +120,16 @@ def resend(user: dict = Depends(auth.current_user)) -> dict:
 
 
 class AskIn(Body):
-    kind: Literal["post", "share_card", "search"]
+    kind: Literal["post", "share_card", "search", "delete"]
+
+
+@router.delete("/guardian/requests/delete", status_code=200)
+def cancel_delete(user: dict = Depends(auth.current_user)) -> dict:
+    """The player changed their mind before the guardian answered."""
+    r = guardian.latest(user["id"], "delete")
+    if r is not None and r["status"] == "pending":
+        guardian.withdraw(r["id"])
+    return player_view(user["id"])
 
 
 @router.post("/guardian/requests", status_code=201)
@@ -134,8 +143,10 @@ def ask(body: AskIn, user: dict = Depends(auth.current_user)) -> dict:
         or guardian.get(user["id"]) is None
     ):
         raise HTTPException(409, "Your guardian needs to approve your account first.")
-    if guardian.allowed(user["id"], body.kind, age):
+    if body.kind != "delete" and guardian.allowed(user["id"], body.kind, age):
         return player_view(user["id"])
+    if body.kind == "delete" and not guardian.needs_guardian_to_delete(user["id"], age):
+        raise HTTPException(409, "You can delete your account yourself in Settings › Your data.")
     before = guardian.latest(user["id"], body.kind)
     guardian.ask(user["id"], body.kind)
     if before is None or before["status"] != "pending":
@@ -236,7 +247,7 @@ def verify(code: str, body: CodeIn) -> dict:
 
 
 class DecideIn(Body):
-    kind: Literal["account", "post", "share_card", "search"]
+    kind: Literal["account", "post", "share_card", "search", "delete"]
     yes: bool
     relation: Literal["parent", "guardian", "coach"] | None = None
     agree: bool = False  # agreed to the terms and privacy policy for the child
@@ -251,7 +262,24 @@ def decide(code: str, body: DecideIn, x_guardian_session: str | None = Header(No
         raise HTTPException(409, "Approve the account first.")
     guardian.decide(uid, body.kind, body.yes, via="page", relation=body.relation)
     log.info("guardian.decided", user_id=uid, kind=body.kind, yes=body.yes, via="page")
+    if body.kind == "delete" and body.yes:
+        return _delete_by_guardian(uid)
     return guardian_page(uid)
+
+
+def _delete_by_guardian(uid: str) -> dict:
+    """The guardian agreed: delete everything, then confirm by text (the number is read first)."""
+    from .routes import delete_account
+
+    g = guardian.get(uid)
+    p, _ = _child(uid)
+    first = _first(p["display_name"])
+    delete_account(uid, by="guardian")
+    if g is not None:
+        sms.sender().send(
+            g["phone"], f"{first}'s Tracka account, clips and training have been deleted. Thank you."
+        )
+    return {"deleted": True, "childFirstName": first}
 
 
 class PrefsIn(Body):
@@ -304,6 +332,9 @@ def sms_inbound(body: InboundIn, x_sms_secret: str | None = Header(None)) -> dic
     )
     kind = pending["kind"] if pending else "account"
     guardian.decide(g["user_id"], kind, yes, via="text")
+    if kind == "delete" and yes:
+        _delete_by_guardian(g["user_id"])
+        return {"ok": True, "kind": kind, "yes": yes}
     p, _ = _child(g["user_id"])
     first = _first(p["display_name"])
     thanks = (

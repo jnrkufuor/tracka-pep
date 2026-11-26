@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/theme.dart';
-import '../widgets/common.dart';
+import '../widgets/brand.dart';
 
 /// The splash (canvas: Onboarding › Splash). Nothing moves: the mark fades in,
 /// then "Tracka" fades in just after (about 0.7 s), while the app checks for a
@@ -44,7 +44,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         label: 'Tracka',
         child: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            FadeTransition(opacity: mark, child: const TrackaMark(size: 132, color: TColors.neon)),
+            FadeTransition(opacity: mark, child: TrackaMark(size: 132, color: context.accent.main)),
             const SizedBox(height: 24),
             FadeTransition(
               opacity: word,

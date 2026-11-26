@@ -35,6 +35,7 @@ class TrackaApp extends StatelessWidget {
     Motion.appSetting = context.select<AppState, bool>((s) => s.settings.reduceMotion);
     // Settings › Accessibility › Text size, on top of the phone's own text size.
     final scale = context.select<AppState, double>((s) => s.settings.textScale);
+    final contrast = context.select<AppState, bool>((s) => s.settings.highContrast);
     return MaterialApp(
       title: 'Tracka',
       debugShowCheckedModeBanner: false,
@@ -43,9 +44,17 @@ class TrackaApp extends StatelessWidget {
         final mq = MediaQuery.of(context);
         // The bridge lets packages that still use the old built-in Material library
         // (package:flutter/material.dart) find our theme and words.
-        return MaterialUiCompatibilityBridge(
-          child: MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear((mq.textScaler.scale(14) / 14 * scale).clamp(0.85, 2.0))), child: child!),
+        Widget app = MediaQuery(
+          data: mq.copyWith(
+            textScaler: TextScaler.linear((mq.textScaler.scale(14) / 14 * scale).clamp(0.85, 2.0)),
+            highContrast: contrast || mq.highContrast,
+          ),
+          child: child!,
         );
+        // Settings › Accessibility › Higher contrast: every grey gets brighter against the
+        // black, so faint text and lines are easier to read. Black stays black.
+        if (contrast) app = ColorFiltered(colorFilter: highContrastFilter, child: app);
+        return MaterialUiCompatibilityBridge(child: app);
       },
       home: AnimatedSwitcher(
         duration: Motion.enter,
@@ -60,3 +69,12 @@ class TrackaApp extends StatelessWidget {
   }
 }
 
+
+/// Each colour channel × 1.3, minus a little: black stays black, greys brighten
+/// (faint #8C9183 becomes about #AEB4A3, muted #A7AC9C about #D1D7C5).
+const highContrastFilter = ColorFilter.matrix(<double>[
+  1.3, 0, 0, 0, -8, //
+  0, 1.3, 0, 0, -8, //
+  0, 0, 1.3, 0, -8, //
+  0, 0, 0, 1, 0,
+]);

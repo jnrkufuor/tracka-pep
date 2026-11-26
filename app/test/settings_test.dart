@@ -8,5 +8,7 @@ void main() {
     expect(s.textScale, 1.0);
     expect(s.pepVoice, 'coach');
     expect(AppSettings.fromJson({'textSize': 'xl'}).textScale, greaterThan(1.2));
+    expect(s.highContrast, isFalse);
+    expect(AppSettings.fromJson({'highContrast': true}).highContrast, isTrue);
   });
 }

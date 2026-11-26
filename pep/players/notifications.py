@@ -232,6 +232,7 @@ def pitch_confirmed(uid: str, pitch_id: str, name: str) -> None:
 def guardian_answered(uid: str, kind: str, yes: bool) -> None:
     what = {
         "account": "your account",
+        "delete": "deleting your account",
         "post": "posting clips",
         "share_card": "sharing your card",
         "search": "showing up in search",

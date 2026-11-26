@@ -146,3 +146,53 @@ def test_guardian_web_page_is_served():
     with TestClient(app) as client:
         r = client.get("/g/ABCD")
         assert r.status_code == 200 and "textContent" in r.text and r.headers["cache-control"] == "no-store"
+
+
+def test_deleting_an_under_18_account_goes_through_the_guardian(monkeypatch):
+    monkeypatch.setattr(guardian, "RESEND_SECONDS", 0)
+    with TestClient(app) as client:
+        h = _minor(client)
+        client.put("/v1/guardian", json={"phone": PHONE, "name": "Ama"}, headers=headers(h))
+        link, _ = _code_from_text()
+        g = _verified(client, link)
+        client.post(f"/v1/g/{link}/decide", json={"kind": "account", "yes": True, "agree": True}, headers=g)
+
+        assert client.delete("/v1/me", headers=headers(h)).status_code == 409  # needs the guardian now
+        v = client.post("/v1/guardian/requests", json={"kind": "delete"}, headers=headers(h)).json()
+        assert any(r["kind"] == "delete" and r["status"] == "pending" for r in v["requests"])
+        assert "delete" in sms.last_text_to(PHONE)
+        # The player can take it back, then ask again.
+        v = client.delete("/v1/guardian/requests/delete", headers=headers(h)).json()
+        assert not any(r["kind"] == "delete" and r["status"] == "pending" for r in v["requests"])
+        client.post("/v1/guardian/requests", json={"kind": "delete"}, headers=headers(h))
+
+        page = client.get(f"/v1/g/{link}", headers=g).json()
+        assert [p["kind"] for p in page["pending"]] == ["delete"]
+        done = client.post(f"/v1/g/{link}/decide", json={"kind": "delete", "yes": True}, headers=g).json()
+        assert done == {"deleted": True, "childFirstName": "Kofi"}
+        assert "deleted" in sms.last_text_to(PHONE)
+        assert client.get("/v1/me", headers=headers(h)).status_code == 401  # the account is gone
+
+
+def test_under_18_without_an_approving_guardian_can_delete_themselves():
+    with TestClient(app) as client:
+        h = _minor(client)
+        assert (
+            client.post("/v1/guardian/requests", json={"kind": "delete"}, headers=headers(h)).status_code
+            == 409
+        )
+        assert client.delete("/v1/me", headers=headers(h)).status_code == 204
+
+
+def test_guardian_can_answer_a_delete_request_by_text(monkeypatch):
+    monkeypatch.setattr(settings(), "sms_webhook_secret", "s3cret")
+    monkeypatch.setattr(guardian, "RESEND_SECONDS", 0)
+    with TestClient(app) as client:
+        h = _minor(client)
+        client.put("/v1/guardian", json={"phone": PHONE}, headers=headers(h))
+        link, _ = _code_from_text()
+        hook = {"X-SMS-Secret": "s3cret"}
+        client.post("/v1/sms/inbound", json={"from": PHONE, "text": f"YES {link}"}, headers=hook)
+        client.post("/v1/guardian/requests", json={"kind": "delete"}, headers=headers(h))
+        r = client.post("/v1/sms/inbound", json={"from": PHONE, "text": f"YES {link}"}, headers=hook).json()
+        assert r["kind"] == "delete" and client.get("/v1/me", headers=headers(h)).status_code == 401

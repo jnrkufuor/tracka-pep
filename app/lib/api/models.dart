@@ -109,6 +109,7 @@ class AppSettings {
     this.homeCards,
     this.textSize = 'm',
     this.pepVoice = 'coach',
+    this.highContrast = false,
   });
 
   final String units;
@@ -143,6 +144,9 @@ class AppSettings {
   /// Settings › Accessibility: s | m | l | xl.
   final String textSize;
 
+  /// Settings › Accessibility: brighter text and lines on the dark background.
+  final bool highContrast;
+
   /// Settings › How Pep talks to you: street | coach.
   final String pepVoice;
 
@@ -165,6 +169,7 @@ class AppSettings {
         homeCards: (j['homeCards'] as List?)?.cast<String>(),
         textSize: j['textSize'] as String? ?? 'm',
         pepVoice: j['pepVoice'] as String? ?? 'coach',
+        highContrast: j['highContrast'] as bool? ?? false,
       );
 
   /// Speed in the player's chosen unit.

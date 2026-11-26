@@ -308,7 +308,11 @@ class ApiClient {
   Future<GuardianState> resendGuardian() async =>
       GuardianState.fromJson(await _send('POST', '/v1/guardian/resend') as Map<String, dynamic>);
 
-  /// Ask the guardian for something new: post | share_card | search.
+  /// Take back a request to delete the account, before the guardian answers.
+  Future<GuardianState> cancelDeleteRequest() async =>
+      GuardianState.fromJson(await _send('DELETE', '/v1/guardian/requests/delete') as Map<String, dynamic>);
+
+  /// Ask the guardian for something new: post | share_card | search | delete.
   Future<GuardianState> askGuardian(String kind) async =>
       GuardianState.fromJson(await _send('POST', '/v1/guardian/requests', body: {'kind': kind}) as Map<String, dynamic>);
 

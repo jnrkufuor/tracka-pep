@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/ds.dart';
@@ -80,7 +81,7 @@ class SettingsScreen extends StatelessWidget {
               () => showEditSheet<void>(context, title: 'Main colour', child: const MainColourPicker()),
               trailing: Container(width: 22, height: 22, decoration: BoxDecoration(shape: BoxShape.circle, color: colour.main)),
             ),
-            row('Accessibility', 'Text ${st.textSize.toUpperCase()} · ${st.reduceMotion ? 'less motion' : 'full motion'}',
+            row('Accessibility', 'Text ${st.textSize.toUpperCase()} · ${st.highContrast ? 'higher contrast · ' : ''}${st.reduceMotion ? 'less motion' : 'full motion'}',
                 () => _go(context, const AccessibilityScreen())),
             row('How Pep talks to you', '${st.pepVoice == 'street' ? 'Street talk' : 'Coach talk'} · English · ${st.units == 'mph' ? 'mph' : 'metres, km/h'}',
                 () => _go(context, const VoiceScreen())),
@@ -137,12 +138,20 @@ class AccessibilityScreen extends StatelessWidget {
         const SizedBox(height: 18),
         Panel(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: SwitchListTile(
-            title: const Text('Less motion'),
-            subtitle: const Text("Turn off fades and moving Pep. Your phone's own setting also works."),
-            value: s.settings.reduceMotion,
-            onChanged: (v) => s.saveSettings({'reduceMotion': v}),
-          ),
+          child: Column(children: [
+            SwitchListTile(
+              title: const Text('Higher contrast'),
+              subtitle: const Text('Brighter text and lines on the dark background'),
+              value: s.settings.highContrast,
+              onChanged: (v) => s.saveSettings({'highContrast': v}),
+            ),
+            SwitchListTile(
+              title: const Text('Less motion'),
+              subtitle: const Text("Turn off fades and moving Pep. Your phone's own setting also works."),
+              value: s.settings.reduceMotion,
+              onChanged: (v) => s.saveSettings({'reduceMotion': v}),
+            ),
+          ]),
         ),
       ]),
     );
@@ -250,19 +259,20 @@ class DataScreen extends StatelessWidget {
     );
   }
 
+  /// Delete the account. Under 18 with a guardian who approved it, the guardian
+  /// has to agree (they get a text and a page); otherwise it's the player's choice.
   Future<void> _deleteAccount(BuildContext context) async {
     final s = context.read<AppState>();
-    final minor = s.me?.profile.age != null && s.me!.profile.age! < 18;
+    final me = s.me;
+    final minor = me?.profile.age != null && me!.profile.age! < 18;
+    if (minor && me.guardianStatus == 'approved') return _askGuardianToDelete(context);
     final ok = await showEditSheet<bool>(
       context,
       title: 'Delete your account?',
       child: Builder(
         builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(
-            "Your profile, every clip and all of Pep's notes are deleted for good. You can't undo this."
-            '${minor ? ' Tell your guardian first.' : ''}',
-            style: const TextStyle(fontSize: 14.5, height: 1.45, color: Tk.inkSoft),
-          ),
+          const Text("Your profile, every clip and all of Pep's notes are deleted for good. You can't undo this.",
+              style: TextStyle(fontSize: 14.5, height: 1.45, color: Tk.inkSoft)),
           const SizedBox(height: 16),
           OutlinedButton(
             style: OutlinedButton.styleFrom(foregroundColor: Tk.gold, side: const BorderSide(color: Tk.gold)),
@@ -280,6 +290,58 @@ class DataScreen extends StatelessWidget {
         if (context.mounted) showToast(context, "Couldn't delete it", detail: '$e', ok: false, aboveTabs: false);
       }
     }
+  }
+
+  Future<void> _askGuardianToDelete(BuildContext context) async {
+    final s = context.read<AppState>();
+    GuardianState? g;
+    try {
+      g = await s.api.guardian();
+    } catch (_) {}
+    if (!context.mounted) return;
+    final waiting = g?.pendingKinds.contains('delete') ?? false;
+    final who = g?.who ?? 'your guardian';
+    await showEditSheet<void>(
+      context,
+      title: waiting ? 'Waiting for $who' : 'Ask $who first',
+      child: Builder(
+        builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(
+            waiting
+                ? "We've asked $who to agree to deleting your account. Once they say yes, everything is deleted for good. "
+                    'Until then nothing changes.'
+                : "Your guardian approved your account, so they need to agree before it's deleted. We'll text them. "
+                    "Once they say yes, your profile, clips and training are deleted for good.",
+            style: const TextStyle(fontSize: 14.5, height: 1.45, color: Tk.inkSoft),
+          ),
+          const SizedBox(height: 16),
+          if (waiting)
+            OutlinedButton(
+              onPressed: () async {
+                await s.api.cancelDeleteRequest();
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                if (context.mounted) showToast(context, 'Request taken back', detail: 'Your account stays.', aboveTabs: false);
+              },
+              child: const Text("I've changed my mind"),
+            )
+          else
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(foregroundColor: Tk.gold, side: const BorderSide(color: Tk.gold)),
+              onPressed: () async {
+                try {
+                  await s.api.askGuardian('delete');
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  if (context.mounted) showToast(context, 'We asked $who', detail: "We'll let you know when they answer.", aboveTabs: false);
+                } catch (e) {
+                  if (ctx.mounted) showToast(ctx, "Couldn't send it", detail: '$e', ok: false, aboveTabs: false);
+                }
+              },
+              child: Text('Ask $who to delete it'),
+            ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Keep my account')),
+        ]),
+      ),
+    );
   }
 
   @override

@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
-import '../widgets/common.dart' show TrackaLogo;
+import '../widgets/brand.dart';
 import '../widgets/ds.dart';
 import '../widgets/tour.dart' show TourKeys;
 import 'feed_screens.dart';
