@@ -34,6 +34,7 @@ from sqlalchemy import (
 )
 
 from .. import db
+from . import details, training  # noqa: F401  (their tables must exist before delete_user walks them)
 
 users = Table(
     "users",
@@ -80,6 +81,17 @@ videos = Table(
 
 # One row per refresh token handed out. Lets us log a device out (revoke) and
 # detect a stolen token being reused (rotation): see auth.py.
+# The app's upload queue retries when a connection drops. It sends its own id for
+# each clip, so a retry that reaches us twice makes one clip, not two. This is an
+# IDEMPOTENCY KEY (handbook chapter 10): doing it again changes nothing.
+upload_keys = Table(
+    "upload_keys",
+    db.metadata,
+    Column("user_id", String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("client_id", String(40), primary_key=True),
+    Column("video_id", String(36), ForeignKey("videos.id", ondelete="CASCADE"), nullable=False),
+)
+
 sessions = Table(
     "sessions",
     db.metadata,
@@ -95,6 +107,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "coachNotes": True,  # AI-written notes on each clip
     "notifyWhenReady": True,
     "shareWithScouts": False,  # for the future scouting app; off until the player opts in
+    "mainColour": "volt",  # Settings › Main colour: the "you" colour (Pep purple and warning gold never change)
+    "reduceMotion": False,  # Settings › Accessibility: less movement, on top of the phone's own setting
+    "uploadOnWifiOnly": True,  # Settings › Your data: mobile data is expensive, so clips wait for Wi-Fi by default
+    "sessionsPerWeek": 3,  # Pep sessions fitted around the player's own football each week
+    "kit": ["ball"],  # what the player has: ball, wall, space, cones, gym (Pep picks drills they can do)
+    "pepVoice": "coach",  # "street" (local football talk) or "coach" (plain coaching words)
 }
 
 
@@ -151,9 +169,14 @@ def delete_user(uid: str) -> list[str]:
                     keys += [k for k in (job.overlay_key, job.thumb_key) if k]
                 c.execute(delete(db.jobs).where(db.jobs.c.id == v.job_id))
                 c.execute(delete(db.ratings).where(db.ratings.c.job_id == v.job_id))
-        # Children first: SQLite doesn't enforce ON DELETE CASCADE unless asked to.
-        for table in (videos, sessions, profiles):
-            c.execute(delete(table).where(table.c.user_id == uid))
+        # Every row in every table that points at this user, children first
+        # (SQLite doesn't enforce ON DELETE CASCADE unless asked to). Found from the
+        # foreign keys themselves, so a new feature's table is covered the day it's
+        # added: nothing to remember here. (Words to know: *metadata reflection*.)
+        for table in reversed(db.metadata.sorted_tables):
+            for col in table.c:
+                if table is not users and any(fk.column is users.c.id for fk in col.foreign_keys):
+                    c.execute(delete(table).where(col == uid))
         c.execute(delete(users).where(users.c.id == uid))
     return keys
 
@@ -205,6 +228,21 @@ def add_video(
         )
 
 
+def video_for_client_id(uid: str, client_id: str) -> str | None:
+    with db.engine().connect() as c:
+        row = c.execute(
+            select(upload_keys.c.video_id).where(
+                upload_keys.c.user_id == uid, upload_keys.c.client_id == client_id
+            )
+        ).first()
+    return row[0] if row else None
+
+
+def remember_client_id(uid: str, client_id: str, video_id: str) -> None:
+    with db.engine().begin() as c:
+        c.execute(insert(upload_keys).values(user_id=uid, client_id=client_id, video_id=video_id))
+
+
 def list_videos(uid: str, limit: int = 200) -> list[dict]:
     """The player's videos, newest first, each joined with its analysis job."""
     q = (
@@ -250,6 +288,11 @@ def delete_video(uid: str, video_id: str) -> list[str]:
         return []
     keys = [k for k in (v["video_key"], v.get("thumb_key"), v.get("overlay_key")) if k]
     with db.engine().begin() as c:
+        # Rows elsewhere that point at this clip first (portfolio, upload keys, posts...).
+        for table in reversed(db.metadata.sorted_tables):
+            for col in table.c:
+                if table is not videos and any(fk.column is videos.c.id for fk in col.foreign_keys):
+                    c.execute(delete(table).where(col == video_id))
         c.execute(delete(videos).where(videos.c.id == video_id))
         if v.get("job_id"):
             c.execute(delete(db.jobs).where(db.jobs.c.id == v["job_id"]))

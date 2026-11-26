@@ -1,151 +1,151 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
-/// Tracka's night-match palette: YesBut's design language, darker and sportier.
-/// Every colour in the app comes from here (see docs/DESIGN.md).
-class TColors {
-  static const bg = Color(0xFF0A0B09); // pitch at night
-  static const surface = Color(0xFF121410);
-  static const surface2 = Color(0xFF191C16);
-  static const surface3 = Color(0xFF22261E);
-  static const line = Color(0xFF2A2F25);
-  static const lineSoft = Color(0xFF1E221B);
+import 'tokens.dart';
 
-  static const ink = Color(0xFFF2F4EC); // chalk
-  static const inkSoft = Color(0xFFA7ACA0);
-  static const inkFaint = Color(0xFF6E7366);
+export 'tokens.dart';
+export 'motion.dart';
 
-  static const neon = Color(0xFFE5FF00); // the floodlight
-  static const onNeon = Color(0xFF0A0B09);
-  static const cherry = Color(0xFFFF4858); // LOW, work on, errors
-  static const sun = Color(0xFFFFD100); // MEDIUM
-  static const violet = Color(0xFF8C73FF); // processing, AI-observed
-
-  static Color forConfidence(String? c) => switch (c) {
-        'HIGH' => neon,
-        'MEDIUM' => sun,
-        _ => cherry,
-      };
-}
-
-class TRadius {
-  static const sm = 14.0;
-  static const md = 22.0;
-  static const lg = 30.0;
-  static const xl = 40.0;
-}
-
+/// Type: Bricolage Grotesque (extra bold) for headings and big numbers,
+/// Figtree for everything you read.
 class TType {
   static const display = 'Bricolage';
-  static const text = 'SansFlex';
+  static const text = 'Figtree';
 
-  /// Uppercase micro-labels with wide tracking, like broadcast graphics.
+  /// Small uppercase labels above a section.
   static const eyebrow = TextStyle(
     fontFamily: text,
     fontSize: 11,
     fontWeight: FontWeight.w700,
-    letterSpacing: 1.8,
-    color: TColors.inkFaint,
+    letterSpacing: 0.9,
+    color: Tk.faint,
   );
+
+  /// A big measured number (4.6 s, 19 passes).
+  static const stat = TextStyle(fontFamily: display, fontSize: 34, fontWeight: FontWeight.w800, letterSpacing: -1, height: 1);
 }
 
-ThemeData trackaTheme() {
+/// The app theme, coloured with the player's main colour.
+///
+/// Rebuilt when the colour changes (MaterialApp gets a new theme and animates
+/// between them). Everything Material draws (buttons, switches, fields,
+/// progress bars) picks the colour up from here; our own widgets read
+/// `context.accent`.
+ThemeData trackaTheme({MainColour colour = MainColour.volt}) {
+  final a = Accent(colour);
   const d = TType.display;
   const t = TextTheme(
-    displayLarge: TextStyle(fontFamily: d, fontSize: 48, fontWeight: FontWeight.w700, letterSpacing: -2, height: 0.98),
-    displayMedium: TextStyle(fontFamily: d, fontSize: 38, fontWeight: FontWeight.w700, letterSpacing: -1.5, height: 1.0),
-    headlineLarge: TextStyle(fontFamily: d, fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: -1.0, height: 1.05),
-    headlineMedium: TextStyle(fontFamily: d, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.7, height: 1.1),
+    displayLarge: TextStyle(fontFamily: d, fontSize: 46, fontWeight: FontWeight.w800, letterSpacing: -1.8, height: 1.0),
+    displayMedium: TextStyle(fontFamily: d, fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: -1.4, height: 1.02),
+    headlineLarge: TextStyle(fontFamily: d, fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1.0, height: 1.05),
+    headlineMedium: TextStyle(fontFamily: d, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.7, height: 1.1),
     titleLarge: TextStyle(fontFamily: d, fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.4),
-    titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-    titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+    titleMedium: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600),
+    titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     bodyLarge: TextStyle(fontSize: 15.5, height: 1.45),
     bodyMedium: TextStyle(fontSize: 14, height: 1.45),
-    bodySmall: TextStyle(fontSize: 12.5, height: 1.35),
+    bodySmall: TextStyle(fontSize: 12.5, height: 1.4, color: Tk.muted),
     labelLarge: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
   );
-  final scheme = const ColorScheme.dark(
-    primary: TColors.neon,
-    onPrimary: TColors.onNeon,
-    secondary: TColors.violet,
-    surface: TColors.surface,
-    onSurface: TColors.ink,
-    error: TColors.cherry,
+  final scheme = ColorScheme.dark(
+    primary: a.main,
+    onPrimary: a.on,
+    secondary: Tk.pep,
+    surface: Tk.card,
+    onSurface: Tk.ink,
+    error: Tk.gold,
+    onError: Tk.bg,
   );
   OutlineInputBorder border(Color c) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(TRadius.sm),
-        borderSide: BorderSide(color: c),
+        borderRadius: BorderRadius.circular(Tk.rField),
+        borderSide: BorderSide(color: c, width: 1.5),
       );
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: scheme,
     fontFamily: TType.text,
-    scaffoldBackgroundColor: TColors.bg,
-    textTheme: t.apply(bodyColor: TColors.ink, displayColor: TColors.ink),
+    scaffoldBackgroundColor: Tk.bg,
+    extensions: [a],
+    textTheme: t.apply(bodyColor: Tk.ink, displayColor: Tk.ink),
     appBarTheme: const AppBarTheme(
-      backgroundColor: TColors.bg,
+      backgroundColor: Tk.bg,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      foregroundColor: TColors.ink,
+      foregroundColor: Tk.ink,
       centerTitle: false,
       systemOverlayStyle: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: TColors.bg,
+        systemNavigationBarColor: Tk.bg,
       ),
-      titleTextStyle: TextStyle(fontFamily: d, fontSize: 20, fontWeight: FontWeight.w700, color: TColors.ink),
+      titleTextStyle: TextStyle(fontFamily: d, fontSize: 20, fontWeight: FontWeight.w800, color: Tk.ink),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: TColors.surface2,
-      hintStyle: const TextStyle(color: TColors.inkFaint),
-      labelStyle: const TextStyle(color: TColors.inkSoft),
+      fillColor: Tk.field,
+      hintStyle: const TextStyle(color: Tk.faint),
+      labelStyle: const TextStyle(color: Tk.muted),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-      border: border(TColors.line),
-      enabledBorder: border(TColors.line),
-      focusedBorder: border(TColors.neon),
-      errorBorder: border(TColors.cherry),
+      border: border(Tk.lineStrong),
+      enabledBorder: border(Tk.lineStrong),
+      focusedBorder: border(a.main),
+      errorBorder: border(Tk.gold),
+      focusedErrorBorder: border(Tk.gold),
+      errorStyle: const TextStyle(color: Tk.gold),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: TColors.neon,
-        foregroundColor: TColors.onNeon,
-        disabledBackgroundColor: TColors.surface3,
+        backgroundColor: a.main,
+        foregroundColor: a.on,
+        disabledBackgroundColor: Tk.field,
+        disabledForegroundColor: Tk.faint,
         minimumSize: const Size(64, 54),
         shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontFamily: TType.text, fontSize: 15, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: TType.text, fontSize: 15.5, fontWeight: FontWeight.w700),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: TColors.ink,
-        side: const BorderSide(color: TColors.line),
+        foregroundColor: Tk.ink,
+        side: const BorderSide(color: Tk.lineStrong, width: 1.5),
         minimumSize: const Size(64, 50),
         shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontFamily: TType.text, fontSize: 14.5, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontFamily: TType.text, fontSize: 15, fontWeight: FontWeight.w700),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: TColors.neon,
-        textStyle: const TextStyle(fontFamily: TType.text, fontWeight: FontWeight.w700),
+        foregroundColor: Tk.muted,
+        textStyle: const TextStyle(fontFamily: TType.text, fontWeight: FontWeight.w600),
       ),
     ),
+    // Toasts sit at the bottom, above the tabs (see widgets/toast.dart).
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: TColors.ink,
-      contentTextStyle: const TextStyle(color: TColors.bg, fontWeight: FontWeight.w700),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TRadius.md)),
+      backgroundColor: const Color(0xFF1A1A1A),
+      contentTextStyle: const TextStyle(fontFamily: TType.text, color: Tk.ink, fontWeight: FontWeight.w600, fontSize: 14),
+      actionTextColor: a.main,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: Color(0xFF2E2E2E)),
+      ),
     ),
-    dividerTheme: const DividerThemeData(color: TColors.lineSoft, thickness: 1),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: Tk.bg,
+      surfaceTintColor: Colors.transparent,
+      modalBackgroundColor: Tk.bg,
+      showDragHandle: false,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Tk.rSheet))),
+    ),
+    dividerTheme: const DividerThemeData(color: Tk.line, thickness: 1, space: 1),
     switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? TColors.onNeon : TColors.inkSoft),
-      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? TColors.neon : TColors.surface3),
+      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? a.on : Tk.muted),
+      trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? a.main : Tk.field),
       trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(color: TColors.neon, linearTrackColor: TColors.surface3),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: a.main, linearTrackColor: Tk.line),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: ZoomPageTransitionsBuilder(),
     }),

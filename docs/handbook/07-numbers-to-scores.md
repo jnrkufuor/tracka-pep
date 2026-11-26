@@ -74,6 +74,16 @@ away), and watch for groups the model scores systematically lower.
    player's own positions first).
 7. **Learned scorer** (`pep/scoring/learned.py`): switched on only once
    coaches have rated enough clips (chapter 05).
+8. **Skill areas** (`pep/players/skill_areas.py`, `pep/data/skill_areas.json`):
+   what the app's Me tab shows instead of one overall score. Each area
+   (grouped as Skills, Reading the game, Body, Goalkeeping, Attitude, with
+   key areas per position) gets a **band** from its percentile (below 30
+   Below average · 30–60 Average · 60–80 Above average · 80–93 Strong ·
+   93+ Standout), the **measured average** in plain words, a
+   **confidence** (timed tests earn it after 2 clips, match clips after 4)
+   and a **trend** (newer half vs older half of the last 6 measurements).
+   Areas Pep can't measure say so: *Not seen yet*, *Coming later* or *Pep
+   can't see this*. Served as `skillAreas` in `GET /v1/coach`.
 
 ## Words to know
 norm · mean · standard deviation · z-score · percentile · normal
@@ -93,6 +103,12 @@ fairness
    explain to a friend why Agility is the top skill and Scanning the focus.
 4. Ask: who might Pep's norms be unfair to? (Hint: where did the research
    data come from?)
+5. In `tests/test_skill_areas.py`, add a test for a U17 midfielder with
+   head checks of 9, 8 and 3 a minute (newest first). Predict the band,
+   confidence and trend before you run it.
+6. In `pep/players/progress.py`, the sprint card says "about 2 metres
+   ahead". Work out the formula by hand for 4.9 s → 4.6 s over 30 m, then
+   check it against `test_sprint_progress_in_plain_words`.
 
 **Questions**
 
@@ -118,3 +134,19 @@ problem.
 
 *Answer:* Recommending a role based on skills we never measured. If only
 pace was measured, Pep shouldn't call someone a great playmaker.
+
+**5. Why does the Me tab show a band plus the measured average, instead of
+a score out of 100?**
+
+*Answer:* A score hides what was measured and invites "I'm a 62, so I'm
+bad". "Above average · 10 m in 1.92 s · high confidence · growing" says
+what Pep saw, how it compares with players your age, how sure it is, and
+which way it's going, and each part can be checked.
+
+**6. Why do timed tests reach high confidence after 2 clips but match clips
+need 4?**
+
+*Answer:* A timed test is the same task every time, with cones that give
+real metres, so two agreeing results are good evidence. Match clips vary
+(angle, distance, what happened in the game), so it takes more of them
+before the average means much.

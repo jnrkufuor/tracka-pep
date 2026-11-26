@@ -4,6 +4,9 @@
 class AppConfig {
   static const apiUrl = String.fromEnvironment('PEP_API_URL', defaultValue: 'http://localhost:8000');
 
+  /// Shown in Help and sent with crash reports and feedback. CI sets it from pubspec.yaml.
+  static const version = String.fromEnvironment('APP_VERSION', defaultValue: '0.1.0');
+
   /// Screenshot mode, for CI only (.github/workflows/screenshots.yml): log in as a demo
   /// player automatically. Empty in every real build.
   static const demoEmail = String.fromEnvironment('PEP_DEMO_EMAIL');

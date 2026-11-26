@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -8,8 +8,10 @@ import 'package:video_player/video_player.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
-import '../widgets/common.dart';
-import '../widgets/skill_card.dart';
+import '../widgets/ds.dart';
+import 'feed_screens.dart' show showPostSheet;
+import 'home_screen.dart' show openUpload;
+import 'review_screens.dart' show ReviewView;
 
 /// One clip: the video (yours, or "what Pep saw"), key moments, and Pep's analysis.
 class VideoScreen extends StatefulWidget {
@@ -85,50 +87,90 @@ class _VideoScreenState extends State<VideoScreen> {
     _player?.play();
   }
 
-  Future<void> _menu(String action) async {
+  /// Rename: a sheet that saves as you go (no Save button).
+  Future<void> _rename() async {
     final s = context.read<AppState>();
-    final nav = Navigator.of(context);
-    if (action == 'rename') {
-      final controller = TextEditingController(text: _v?.title);
-      final title = await showDialog<String>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: TColors.surface,
-          title: const Text('Rename clip'),
-          content: TextField(controller: controller, autofocus: true, maxLength: 120),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.pop(ctx, controller.text), child: const Text('Save')),
-          ],
-        ),
-      );
-      if (title != null) {
-        await s.renameVideo(widget.videoId, title);
-        await _load();
-      }
-    } else if (action == 'delete') {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: TColors.surface,
-          title: const Text('Delete this clip?'),
-          content: const Text('The video and Pep\'s notes on it are deleted for good.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep it')),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: TColors.cherry),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-      if (ok == true) {
-        await s.deleteVideo(widget.videoId);
-        nav.pop();
-      }
+    var title = _v?.title ?? '';
+    await showEditSheet<void>(
+      context,
+      title: 'Rename clip',
+      child: TextFormField(
+        initialValue: title,
+        autofocus: true,
+        maxLength: 120,
+        decoration: const InputDecoration(labelText: 'Title', hintText: 'Sunday match, 2nd half'),
+        onChanged: (v) => title = v,
+      ),
+    );
+    if (title.trim() != (_v?.title ?? '')) {
+      await s.renameVideo(widget.videoId, title.trim());
+      await _load();
     }
   }
+
+  Future<void> _delete() async {
+    final s = context.read<AppState>();
+    final nav = Navigator.of(context);
+    final ok = await showEditSheet<bool>(
+      context,
+      title: 'Delete this clip?',
+      child: Builder(
+        builder: (ctx) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text("The video and Pep's notes on it are deleted for good.", style: TextStyle(fontSize: 14.5, color: Tk.inkSoft)),
+          const SizedBox(height: 16),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(foregroundColor: Tk.gold, side: const BorderSide(color: Color(0x66FFC21A))),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete it'),
+          ),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Keep it')),
+        ]),
+      ),
+    );
+    if (ok == true) {
+      await s.deleteVideo(widget.videoId);
+      nav.pop();
+    }
+  }
+
+  Future<void> _more(Video v) => showEditSheet<void>(
+        context,
+        title: v.displayTitle,
+        child: Builder(
+          builder: (ctx) => Column(children: [
+            if (v.status == 'READY')
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const TIcon('share', size: 20, color: Tk.ink),
+                title: const Text('Post on Pitchside'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  showPostSheet(context, widget.videoId);
+                },
+              ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const TIcon('pencil', size: 20, color: Tk.ink),
+              title: const Text('Rename'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _rename();
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const TIcon('trash', size: 20, color: Tk.gold),
+              title: const Text('Delete', style: TextStyle(color: Tk.gold)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _delete();
+              },
+            ),
+          ]),
+        ),
+      );
+
+  static const _kinds = {'match': 'Match', 'training': 'Training', 'drill': 'Test or drill', 'highlight': 'Highlight'};
 
   @override
   Widget build(BuildContext context) {
@@ -138,20 +180,11 @@ class _VideoScreenState extends State<VideoScreen> {
       appBar: AppBar(
         title: Text(v?.displayTitle ?? ''),
         actions: [
-          if (v != null)
-            PopupMenuButton<String>(
-              color: TColors.surface2,
-              onSelected: _menu,
-              icon: const LoopyIcon('settings', size: 24),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'rename', child: Text('Rename')),
-                PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: TColors.cherry))),
-              ],
-            ),
+          if (v != null) IconButton(tooltip: 'More', onPressed: () => _more(v), icon: const TIcon('settings', size: 21, color: Tk.ink)),
         ],
       ),
       body: v == null
-          ? Center(child: _error == null ? const CircularProgressIndicator() : Text(_error!))
+          ? (_error == null ? const Center(child: CircularProgressIndicator()) : StateView.error(onRetry: _load))
           : ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [
               if (_player != null) _Player(controller: _player!, moments: v.analysis?.moments ?? const [], onSeek: _seek),
               if (v.overlayUrl != null)
@@ -159,24 +192,32 @@ class _VideoScreenState extends State<VideoScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
                     onPressed: _toggleOverlay,
-                    icon: const LoopyIcon('eye', size: 20, color: TColors.neon),
+                    icon: TIcon('eye2', size: 18, color: context.accent.main),
                     label: Text(_overlay ? 'Show my video' : 'Show what Pep saw'),
                   ),
                 ),
               const SizedBox(height: 6),
-              Text('${v.clipType} · ${DateFormat.yMMMd().add_jm().format(v.createdAt)}',
-                  style: const TextStyle(color: TColors.inkFaint)),
+              Text('${_kinds[v.clipType] ?? 'Clip'} · ${DateFormat.yMMMd().add_jm().format(v.createdAt)}',
+                  style: const TextStyle(fontSize: 13, color: Tk.faint)),
               const SizedBox(height: 14),
               if (v.processing) const _Watching(),
               if (v.status == 'FAILED')
-                TCard(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Pep couldn\'t score this clip', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 8),
-                    Text(v.error ?? 'Something went wrong.', style: const TextStyle(color: TColors.inkSoft)),
-                  ]),
+                StateView(
+                  icon: 'camera',
+                  kind: StateKind.watchOut,
+                  title: "Pep couldn't read this clip",
+                  message: v.error ?? 'Something went wrong.',
+                  actionLabel: 'Film it again',
+                  onAction: () => openUpload(context),
                 ),
-              if (v.analysis != null) _AnalysisView(a: v.analysis!, settings: settings, onSeek: _seek),
+              if (v.review != null) ...[
+                ReviewView(review: v.review!, onSeek: _seek),
+                const SizedBox(height: 22),
+              ] else if (v.analysis?.summary != null) ...[
+                Text(v.analysis!.summary!, style: const TextStyle(fontSize: 15, height: 1.45, color: Tk.ink)),
+                const SizedBox(height: 16),
+              ],
+              if (v.analysis != null) _Measured(a: v.analysis!, settings: settings),
             ]),
     );
   }
@@ -194,7 +235,7 @@ class _Player extends StatelessWidget {
     final total = controller.value.duration.inMilliseconds / 1000;
     return Column(children: [
       ClipRRect(
-        borderRadius: BorderRadius.circular(TRadius.md),
+        borderRadius: BorderRadius.circular(Tk.rCard),
         child: AspectRatio(
           aspectRatio: controller.value.aspectRatio,
           child: GestureDetector(
@@ -205,7 +246,15 @@ class _Player extends StatelessWidget {
                 valueListenable: controller,
                 builder: (_, v, __) => v.isPlaying
                     ? const SizedBox.shrink()
-                    : const Center(child: Icon(Icons.play_circle_fill_rounded, size: 64, color: TColors.neon)),
+                    : Center(
+                        child: Container(
+                          width: 58,
+                          height: 58,
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0x99000000)),
+                          alignment: Alignment.center,
+                          child: const TIcon('play', size: 22, color: Colors.white),
+                        ),
+                      ),
               ),
             ]),
           ),
@@ -223,14 +272,14 @@ class _Player extends StatelessWidget {
               return Stack(clipBehavior: Clip.none, children: [
                 Positioned.fill(
                   child: Container(
-                    decoration: BoxDecoration(color: TColors.surface2, borderRadius: BorderRadius.circular(999)),
+                    decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999)),
                   ),
                 ),
                 Positioned(
                   left: (box.maxWidth * at).clamp(0, box.maxWidth - 2),
                   top: 4,
                   bottom: 4,
-                  child: Container(width: 2, color: TColors.ink),
+                  child: Container(width: 2, color: Tk.ink),
                 ),
                 for (final m in moments)
                   if (total > 0)
@@ -243,9 +292,9 @@ class _Player extends StatelessWidget {
                           width: 16,
                           height: 16,
                           decoration: BoxDecoration(
-                            color: m.good ? TColors.neon : TColors.cherry,
+                            color: m.good ? context.accent.main : Tk.gold,
                             shape: BoxShape.circle,
-                            border: Border.all(color: TColors.bg, width: 3),
+                            border: Border.all(color: Tk.bg, width: 3),
                           ),
                         ),
                       ),
@@ -263,156 +312,58 @@ class _Watching extends StatelessWidget {
   const _Watching();
 
   @override
-  Widget build(BuildContext context) {
-    return const TCard(
-      accent: 'ball',
-      child: Row(children: [
-        SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 3, color: TColors.violet)),
-        SizedBox(width: 16),
-        Expanded(
-          child: Text('Pep is watching your clip. This usually takes a minute or two. You can leave this screen.',
-              style: TextStyle(fontWeight: FontWeight.w500)),
-        ),
-      ]),
-    );
-  }
+  Widget build(BuildContext context) => const Panel(
+        child: Row(children: [
+          SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: Tk.pep)),
+          SizedBox(width: 14),
+          Expanded(
+            child: Text('Pep is watching your clip. This usually takes a minute or two. You can leave this screen.',
+                style: TextStyle(fontSize: 14.5, color: Tk.ink)),
+          ),
+        ]),
+      );
 }
 
-class _AnalysisView extends StatelessWidget {
-  const _AnalysisView({required this.a, required this.settings, required this.onSeek});
+class _Measured extends StatelessWidget {
+  const _Measured({required this.a, required this.settings});
 
   final Analysis a;
   final AppSettings settings;
-  final ValueChanged<double> onSeek;
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
     final m = a.metrics;
     final tiles = <(String, String, String)>[
-      ('Top speed', settings.speed(m['top_speed_ms']), settings.speedUnit),
-      ('Distance', m['distance_m']?.toStringAsFixed(0) ?? '–', 'm'),
-      ('Sprints', m['high_speed_runs']?.toStringAsFixed(0) ?? '–', ''),
-      ('Touches / min', m['touches_per_min']?.toStringAsFixed(0) ?? '–', ''),
+      if (m['top_speed_ms'] != null) ('Top speed', settings.speed(m['top_speed_ms']), settings.speedUnit),
+      if (m['distance_m'] != null) ('Distance', m['distance_m']!.toStringAsFixed(0), 'm'),
+      if (m['high_speed_runs'] != null) ('Sprints', m['high_speed_runs']!.toStringAsFixed(0), ''),
+      if (m['touches_per_min'] != null) ('Touches a minute', m['touches_per_min']!.toStringAsFixed(0), ''),
       if (m['sprint_30m_s'] != null) ('30 m sprint', m['sprint_30m_s']!.toStringAsFixed(2), 's'),
       if (m['split_10m_s'] != null) ('10 m split', m['split_10m_s']!.toStringAsFixed(2), 's'),
       if (m['agility_5105_s'] != null) ('5-10-5', m['agility_5105_s']!.toStringAsFixed(2), 's'),
       if (m['juggles_best'] != null) ('Keepy-ups', m['juggles_best']!.toStringAsFixed(0), ''),
       if (m['dives'] != null) ('Dives', m['dives']!.toStringAsFixed(0), ''),
     ];
-    final roles = a.roleFit.where((r) => (r.coverage ?? 0) >= 0.35).take(3).toList();
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      TCard(
-        neon: true,
-        accent: 'star',
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            KitNumber(a.overallScore, size: 92, color: TColors.onNeon),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Eyebrow('This clip', color: TColors.onNeon),
-                  const SizedBox(height: 4),
-                  Text('${(a.confidence ?? 'LOW').toLowerCase()} confidence',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                ]),
-              ),
-            ),
-          ]),
-          if (a.summary != null) ...[
-            const SizedBox(height: 14),
-            Text(a.summary!, style: const TextStyle(fontFamily: TType.display, fontSize: 18, height: 1.35, fontWeight: FontWeight.w500)),
-          ],
-        ]),
-      ),
-      const SizedBox(height: 22),
-      const Eyebrow('Measured'),
-      const SizedBox(height: 10),
-      GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 2.1,
+    if (tiles.isEmpty) return const SizedBox.shrink();
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        title: const Text('What Pep measured', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
         children: [
           for (final (label, value, unit) in tiles)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: TColors.surface,
-                borderRadius: BorderRadius.circular(TRadius.md),
-                border: Border.all(color: TColors.lineSoft),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                Eyebrow(label),
-                const SizedBox(height: 4),
-                Text.rich(TextSpan(children: [
-                  TextSpan(text: value, style: t.headlineMedium),
-                  TextSpan(text: ' $unit', style: const TextStyle(color: TColors.inkFaint, fontSize: 13)),
-                ])),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(children: [
+                Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: Tk.muted))),
+                Text('$value${unit.isEmpty ? '' : ' $unit'}',
+                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
               ]),
             ),
+          const SizedBox(height: 8),
+          const InfoNote(InfoNote.measured),
         ],
       ),
-      if (a.moments.isNotEmpty) ...[
-        const SizedBox(height: 22),
-        const Eyebrow('Moments'),
-        const SizedBox(height: 6),
-        for (final mo in a.moments)
-          InkWell(
-            onTap: () => onSeek(mo.atSeconds),
-            borderRadius: BorderRadius.circular(TRadius.sm),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SizedBox(
-                  width: 48,
-                  child: Text('${mo.atSeconds.toStringAsFixed(1)}s',
-                      style: const TextStyle(fontFamily: TType.display, fontWeight: FontWeight.w700, color: TColors.inkFaint)),
-                ),
-                Container(
-                  width: 10,
-                  height: 10,
-                  margin: const EdgeInsets.only(top: 6, right: 12),
-                  decoration: BoxDecoration(color: mo.good ? TColors.neon : TColors.cherry, shape: BoxShape.circle),
-                ),
-                Expanded(child: Text(mo.text)),
-              ]),
-            ),
-          ),
-      ],
-      const SizedBox(height: 22),
-      const Eyebrow('Skills in this clip'),
-      const SizedBox(height: 10),
-      for (final s in a.skills) ...[SkillCard(skill: s), const SizedBox(height: 10)],
-      if (roles.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        const Eyebrow('Roles this clip suits'),
-        const SizedBox(height: 10),
-        TCard(
-          child: Column(children: [
-            for (final r in roles) ...[
-              Row(children: [
-                Expanded(child: Text(r.label, style: const TextStyle(fontWeight: FontWeight.w700))),
-                Text('${r.score}', style: t.titleLarge),
-              ]),
-              const SizedBox(height: 6),
-              ScoreBar(r.score),
-              const SizedBox(height: 12),
-            ],
-          ]),
-        ),
-      ],
-      const SizedBox(height: 14),
-      Text(
-        a.coachSource == 'gemini'
-            ? 'Numbers are measured by Pep. Notes are written by Pep\'s AI coach after watching your clip.'
-            : 'Numbers are measured by Pep. Notes are written from your measurements.',
-        style: const TextStyle(color: TColors.inkFaint, fontSize: 12),
-      ),
-    ]);
+    );
   }
 }

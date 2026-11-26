@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
     # Password for the Pep Lab web UI (HTTP Basic, user "lab"). Empty = no password (dev only).
     lab_password: str = ""
+    # Error tracking (Sentry, or anything that speaks its protocol, like GlitchTip).
+    # Empty = off: errors still go to the logs. See pep/errors.py and docs/RUNBOOK.md.
+    sentry_dsn: str = ""
+    # Shown on the public pages (/delete-account, /child-safety) and in the store listings.
+    support_email: str = "support@tracka.app"
 
     # ---- data
     # SQLite needs no setup, which is perfect locally. In production use Postgres:
@@ -88,6 +93,18 @@ class Settings(BaseSettings):
     max_side: int = 1280  # frames are shrunk so their longest side is this many pixels
     device: str = ""  # "" lets Ultralytics choose; "cuda:0", "cpu", "mps"
     models_dir: Path = ROOT / "var" / "models"
+
+    # ---- texts (SMS): PLACEHOLDER until a provider is chosen (pep/players/sms.py)
+    sms_provider: Literal["log"] = "log"
+    sms_webhook_secret: str = ""  # replies like "YES 4F7K" come in at /v1/sms/inbound with this
+    # While texts can't reach guardians, under-18s can tick "they've already said yes".
+    guardian_self_confirm: bool = True
+    # Where guardians and card links open (the public web address of this API for now).
+    web_url: str = ""
+
+    # ---- push (Firebase Cloud Messaging): pep/players/push.py, docs/PUSH_SETUP.md
+    fcm_service_account: str = ""  # the service account JSON, as text
+    fcm_project_id: str = ""
 
     # ---- AI coach (language model that watches the clip and writes feedback)
     coach_provider: Literal["gemini", "none"] = "gemini"

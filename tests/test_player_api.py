@@ -134,6 +134,11 @@ def test_upload_analyse_library_and_coach_summary(blank_video, fake_perceiver):
         coach = client.get("/v1/coach", headers=headers(h)).json()
         assert coach["clipsAnalysed"] == 3 and coach["overallScore"] is not None
         assert coach["skills"] and coach["focus"] and coach["trend"]
+        # Me tab: skill areas with bands, measured from the clips (top speed is measured by the fake perceiver)
+        areas = coach["skillAreas"]
+        assert areas["ageGroup"] and areas["groups"]
+        top = next(i for g in areas["groups"] for i in g["items"] if i["id"] == "top_speed")
+        assert top["state"] == "measured" and top["band"] and "km/h" in top["average"]
         assert client.get("/v1/opportunities", headers=headers(h)).json() == {"comingSoon": True, "items": []}
 
 
@@ -177,3 +182,38 @@ def test_video_links_are_signed_and_absolute(blank_video):
         assert client.get(path).status_code == 200
         assert client.get(path.replace("sig=", "sig=0")).status_code == 403
         assert client.get(path.split("?")[0]).status_code == 403
+
+
+def test_design_settings_defaults_and_validation():
+    """Main colour, reduce motion and Wi-Fi-only uploads: defaults, saving, and bad values rejected."""
+    with TestClient(app) as client:
+        h = signup(client)
+        s = client.get("/v1/me", headers=headers(h)).json()["settings"]
+        assert s["mainColour"] == "volt" and s["reduceMotion"] is False and s["uploadOnWifiOnly"] is True
+        s = client.patch(
+            "/v1/me", json={"settings": {"mainColour": "pink", "reduceMotion": True}}, headers=headers(h)
+        ).json()["settings"]
+        assert s["mainColour"] == "pink" and s["reduceMotion"] is True and s["units"] == "kmh"
+        # Purple, gold and red are never main colours (they mean Pep, warnings and errors).
+        bad = client.patch("/v1/me", json={"settings": {"mainColour": "purple"}}, headers=headers(h))
+        assert bad.status_code == 422
+
+
+def test_upload_retries_with_the_same_client_id_make_one_clip(blank_video):
+    with TestClient(app) as client:
+        h = signup(client)
+        complete_profile(client, h, consent=True)
+        ids = []
+        for _ in range(2):  # the app retried after the connection dropped
+            with blank_video.open("rb") as f:
+                r = client.post(
+                    "/v1/videos",
+                    files={"video": ("c.mp4", f, "video/mp4")},
+                    data={"meta": '{"title": "Again", "clientId": "q-123"}'},
+                    headers=headers(h),
+                )
+            assert r.status_code == 202
+            ids.append(r.json()["id"])
+        assert ids[0] == ids[1]
+        assert len(client.get("/v1/videos", headers=headers(h)).json()) == 1
+        assert client.delete(f"/v1/videos/{ids[0]}", headers=headers(h)).status_code == 204

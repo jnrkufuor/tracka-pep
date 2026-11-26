@@ -85,6 +85,14 @@ Details worth knowing:
   processes queued clips; `kick()` lets the API wake workers right after
   an upload.
 
+### Push notifications: a service account signs its own token (pep/players/push.py)
+
+To send a push, the API proves to Google who it is. It signs a short JWT with
+the Firebase service account's private key, swaps it for an access token that
+lasts an hour, and caches it. That's the **OAuth 2.0 service-account flow**. The
+key lives only in an env var (`PEP_FCM_SERVICE_ACCOUNT`); the app gets only
+non-secret ids at build time. Setup steps: `docs/PUSH_SETUP.md`.
+
 ## Words to know
 cloud · IaaS · PaaS · serverless · SaaS · container · image · Dockerfile ·
 region · egress · cold start · scale to zero · CDN · edge · static
@@ -104,6 +112,9 @@ presigned URL
    again.
 4. `pip install modal`, then `modal deploy deploy/modal_app.py`, and watch
    a clip run on a GPU in Modal's dashboard.
+5. Read `access_token()` in `pep/players/push.py`. Decode the JWT it signs
+   (jwt.io, with a test key): what are `iss`, `aud` and `exp`, and why is the
+   token cached for less than the hour it lasts?
 
 **Questions**
 

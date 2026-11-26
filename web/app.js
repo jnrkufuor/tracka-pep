@@ -61,6 +61,8 @@ const routes = [
   [/^#\/players$/, pagePlayers, "players"],
   [/^#\/calibrate$/, pageCalibrate, "calibrate"],
   [/^#\/health$/, pageHealth, "health"],
+  [/^#\/safety$/, pageSafety, "safety"],
+  [/^#\/errors$/, pageErrors, "errors"],
 ];
 
 const NAV = [
@@ -68,6 +70,8 @@ const NAV = [
   ["players", "#/players", "eye", "Scout preview"],
   ["calibrate", "#/calibrate", "target", "Calibrate"],
   ["health", "#/health", "pulse", "Health"],
+  ["safety", "#/safety", "whistle", "Safety"],
+  ["errors", "#/errors", "pulse", "App errors"],
 ];
 
 async function route() {
@@ -619,6 +623,85 @@ async function pageHealth() {
   };
   await draw();
   timers.push(setInterval(() => draw().catch(() => {}), 10000));
+}
+
+// ---------------------------------------------------------------- App errors
+// Crashes the player app sent in the last week (pep/players/app_errors.py),
+// one row per kind, most frequent first. Tap one for its stack trace.
+async function pageErrors() {
+  const rows = await api("/lab/app-errors");
+  app.innerHTML = `
+    <section class="hero fade-in" style="padding-bottom:20px">
+      <span class="eyebrow neon">Player app · last 7 days</span>
+      <h1>App errors</h1>
+      <p>Crashes reported by the app. Emails and phone numbers are hidden before they're saved. Fix the ones that hit the most players first.</p>
+    </section>
+    ${rows.length ? rows.map((r) => `
+      <div class="card stack" style="margin-bottom:10px">
+        <div class="row spread"><span class="eyebrow">${r.count} time${r.count === 1 ? "" : "s"} · ${r.players} player${r.players === 1 ? "" : "s"}</span>
+          <span class="faint">${esc(r.version || "")} · last ${esc(new Date(r.last).toLocaleString())}</span></div>
+        <p style="margin:0">${esc(r.message)}</p>
+        <div class="row"><button class="btn ghost" data-fp="${esc(r.fingerprint)}">Show stack trace</button></div>
+        <pre class="faint" data-stack="${esc(r.fingerprint)}" style="display:none;white-space:pre-wrap;font-size:12px"></pre>
+      </div>`).join("") : `<p class="muted">No crashes reported this week.</p>`}`;
+  $$("[data-fp]").forEach((b) => b.addEventListener("click", async () => {
+    const pre = $(`[data-stack="${b.dataset.fp}"]`);
+    const one = await api(`/lab/app-errors/${b.dataset.fp}`);
+    pre.textContent = `${one.platform || ""} ${one.screen || ""}\n${one.stack || "(no stack trace)"}`;
+    pre.style.display = "block";
+  }));
+}
+
+// ---------------------------------------------------------------- Safety (moderation)
+
+// Pitchside moderation (pep/players/moderation.py). Clips with 3+ reports are hidden
+// until someone here decides. Safety reports from Help come first. Every action is logged.
+async function pageSafety() {
+  const draw = (q) => {
+    const reasons = (r) => Object.entries(r).map(([k, n]) => `${esc(k.replace("_", " "))} × ${n}`).join(" · ");
+    app.innerHTML = `
+      <section class="hero fade-in" style="padding-bottom:20px">
+        <span class="eyebrow neon">Pitchside · moderation</span>
+        <h1>Safety</h1>
+        <p>Reported clips and reports from players. Act quickly on anything about a child's safety, and write a short note: every action is logged.</p>
+      </section>
+      <h3>Reports from players</h3>
+      ${q.reports.length ? q.reports.map((r) => `
+        <div class="card stack" style="margin-bottom:10px">
+          <div class="row spread"><span class="eyebrow ${r.kind === "safety" ? "neon" : ""}">${esc(r.kind)} · ${esc(r.shirtName)}</span><span class="faint">${esc(new Date(r.createdAt).toLocaleString())}</span></div>
+          <p style="margin:0">${esc(r.text)}</p>
+          <div class="row"><button class="btn ghost" data-done="${esc(r.id)}">Mark as handled</button></div>
+        </div>`).join("") : `<p class="muted">No open reports.</p>`}
+      <h3 style="margin-top:24px">Reported clips</h3>
+      ${q.posts.length ? q.posts.map((p) => `
+        <div class="card stack" style="margin-bottom:10px">
+          <div class="row spread"><span class="eyebrow ${p.hidden ? "neon" : ""}">${p.hidden ? "Hidden until reviewed" : "Still showing"} · ${p.reports} report${p.reports === 1 ? "" : "s"}</span>
+            <span class="faint">${esc(p.author.shirtName)} · ${esc(p.author.ageGroup || "")}${p.author.under18 ? " · under 18" : ""}${p.onHold ? " · posting paused" : ""}</span></div>
+          ${p.videoUrl ? `<video src="${esc(p.videoUrl)}" controls preload="metadata" style="width:100%;max-height:360px;border-radius:14px;background:#000"></video>` : ""}
+          ${p.caption ? `<p style="margin:0">“${esc(p.caption)}”</p>` : ""}
+          <p class="faint" style="margin:0">${reasons(p.reasons)}</p>
+          <input type="text" data-note="${esc(p.postId)}" placeholder="Note (why)">
+          <div class="row">
+            <button class="btn" data-keep="${esc(p.postId)}">Keep it</button>
+            <button class="btn ghost" data-down="${esc(p.postId)}">Take it down</button>
+            ${p.onHold ? `<button class="btn ghost" data-lift="${esc(p.author.id)}">Lift posting pause</button>`
+              : `<button class="btn ghost" data-pause="${esc(p.author.id)}">Pause posting 7 days</button>`}
+          </div>
+        </div>`).join("") : `<p class="muted">No reported clips.</p>`}`;
+    const note = (id) => ($(`[data-note="${id}"]`) || {}).value || "";
+    const post = (id, action) => api(`/lab/moderation/posts/${id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, note: note(id) }) });
+    $$("[data-keep]").forEach((b) => b.addEventListener("click", async () => draw(await post(b.dataset.keep, "keep"))));
+    $$("[data-down]").forEach((b) => b.addEventListener("click", async () => {
+      if (confirm("Take this clip down? It stays private in the player's library.")) draw(await post(b.dataset.down, "take_down"));
+    }));
+    $$("[data-pause]").forEach((b) => b.addEventListener("click", async () => {
+      const reason = prompt("Why pause this player's posting?");
+      if (reason && reason.length >= 3) draw(await api(`/lab/moderation/holds/${b.dataset.pause}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days: 7, reason }) }));
+    }));
+    $$("[data-lift]").forEach((b) => b.addEventListener("click", async () => draw(await api(`/lab/moderation/holds/${b.dataset.lift}`, { method: "DELETE" }))));
+    $$("[data-done]").forEach((b) => b.addEventListener("click", async () => draw(await api(`/lab/moderation/reports/${b.dataset.done}/done`, { method: "POST" }))));
+  };
+  draw(await api("/lab/moderation"));
 }
 
 // ---------------------------------------------------------------- start

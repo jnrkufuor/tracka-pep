@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tracka/api/models.dart';
 import 'package:tracka/theme/theme.dart';
-import 'package:tracka/widgets/common.dart';
+import 'package:tracka/widgets/brand.dart';
 
 void main() {
   test('parses a video with its analysis', () {
@@ -54,13 +54,44 @@ void main() {
     expect(c.confidence, 'LOW');
   });
 
-  testWidgets('kit number and score bar render', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: trackaTheme(),
-      home: const Scaffold(body: Column(children: [KitNumber(74), ScoreBar(74), Pill('High')])),
-    ));
+  testWidgets('the logo draws the mark in your main colour', (tester) async {
+    await tester.pumpWidget(MaterialApp(theme: trackaTheme(), home: const Scaffold(body: TrackaLogo())));
     await tester.pumpAndSettle();
-    expect(find.text('74'), findsOneWidget);
-    expect(find.text('HIGH'), findsOneWidget);
+    expect(find.text('Tracka'), findsOneWidget);
+  });
+
+  test('the week finds the next planned Pep session from today', () {
+    final w = Week.fromJson({
+      'start': '2026-11-23',
+      'today': '2026-11-24',
+      'health': {'status': 'fine'},
+      'days': [
+        {'date': '2026-11-23', 'weekday': 'Monday', 'items': [
+          {'id': 'pep-2026-11-23', 'kind': 'pep', 'title': 'Pep session', 'status': 'planned', 'mode': 'normal'},
+        ]},
+        {'date': '2026-11-24', 'weekday': 'Tuesday', 'isToday': true, 'items': [
+          {'id': 'e1', 'kind': 'team', 'title': 'Team training', 'status': 'planned', 'time': '16:00', 'repeats': true},
+        ]},
+        {'date': '2026-11-25', 'weekday': 'Wednesday', 'items': [
+          {'id': 'pep-2026-11-25', 'kind': 'pep', 'title': 'Pep session', 'status': 'skipped'},
+          {'id': 'pep-2026-11-26', 'kind': 'pep', 'title': 'Light session', 'status': 'planned', 'mode': 'light', 'moved': true},
+        ]},
+      ],
+    });
+    expect(w.todayDay!.items.single.isFootball, isTrue);
+    final next = w.nextSession!;
+    expect(next.$2.id, 'pep-2026-11-26'); // Monday is in the past, Wednesday's first is skipped
+    expect(next.$2.moved, isTrue);
+  });
+
+  test('a session plan lists its steps and safety note', () {
+    final p = SessionPlan.fromJson({
+      'key': 'pep-2026-11-25', 'date': '2026-11-25', 'mode': 'normal', 'title': 'Pep session', 'minutes': 30,
+      'focus': [{'id': 'scanning', 'name': 'Looking around before the ball comes'}],
+      'steps': [{'id': 'warmup', 'name': 'Warm-up', 'minutes': 5, 'how': 'Jog.', 'needs': ['nothing']}],
+      'safety': 'Stop if anything hurts.', 'status': 'planned',
+    });
+    expect(p.steps.single.minutes, 5);
+    expect(p.focus.single, startsWith('Looking'));
   });
 }

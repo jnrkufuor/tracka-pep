@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -8,15 +8,19 @@ import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../util/local_video.dart';
-import '../widgets/common.dart';
-import '../widgets/profile_fields.dart' show FieldLabel, Segmented;
-import 'video_screen.dart';
+import '../widgets/ds.dart';
+import '../widgets/profile_fields.dart' show FieldLabel;
+import 'uploads_screen.dart';
 
 /// Upload a clip: pick it, say what it is, tap yourself (and the cones, for a drill), send it to Pep.
 class UploadScreen extends StatefulWidget {
-  const UploadScreen({super.key, this.drill});
+  const UploadScreen({super.key, this.drill, this.challenge, this.title});
 
   final String? drill;
+
+  /// A Pitchside challenge id: the clip counts as an attempt (private unless posted).
+  final String? challenge;
+  final String? title;
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
@@ -37,6 +41,8 @@ class _UploadScreenState extends State<UploadScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.title != null) _title.text = widget.title!;
+    if (widget.challenge != null && widget.drill == null) _clipType = 'highlight';
     if (widget.drill != null) {
       _clipType = 'drill';
       _drill = widget.drill;
@@ -107,6 +113,7 @@ class _UploadScreenState extends State<UploadScreen> {
       'title': _title.text.trim(),
       'clipType': _clipType,
       if (_clipType == 'drill') 'drill': _drill,
+      if (widget.challenge != null) 'challenge': widget.challenge,
       if (_target != null) 'target': {'x': _target!.dx, 'y': _target!.dy},
       if (_target != null) 'targetAtSeconds': _targetAt,
       if (_needsCones)
@@ -119,14 +126,13 @@ class _UploadScreenState extends State<UploadScreen> {
     setState(() => _progress = 0);
     _video?.pause();
     try {
-      final id = await s.upload(_file!, meta, onProgress: (p) {
-        if (mounted) setState(() => _progress = p);
-      });
-      nav.pushReplacement(MaterialPageRoute(builder: (_) => VideoScreen(videoId: id)));
+      // Saved to the queue first; it sends now, on Wi-Fi, or when you're back online.
+      await s.upload(_file!, meta);
+      nav.pushReplacement(MaterialPageRoute(builder: (_) => const UploadsScreen()));
     } catch (e) {
       if (mounted) {
         setState(() => _progress = null);
-        showSnack(context, '$e');
+        showToast(context, "Couldn't save the clip", detail: '$e', ok: false, aboveTabs: false);
       }
     }
   }
@@ -136,33 +142,40 @@ class _UploadScreenState extends State<UploadScreen> {
     final meta = context.watch<AppState>().meta;
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('New clip')),
+      appBar: AppBar(),
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.fromLTRB(20, 4, 20, 28), children: [
           if (_video == null) ...[
-            TCard(
-              accent: 'upload',
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Pick a clip', style: t.headlineMedium),
-                const SizedBox(height: 8),
-                const Text('3 seconds to 3 minutes. Daylight, camera on you, and the whole of you in shot works best.',
-                    style: TextStyle(color: TColors.inkSoft)),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: () => _pick(ImageSource.gallery),
-                  icon: const LoopyIcon('film', color: TColors.onNeon, size: 22),
-                  label: const Text(kIsWeb ? 'Choose a video' : 'From your gallery'),
-                ),
-                if (!kIsWeb) ...[
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () => _pick(ImageSource.camera),
-                    icon: const LoopyIcon('play', size: 20),
-                    label: const Text('Record now'),
+            Text('New clip', style: t.headlineLarge),
+            const SizedBox(height: 4),
+            const Text('3 seconds to 3 minutes. Daylight, camera on you, and the whole of you in shot works best.',
+                style: TextStyle(fontSize: 13.5, color: Tk.muted)),
+            const SizedBox(height: 16),
+            Row(children: [
+              if (!kIsWeb) ...[
+                Expanded(
+                  child: Panel(
+                    onTap: () => _pick(ImageSource.camera),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      IconTile(icon: 'camera', color: context.accent.main, background: context.accent.tile, size: 40),
+                      const SizedBox(height: 10),
+                      const Text('Film now', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+                    ]),
                   ),
-                ],
-              ]),
-            ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Panel(
+                  onTap: () => _pick(ImageSource.gallery),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const IconTile(icon: 'clip', color: Tk.stone, background: Tk.stoneTile, size: 40),
+                    const SizedBox(height: 10),
+                    const Text(kIsWeb ? 'Choose a video' : 'From your phone', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+                  ]),
+                ),
+              ),
+            ]),
           ] else ...[
             _Preview(video: _video!, target: _target, cones: _cones, hint: _hint, onTap: _tap),
             Align(
@@ -172,9 +185,10 @@ class _UploadScreenState extends State<UploadScreen> {
           ],
           const SizedBox(height: 12),
           const FieldLabel('What kind of clip'),
-          Segmented<String>(
-            options: const {'match': 'Match', 'training': 'Training', 'drill': 'Drill', 'highlight': 'Highlight'},
+          SingleChips<String>(
+            options: const {'match': 'Match', 'training': 'Training', 'drill': 'Test or drill', 'highlight': 'Highlight'},
             value: _clipType,
+            scroll: false,
             onChanged: (v) => setState(() {
               _clipType = v;
               _cones.clear();
@@ -184,15 +198,15 @@ class _UploadScreenState extends State<UploadScreen> {
           if (_clipType == 'highlight')
             const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text('Highlights are great to keep, but Pep trusts their scores less: they only show your best moments.',
-                  style: TextStyle(color: TColors.inkFaint, fontSize: 12.5)),
+              child: Text('Highlights are great to keep, but they only show your best moments, so Pep trusts them less.',
+                  style: TextStyle(color: Tk.faint, fontSize: 12.5)),
             ),
           if (_clipType == 'drill' && meta != null) ...[
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _drill,
               isExpanded: true,
-              dropdownColor: TColors.surface2,
+              dropdownColor: Tk.card2,
               decoration: const InputDecoration(labelText: 'Which drill'),
               items: [for (final d in meta.drills.values) DropdownMenuItem(value: d.id, child: Text(d.label))],
               onChanged: (v) => setState(() {
@@ -202,15 +216,15 @@ class _UploadScreenState extends State<UploadScreen> {
             ),
             if (_drillInfo != null) ...[
               const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(color: TColors.surface, borderRadius: BorderRadius.circular(TRadius.md)),
+              Panel(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const LoopyIcon('cone', color: TColors.neon, size: 24),
+                  TIcon('cone', color: context.accent.main, size: 22),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(_drillInfo!.how, style: const TextStyle(fontSize: 13.5))),
+                  Expanded(child: Text(_drillInfo!.how, style: const TextStyle(fontSize: 13.5, color: Tk.ink))),
                 ]),
               ),
+              const SizedBox(height: 8),
+              const SafetyNote(SafetyNote.drill),
             ],
           ],
           const SizedBox(height: 16),
@@ -221,9 +235,9 @@ class _UploadScreenState extends State<UploadScreen> {
           ),
           const SizedBox(height: 8),
           if (_progress != null) ...[
-            Text('Uploading… ${(_progress! * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w700)),
+            const Text('Saving your clip…', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
-            ScoreBar(_progress! * 100),
+            const LinearProgressIndicator(minHeight: 4),
             const SizedBox(height: 12),
           ],
           FilledButton(
@@ -231,6 +245,8 @@ class _UploadScreenState extends State<UploadScreen> {
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
             child: const Text('Send to Pep'),
           ),
+          const SizedBox(height: 10),
+          const InfoNote('Only you and Pep see this clip unless you post it.'),
         ]),
       ),
     );
@@ -250,7 +266,7 @@ class _Preview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       ClipRRect(
-        borderRadius: BorderRadius.circular(TRadius.md),
+        borderRadius: BorderRadius.circular(Tk.rCard),
         child: AspectRatio(
           aspectRatio: video.value.aspectRatio,
           child: LayoutBuilder(builder: (context, box) {
@@ -264,13 +280,13 @@ class _Preview extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: label == null ? Colors.transparent : TColors.neon,
-                      border: Border.all(color: TColors.neon, width: 3),
-                      boxShadow: [BoxShadow(color: TColors.neon.withValues(alpha: 0.35), blurRadius: 10, spreadRadius: 3)],
+                      color: label == null ? Colors.transparent : context.accent.main,
+                      border: Border.all(color: context.accent.main, width: 3),
+                      
                     ),
                     child: label == null
                         ? null
-                        : Text(label, style: const TextStyle(color: TColors.onNeon, fontWeight: FontWeight.w700, fontSize: 11)),
+                        : Text(label, style: TextStyle(color: context.accent.on, fontWeight: FontWeight.w700, fontSize: 11)),
                   ),
                 );
             return GestureDetector(
@@ -290,24 +306,23 @@ class _Preview extends StatelessWidget {
           valueListenable: video,
           builder: (_, v, __) => IconButton(
             onPressed: () => v.isPlaying ? video.pause() : video.play(),
-            icon: Icon(v.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: TColors.neon),
+            icon: TIcon(v.isPlaying ? 'slowmo' : 'play', size: 20, color: context.accent.main),
           ),
         ),
         Expanded(
           child: VideoProgressIndicator(
             video,
             allowScrubbing: true,
-            colors: const VideoProgressColors(playedColor: TColors.neon, bufferedColor: TColors.surface3, backgroundColor: TColors.surface2),
+            colors: VideoProgressColors(playedColor: context.accent.main, bufferedColor: Tk.lineStrong, backgroundColor: Tk.field),
           ),
         ),
       ]),
-      Container(
+      Panel(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: TColors.surface, borderRadius: BorderRadius.circular(TRadius.sm)),
         child: Row(children: [
-          const LoopyIcon('target', size: 22, color: TColors.neon),
+          TIcon('target', size: 20, color: context.accent.main),
           const SizedBox(width: 10),
-          Expanded(child: Text(hint, style: const TextStyle(fontSize: 13.5))),
+          Expanded(child: Text(hint, style: const TextStyle(fontSize: 13.5, color: Tk.ink))),
         ]),
       ),
     ]);

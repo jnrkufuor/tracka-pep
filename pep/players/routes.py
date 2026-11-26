@@ -14,8 +14,9 @@ The player API: what the Tracka mobile and web app talk to.
     GET    /v1/videos/{id}          one clip + its analysis
     PATCH  /v1/videos/{id}          rename
     DELETE /v1/videos/{id}          delete
-    GET    /v1/coach                the coach summary across all clips
+    GET    /v1/coach                the coach summary across all clips + skillAreas (bands, Me tab)
     GET    /v1/opportunities        empty for now ("coming soon")
+    …      /v1/week, /v1/sessions, /v1/events, /v1/health: training (see training_routes.py)
 
 Versioned under /v1: once phones have the app installed you can't update
 them all at once, so breaking changes go to /v2 while /v1 keeps working.
@@ -41,12 +42,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from .. import db
+from ..config import settings
 from ..contracts import POSITIONS, AnalysisRequest, Calibration, Point
 from ..drills.runner import drill_catalogue
 from ..log import get_logger
 from ..storage import storage
-from . import auth, store
+from . import auth, details, guardian, pitchside, review, sms, store
 from .coach import summary
+from .skill_areas import skill_areas
 
 log = get_logger(__name__)
 router = APIRouter(prefix="/v1", tags=["player app"])
@@ -129,6 +132,28 @@ class SettingsIn(Body):
     coach_notes: bool | None = None
     notify_when_ready: bool | None = None
     share_with_scouts: bool | None = None
+    # Design-system settings (added Nov 2026; new fields only, so installed apps keep working).
+    main_colour: Literal["volt", "blue", "pink", "ice", "aqua"] | None = None
+    reduce_motion: bool | None = None
+    upload_on_wifi_only: bool | None = None
+    sessions_per_week: int | None = Field(
+        None, ge=0, le=6
+    )  # how many Pep sessions to fit around your football
+    # Onboarding v2: what kit the player has, and how Pep talks to them.
+    kit: list[Literal["ball", "wall", "space", "cones", "gym"]] | None = Field(None, max_length=5)
+    pep_voice: Literal["street", "coach"] | None = None
+    # Pitchside: show up when players search (under 18 also needs the guardian's yes)
+    findable: bool | None = None
+    notify_opportunities: bool | None = None  # "Tell me when there's one near me"
+    # Settings › Notifications: kind → on (tips, reviews, reminders, events, respect)
+    notifications: dict[Literal["tips", "reviews", "reminders", "events", "respect"], bool] | None = None
+    quiet_hours: bool | None = None  # 9 pm to 7 am; always on for under-18s
+    # Home: the cards shown, in order (Customise home). Unknown ids are ignored by the app.
+    home_cards: list[str] | None = Field(None, max_length=20)
+    # Settings › Accessibility
+    text_size: Literal["s", "m", "l", "xl"] | None = None
+    high_contrast: bool | None = None
+    tour_seen: bool | None = None  # Pep's tour ("Show me around") was shown
 
 
 class ProfileIn(Body):
@@ -141,6 +166,17 @@ class ProfileIn(Body):
     region: str | None = Field(None, max_length=40)
     club: str | None = Field(None, max_length=80)
     bio: str | None = Field(None, max_length=400)
+    # Onboarding v2 (stored in player_details, a new table: see details.py)
+    shirt_name: str | None = Field(None, max_length=20)
+    shirt_number: int | None = Field(None, ge=1, le=99)
+    town: str | None = Field(None, max_length=60)
+    level: Literal["fun", "amateur", "school", "club", "academy", "pro"] | None = None
+    goal: Literal["fun", "school", "academy", "standout", "better", "looking"] | None = None
+    style: str | None = Field(None, max_length=40)
+    weak_foot: int | None = Field(None, ge=1, le=5)
+    guardian_phone: str | None = Field(None, max_length=24, pattern=r"^\+?[0-9 ]{7,20}$")
+    guardian_relation: Literal["parent", "guardian", "coach"] | None = None
+    casual: dict | None = None
     guardian_email: str | None = Field(None, max_length=254)
     guardian_consent: bool | None = None
     settings: SettingsIn | None = None
@@ -148,6 +184,7 @@ class ProfileIn(Body):
 
 def _me(user: dict) -> dict:
     p = store.get_profile(user["id"])
+    d = details.get(user["id"])
     age = store.age_on(p["birth_date"])
     return {
         "id": user["id"],
@@ -166,11 +203,28 @@ def _me(user: dict) -> dict:
             "bio": p["bio"],
             "guardianEmail": p["guardian_email"],
             "guardianConsent": p["guardian_consent"],
+            # onboarding v2 (new fields: older apps ignore them)
+            "shirtName": d["shirt_name"],
+            "shirtNumber": d["shirt_number"],
+            "town": d["town"],
+            "level": d["level"],
+            "goal": d["goal"],
+            "style": d["style"],
+            "weakFoot": d["weak_foot"],
+            "guardianPhone": d["guardian_phone"],
+            "guardianRelation": d["guardian_relation"],
+            "casual": d["casual"],
         },
         "settings": p["settings"],
         # The app shows onboarding until these are filled in.
-        "profileComplete": bool(p["display_name"] and p["birth_date"] and p["positions"]),
-        "needsGuardian": age is not None and age < 18 and not p["guardian_consent"],
+        # Players just having fun or looking around don't need positions to finish onboarding.
+        "profileComplete": bool(
+            p["display_name"] and p["birth_date"] and (p["positions"] or d["goal"] in details.CASUAL_GOALS)
+        ),
+        # Under 18: the guardian approves the account (guardian.py). The old consent tick
+        # still counts while texts are a placeholder and can't reach guardians.
+        "needsGuardian": not guardian.allowed(user["id"], "account", age, p["guardian_consent"]),
+        "guardianStatus": guardian.status(user["id"]) if age is not None and age < 18 else None,
     }
 
 
@@ -190,28 +244,52 @@ def update_me(body: ProfileIn, user: dict = Depends(auth.current_user)) -> dict:
         raise HTTPException(422, "Pick a region from the list.")
     if values.get("guardian_email") and not EMAIL.match(values["guardian_email"]):
         raise HTTPException(422, "The guardian's email doesn't look right.")
+    extra = {k: values.pop(k) for k in list(values) if k in details.FIELDS}
+    if extra:
+        details.save(user["id"], extra)
     if body.settings is not None:
         current = store.get_profile(user["id"])["settings"]
         changes = {to_camel(k): v for k, v in body.settings.model_dump(exclude_unset=True).items()}
+        if "notifications" in changes:  # one switch at a time: keep the others
+            changes["notifications"] = {
+                **(current.get("notifications") or {}),
+                **(changes["notifications"] or {}),
+            }
         values["settings"] = {**current, **changes}
     store.update_profile(user["id"], values)
     return _me(user)
 
 
-@router.delete("/me", status_code=204)
-def delete_me(user: dict = Depends(auth.current_user)) -> None:
-    keys = store.delete_user(user["id"])
+def delete_account(uid: str, by: str = "player") -> None:
+    """Delete the account, every row that points at it, and its files in storage."""
+    keys = store.delete_user(uid)
     for key in keys:
         try:
             storage().delete(key)
         except Exception as exc:  # keep going: the account is already gone
             log.warning("delete.storage_failed", key=key, error=str(exc))
-    log.info("player.deleted", user_id=user["id"], files=len(keys))
+    log.info("player.deleted", user_id=uid, files=len(keys), by=by)
+
+
+@router.delete("/me", status_code=204)
+def delete_me(user: dict = Depends(auth.current_user)) -> None:
+    p = store.get_profile(user["id"])
+    if guardian.needs_guardian_to_delete(user["id"], store.age_on(p["birth_date"])):
+        raise HTTPException(409, "Your guardian needs to agree first. Ask them from Settings › Your data.")
+    delete_account(user["id"])
 
 
 @router.get("/meta")
 def meta() -> dict:
-    return {"positions": POSITIONS, "regions": GHANA_REGIONS, "drills": drill_catalogue()}
+    return {
+        "positions": POSITIONS,
+        "regions": GHANA_REGIONS,
+        "drills": drill_catalogue(),
+        # Guardian texts are a placeholder until an SMS provider is chosen (sms.py). While they
+        # can't reach phones, the app shows the interim "they've already said yes" tick.
+        "textsLive": sms.live(),
+        "guardianSelfConfirm": settings().guardian_self_confirm and not sms.live(),
+    }
 
 
 # ---------------------------------------------------------------- videos
@@ -224,9 +302,14 @@ class UploadMeta(Body):
     target: Point | None = None
     target_at_seconds: float = 0.0
     calibration: Calibration | None = None
+    # The app's own id for this upload (its upload queue). Sending the same one again
+    # (a retry after the connection dropped) returns the clip already made: no duplicates.
+    client_id: str | None = Field(None, max_length=40)
+    # A Pitchside challenge attempt (pep/data/challenges.json). Weekly ones are Tracka drills.
+    challenge: str | None = Field(None, max_length=40)
 
 
-def _video_view(v: dict, base: str, full: bool = False) -> dict:
+def _video_view(v: dict, base: str, full: bool = False, kit: list[str] | None = None) -> dict:
     """base: this API's own address. Local-disk storage gives links like /files/...,
     which only work from another website (the app) once they're absolute."""
 
@@ -246,12 +329,17 @@ def _video_view(v: dict, base: str, full: bool = False) -> dict:
         "confidence": r.get("confidence"),
         "thumbnailUrl": link(v["thumb_key"]) if v.get("thumb_key") else None,
     }
+    rv = review.review(r if v.get("status") == "READY" else None, kit)
+    if rv is not None:
+        view["reviewNote"] = rv["note"]  # the line under it in Pep › Reviews
     if full:
         view |= {
             "videoUrl": link(v["video_key"]),
             "overlayUrl": link(v["overlay_key"]) if v.get("overlay_key") else None,
             "error": r.get("error") or v.get("error"),
             "analysis": r if v.get("status") == "READY" else None,
+            # Pep's review as a story: headline, moments, tips with drills (pep/players/review.py)
+            "review": rv,
         }
     return view
 
@@ -270,7 +358,7 @@ async def upload(
 ) -> dict:
     """Store the clip, queue it for Pep, and answer at once. The app polls GET /videos/{id}."""
     me_ = _me(user)
-    if not me_["profileComplete"]:
+    if not me_["profileComplete"] or not me_["profile"]["positions"]:
         raise HTTPException(
             409, "Finish your profile first: Pep needs your age and positions to score you fairly."
         )
@@ -280,8 +368,22 @@ async def upload(
         m = UploadMeta.model_validate(json.loads(meta or "{}"))
     except ValueError as exc:
         raise HTTPException(422, f"Bad clip details: {exc}") from None
+    if m.challenge:
+        found = pitchside.challenge(m.challenge)
+        if found is None:
+            raise HTTPException(422, "Unknown challenge.")
+        kind, ch = found
+        if kind == "weekly":
+            m.clip_type, m.drill = "drill", ch["drill"]
+        elif m.clip_type == "drill":
+            m.clip_type = "highlight"
     if m.clip_type == "drill" and m.drill not in drill_catalogue():
         raise HTTPException(422, "Pick which drill this is.")
+
+    if m.client_id:
+        done = store.video_for_client_id(user["id"], m.client_id)
+        if done is not None:
+            return {"id": done, "status": "QUEUED", "duplicate": True}
 
     video_id = str(uuid.uuid4())
     suffix = Path(video.filename or "clip.mp4").suffix.lower() or ".mp4"
@@ -316,6 +418,10 @@ async def upload(
     )
     job = db.enqueue(request.to_wire(), source="app", video_key=key)
     store.add_video(user["id"], video_id, m.title or "", key, m.clip_type, request.drill, size, job["id"])
+    if m.client_id:
+        store.remember_client_id(user["id"], m.client_id, video_id)
+    if m.challenge:
+        pitchside.record_attempt(user["id"], video_id, m.challenge)
 
     from ..api.app import kick_workers
 
@@ -329,7 +435,8 @@ def one_video(video_id: str, req: Request, user: dict = Depends(auth.current_use
     v = store.get_video(user["id"], video_id)
     if v is None:
         raise HTTPException(404, "Video not found.")
-    return _video_view(v, str(req.base_url), full=True)
+    kit = store.get_profile(user["id"])["settings"].get("kit")
+    return _video_view(v, str(req.base_url), full=True, kit=kit)
 
 
 class RenameIn(Body):
@@ -360,10 +467,64 @@ def remove(video_id: str, user: dict = Depends(auth.current_user)) -> None:
 
 @router.get("/coach")
 def coach(user: dict = Depends(auth.current_user)) -> dict:
-    return summary(store.list_videos(user["id"]), store.get_profile(user["id"])["positions"])
+    """
+    The coach summary (Home and Pep) plus `skillAreas` (Me › Growth): bands, measured
+    averages, confidence and trends compared with the player's age group. The old
+    `overallScore` stays for installed apps; the new design doesn't show it.
+    """
+    videos = store.list_videos(user["id"])
+    p = store.get_profile(user["id"])
+    out = summary(videos, p["positions"])
+    out["skillAreas"] = skill_areas(videos, p["positions"], store.age_on(p["birth_date"]), p["sex"])
+    return out
+
+
+@router.get("/tips")
+def tips(req: Request, user: dict = Depends(auth.current_user)) -> list[dict]:
+    """
+    Pep › Tips: every tip from the player's ready clips, newest first. Each one says
+    which clip and moment it came from (so the app can jump there) and the drill
+    Pep picked for the player's kit. Only the logged-in player's own clips.
+    """
+    videos = store.list_videos(user["id"])
+    kit = store.get_profile(user["id"])["settings"].get("kit")
+    thumbs = {v["id"]: _video_view(v, str(req.base_url))["thumbnailUrl"] for v in videos}
+    return [t | {"thumbnailUrl": thumbs.get(t["videoId"])} for t in review.all_tips(videos, kit)]
 
 
 @router.get("/opportunities")
 def opportunities(user: dict = Depends(auth.current_user)) -> dict:
     """Trials, academies and tournaments will appear here. Not built yet: the app shows 'coming soon'."""
     return {"comingSoon": True, "items": []}
+
+
+# ---------------------------------------------------------------- training (week, sessions, events, health)
+from .training_routes import router as training_router  # noqa: E402  (after this router exists)
+
+router.include_router(training_router)
+
+from .guardian_routes import router as guardian_router  # noqa: E402
+
+router.include_router(guardian_router)
+
+from .card import router as card_router  # noqa: E402
+
+router.include_router(card_router)
+router.include_router(pitchside.router)
+
+from .notifications import router as notifications_router  # noqa: E402
+
+router.include_router(notifications_router)
+
+from .progress import router as progress_router  # noqa: E402
+
+router.include_router(progress_router)
+
+from .account import router as account_router  # noqa: E402
+
+router.include_router(account_router)
+
+# Crash reports from the app (POST /v1/app-errors): pep/players/app_errors.py
+from .app_errors import router as app_errors_router  # noqa: E402
+
+router.include_router(app_errors_router)

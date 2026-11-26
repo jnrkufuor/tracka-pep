@@ -97,6 +97,17 @@ players filmed on cheaper phones score lower for the same sprint time,
 that's **measurement bias**, and it would hurt exactly the players Tracka
 wants to help.
 
+### Sharing a player card (pep/players/card.py)
+
+Two ideas carry the card. **Data minimisation**: the card shows only what a
+coach needs (shirt name, position, region, age group, measured bands, bests,
+the clips the player picked) and never the full name, birth date, town or
+contact. The list lives in one function, `card_data`, so there's one place
+to review. **Capability URLs**: the share link holds a long random token;
+having the link *is* the permission. Turning it off or making a new one
+cuts everyone off at once, and for under-18s the guardian's yes is checked
+on every view, so taking it back works instantly.
+
 ## Part 3: Making Pep better
 
 ### The idea
@@ -163,6 +174,19 @@ learning · re-identification · action recognition
    how results become benchmark items.
 5. Pick one roadmap item, write a one-page plan (data needed, how you'll
    measure success, cost, risk), and do it on a branch.
+6. Share your card, open the link in a private browser window, then turn
+   the link off and reload. Now add a field to `card_data` and write the
+   test that proves it doesn't leak the player's town.
+7. Settings › Your data › Download your data. Open the file: which tables
+   are in it, and which are left out on purpose (`SKIP_TABLES` in
+   `pep/players/account.py`)? Why would leaving `sessions` in be a problem?
+8. Try posting a clip on Pitchside with the caption "call me 024 123 4567",
+   then "follow @kofi". Both are refused (`has_contact_details` in
+   `pep/players/pitchside.py`). Think like someone trying to get around it:
+   what would you write instead ("zero two four…")? What else, besides the
+   filter, keeps a child safe when a filter misses?
+9. Open `docs/STORE.md` and fill in Play's Data safety form on paper for one
+   new feature you'd like to add. Which rows change?
 
 **Questions**
 

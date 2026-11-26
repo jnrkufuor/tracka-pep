@@ -1,0 +1,45 @@
+{
+  "_about": [
+    "What scouts look for, grouped the way the app shows it (Me › Growth): Skills, Reading the game, Body, Goalkeeping, Attitude.",
+    "Each item lists the measurements ('metrics') that feed it, newest data first in 'metrics' order. 'average' is how the measured value is said in plain words: {v} is the value, {kmh} the value in km/h, {pct} the value as a percentage.",
+    "'key' = positions for which this item matters most (a small dot in the app). 'positions' = only show it for these positions (omit = everyone).",
+    "'state': coming_later = Pep will measure this once event detection lands; cant_see = video can't show it (a coach or test can).",
+    "Football opinion: review with coaches. Changing a band threshold is in pep/players/skill_areas.py."
+  ],
+  "version": "areas-2026-11",
+  "groups": [
+    {"name": "Skills", "items": [
+      {"id": "passing_forward", "name": "Passing forward", "metrics": ["wall_passes_30s"], "average": ["{v:.0f} wall passes in 30 s"], "key": ["CDM", "CM", "CAM", "CB"], "how": "Film the wall-pass drill (30 seconds, 2 m from a wall)."},
+      {"id": "ball_mastery", "name": "Ball mastery", "metrics": ["juggles_best"], "average": ["{v:.0f} keepy-ups in a row"], "key": ["CAM", "LW", "RW", "CF", "ST"], "how": "Film the keepy-up drill."},
+      {"id": "close_control", "name": "Keeping the ball close", "metrics": ["close_control_m"], "average": ["ball {v:.1f} m from your feet"], "key": ["CAM", "LW", "RW", "LM", "RM"], "how": "Film a match or a dribbling session from the side."},
+      {"id": "half_turn", "name": "Receiving on the half-turn", "state": "coming_later", "key": ["CM", "CAM"]},
+      {"id": "weak_foot", "name": "Weaker foot", "state": "coming_later"},
+      {"id": "finishing", "name": "Finishing", "state": "coming_later", "key": ["CF", "ST"], "positions": ["CAM", "LW", "RW", "LM", "RM", "CF", "ST"]},
+      {"id": "defending_1v1", "name": "Defending one against one", "state": "coming_later", "key": ["CB", "LB", "RB", "LWB", "RWB", "CDM"], "positions": ["CB", "LB", "RB", "LWB", "RWB", "CDM", "CM"]}
+    ]},
+    {"name": "Reading the game", "items": [
+      {"id": "scanning", "name": "Looking around before the ball comes", "metrics": ["head_checks_per_min"], "average": ["{v:.1f} head checks a minute"], "key": ["CDM", "CM", "CAM", "CB"], "how": "Film a match with your whole body and head in frame."},
+      {"id": "turning", "name": "Turning away from pressure", "metrics": ["turns_per_min"], "average": ["{v:.1f} turns a minute"], "key": ["CM", "CAM", "LW", "RW"], "how": "Film a match or a small-sided game."},
+      {"id": "finding_space", "name": "Finding space between the lines", "state": "coming_later", "key": ["CAM", "CF"]},
+      {"id": "positioning", "name": "Positioning", "state": "coming_later", "key": ["GK", "CB", "CDM"]}
+    ]},
+    {"name": "Body", "items": [
+      {"id": "short_speed", "name": "Speed over short distances", "metrics": ["split_10m_s", "peak_accel_ms2"], "average": ["10 m in {v:.2f} s", "peak acceleration {v:.1f} m/s²"], "key": ["LB", "RB", "LWB", "RWB", "LW", "RW", "ST"], "how": "Film the 30 m sprint test from the side."},
+      {"id": "top_speed", "name": "Top speed", "metrics": ["sprint_30m_s", "top_speed_ms"], "average": ["30 m in {v:.2f} s", "{kmh} km/h"], "key": ["LW", "RW", "CF", "ST", "LB", "RB"], "how": "Film the 30 m sprint test from the side."},
+      {"id": "agility", "name": "Changing direction", "metrics": ["agility_5105_s"], "average": ["5-10-5 in {v:.2f} s"], "key": ["LB", "RB", "CM", "LW", "RW"], "how": "Film the 5-10-5 agility test."},
+      {"id": "engine", "name": "Up and down the pitch", "metrics": ["distance_per_min_m"], "average": ["{v:.0f} m a minute"], "key": ["CM", "LB", "RB", "LWB", "RWB"], "how": "Film a long stretch of a match."},
+      {"id": "ready", "name": "Ready stance", "metrics": ["ready_knee_deg"], "average": ["knees bent to {v:.0f}°"], "key": ["GK", "CB"], "how": "Film a match from the side."}
+    ]},
+    {"name": "Goalkeeping", "positions": ["GK"], "items": [
+      {"id": "diving", "name": "Diving to save", "metrics": ["dive_speed_ms"], "average": ["dives at {v:.1f} m/s"], "key": ["GK"], "how": "Film a shot-stopping session from behind the goal."},
+      {"id": "set_position", "name": "Set before the shot", "metrics": ["set_share"], "average": ["set for {pct}% of shots"], "key": ["GK"], "how": "Film a shot-stopping session from behind the goal."},
+      {"id": "distribution", "name": "Starting attacks", "state": "coming_later"}
+    ]},
+    {"name": "Attitude", "items": [
+      {"id": "wants_ball", "name": "Always wants the ball", "metrics": ["touches_per_min"], "average": ["{v:.0f} touches a minute"], "key": ["CM", "CAM"], "how": "Film a match or a small-sided game."},
+      {"id": "keeps_moving", "name": "Keeps moving", "metrics": ["moving_share"], "average": ["moving {pct}% of the time"], "key": ["CM", "LB", "RB"], "how": "Film a long stretch of a match."},
+      {"id": "win_back", "name": "Winning the ball back after losing it", "state": "coming_later"},
+      {"id": "coachable", "name": "Listens and learns from coaches", "state": "cant_see"}
+    ]}
+  ]
+}

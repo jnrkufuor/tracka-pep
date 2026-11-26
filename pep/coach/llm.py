@@ -41,10 +41,40 @@ log = get_logger(__name__)
 
 OBSERVABLE = ("Passing", "Finishing", "Defending", "Decision making", "First touch")
 
+# Skill areas (pep/data/skill_areas.json) a moment or tip can be about. The model
+# picks one of these ids, so every note lands in a place the app can link to
+# (Me › Growth) and Pep can find a drill for it. Keep in step with the JSON.
+AREAS = Literal[
+    "passing_forward",
+    "ball_mastery",
+    "close_control",
+    "half_turn",
+    "weak_foot",
+    "finishing",
+    "defending_1v1",
+    "scanning",
+    "turning",
+    "finding_space",
+    "positioning",
+    "short_speed",
+    "top_speed",
+    "agility",
+    "engine",
+    "ready",
+    "diving",
+    "set_position",
+    "distribution",
+    "wants_ball",
+    "keeps_moving",
+    "win_back",
+]
+
 
 class NoteMoment(BaseModel):
     at_seconds: float
     kind: Literal["GOOD", "WORK_ON"]
+    title: str = Field("", description="What happened, 2-5 words, e.g. 'Turned and played forward'.")
+    area: AREAS | None = Field(None, description="The skill area this moment shows, if one fits.")
     text: str = Field(description="One sentence, under 25 words, addressed to the player as 'you'.")
 
 
@@ -59,11 +89,26 @@ class Tip(BaseModel):
     tip: str = Field(description="One concrete thing to practise, under 35 words.")
 
 
+class AreaTip(BaseModel):
+    """A tip tied to a moment: 'Twice you turned into a player you hadn't seen...'."""
+
+    area: AREAS
+    title: str = Field(
+        description="The tip as a short instruction, 3-7 words, e.g. 'Look before you get the ball'."
+    )
+    text: str = Field(description="Why, from what you saw in this clip, then what to do. Under 35 words.")
+    at_seconds: float | None = Field(None, description="The moment in the clip this tip comes from.")
+
+
 class CoachNotes(BaseModel):
+    headline: str = Field(
+        "", description="The biggest thing in this clip, 3-6 words, e.g. 'You looked around more'."
+    )
     summary: str = Field(description="Two sentences: the clearest strength and the one thing to work on.")
     moments: list[NoteMoment] = Field(default_factory=list)
     observed: list[Observed] = Field(default_factory=list)
     tips: list[Tip] = Field(default_factory=list)
+    area_tips: list[AreaTip] = Field(default_factory=list)
 
 
 SYSTEM = """You are Pep, a youth football coach reviewing a player's video for the Tracka app.
@@ -74,6 +119,7 @@ Rules:
 - Measurements in the request were computed by Pep's tracking. Never contradict them and never invent other numbers (no speeds, distances or percentages of your own).
 - Every moment needs a real timestamp in seconds within the clip.
 - Rate an 'observed' skill only if the clip clearly shows it at least twice. Leave it out otherwise.
+- Tips only give words. Never give food plans, never diagnose injuries; if something looks painful, say to stop and tell an adult.
 - Write to the player as 'you'. Plain English, short sentences, no jargon a 14-year-old wouldn't know.
 """
 
@@ -91,8 +137,9 @@ def build_prompt(context: dict) -> str:
         "Pep's skill scores so far (0-100, 62 is typical for their age group):\n"
         f"{json.dumps(context.get('skills', {}), indent=1)}\n\n"
         "Return: a summary; 3-8 moments (good things and things to work on, roughly balanced); "
-        f"observed ratings for any of {', '.join(OBSERVABLE)} the clip clearly shows; and one tip for each "
-        "of the two lowest-scoring skills."
+        f"observed ratings for any of {', '.join(OBSERVABLE)} the clip clearly shows; one tip for each "
+        "of the two lowest-scoring skills; a short headline; and 1-3 area_tips, each tied to a WORK_ON moment "
+        "(use its at_seconds) and a skill area."
     )
 
 

@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../config.dart';
+import 'cache.dart';
 import 'models.dart';
 
 /// An API error with a message that's safe to show the player.
@@ -26,13 +28,25 @@ class ApiError implements Exception {
 /// retry the call. If that fails too, the player is logged out ([onLoggedOut]).
 /// Tokens live in secure storage (Keychain on iOS, Keystore on Android,
 /// browser storage on web), never in plain preferences.
+///
+/// Offline: answers to the GETs in [_cached] are saved ([ResponseCache]). If the
+/// network is down, the saved copy is returned instead and [offline] turns true,
+/// so screens show what they last saw with a "You're offline" note.
 class ApiClient {
-  ApiClient({http.Client? client, FlutterSecureStorage? storage})
+  ApiClient({http.Client? client, FlutterSecureStorage? storage, ResponseCache? cache})
       : _http = client ?? http.Client(),
-        _store = storage ?? const FlutterSecureStorage();
+        _store = storage ?? const FlutterSecureStorage(),
+        cache = cache ?? PrefsCache();
 
   final http.Client _http;
   final FlutterSecureStorage _store;
+  final ResponseCache cache;
+
+  /// True while the last call couldn't reach Tracka and a saved copy was shown.
+  final ValueNotifier<bool> offline = ValueNotifier(false);
+
+  static const _cached = ['/v1/me', '/v1/meta', '/v1/videos', '/v1/coach', '/v1/week', '/v1/health', '/v1/tips', '/v1/card', '/v1/guardian', '/v1/challenges', '/v1/pitches', '/v1/notifications', '/v1/focus', '/v1/progress'];
+  static bool _cacheable(String method, String path) => method == 'GET' && _cached.any((p) => path == p || path.startsWith('$p?'));
   String? _access;
   String? _refresh;
   Future<bool>? _refreshing; // one refresh at a time, even if several calls hit 401 together
@@ -74,6 +88,7 @@ class ApiClient {
       return _http.send(req).then(http.Response.fromStream).timeout(const Duration(seconds: 30));
     }
 
+    final save = _cacheable(method, path);
     http.Response res;
     try {
       res = await go();
@@ -81,11 +96,20 @@ class ApiClient {
         res = await go();
       }
     } on TimeoutException {
-      throw ApiError(0, 'The connection is slow. Try again in a moment.');
+      return _fromCache(path, save, ApiError(0, 'The connection is slow. Try again in a moment.'));
     } on http.ClientException {
-      throw ApiError(0, "Can't reach Tracka. Check your connection.");
+      return _fromCache(path, save, ApiError(0, "Can't reach Tracka. Check your connection."));
     }
+    offline.value = false;
+    if (save && res.statusCode == 200) unawaited(cache.put(path, utf8.decode(res.bodyBytes)));
     return _decode(res, auth: auth);
+  }
+
+  Future<dynamic> _fromCache(String path, bool cacheable, ApiError error) async {
+    final saved = cacheable ? await cache.get(path) : null;
+    if (saved == null) throw error;
+    offline.value = true;
+    return jsonDecode(saved);
   }
 
   dynamic _decode(http.Response res, {bool auth = true}) {
@@ -95,6 +119,7 @@ class ApiClient {
     if (res.statusCode >= 200 && res.statusCode < 300) return data;
     if (res.statusCode == 401 && auth) {
       clearTokens();
+      cache.clear();
       onLoggedOut?.call();
     }
     final detail = data is Map ? data['detail'] : null;
@@ -132,6 +157,7 @@ class ApiClient {
       if (_refresh != null) await _send('POST', '/v1/auth/logout', body: {'refreshToken': _refresh}, auth: false);
     } catch (_) {}
     await clearTokens();
+    await cache.clear(); // saved screens and the upload queue belong to this player
   }
 
   // ------------------------------------------------------------- profile
@@ -144,6 +170,7 @@ class ApiClient {
   Future<void> deleteAccount() async {
     await _send('DELETE', '/v1/me');
     await clearTokens();
+    await cache.clear();
   }
 
   Future<Meta> meta() async => Meta.fromJson(await _send('GET', '/v1/meta', auth: false) as Map<String, dynamic>);
@@ -189,9 +216,166 @@ class ApiClient {
 
   // ------------------------------------------------------------- coach
 
+  /// Settings › Your data: everything Tracka holds about you, as JSON.
+  Future<String> exportMe() async => const JsonEncoder.withIndent('  ').convert(await _send('GET', '/v1/me/export'));
+
+  Future<void> feedback(String text, {String kind = 'problem', String? appVersion}) =>
+      _send('POST', '/v1/feedback', body: {'kind': kind, 'text': text, if (appVersion != null) 'appVersion': appVersion});
+
+  /// A crash report (lib/state/crash_report.dart). Works logged out too.
+  Future<void> reportError({required String message, String? stack, String? appVersion, String? platform}) async {
+    final s = stack == null || stack.length <= 8000 ? stack : stack.substring(0, 8000);
+    await _send('POST', '/v1/app-errors',
+        auth: false,
+        body: {'message': message, if (s != null) 'stack': s, if (appVersion != null) 'appVersion': appVersion, if (platform != null) 'platform': platform});
+  }
+
+  Future<ProgressState> progress() async => ProgressState.fromJson(await _send('GET', '/v1/progress') as Map<String, dynamic>);
+
+  Future<FocusState> focus() async => FocusState.fromJson(await _send('GET', '/v1/focus') as Map<String, dynamic>);
+
+  // ------------------------------------------------------------- notifications
+
+  Future<({List<AppNotification> items, int unread, bool quietNow})> notifications() async {
+    final j = await _send('GET', '/v1/notifications') as Map<String, dynamic>;
+    return (
+      items: [for (final n in j['items'] as List) AppNotification.fromJson(n as Map<String, dynamic>)],
+      unread: (j['unread'] as num?)?.toInt() ?? 0,
+      quietNow: j['quietNow'] as bool? ?? false,
+    );
+  }
+
+  Future<void> registerDevice(String token, String platform) =>
+      _send('PUT', '/v1/devices', body: {'token': token, 'platform': platform});
+
+  Future<void> unregisterDevice(String token) => _send('DELETE', '/v1/devices/${Uri.encodeComponent(token)}');
+
+  /// Mark these read, or all of them when [ids] is null.
+  Future<void> markRead([List<String>? ids]) => _send('POST', '/v1/notifications/read', body: {if (ids != null) 'ids': ids});
+
+  // ------------------------------------------------------------- pitchside
+
+  Future<({List<FeedPost> posts, bool canPost})> feed({String tab = 'for_you'}) async {
+    final j = await _send('GET', '/v1/feed?tab=$tab') as Map<String, dynamic>;
+    return (posts: [for (final p in j['posts'] as List) FeedPost.fromJson(p as Map<String, dynamic>)], canPost: j['canPost'] as bool? ?? false);
+  }
+
+  Future<FeedPost> post(String videoId, {String caption = ''}) async =>
+      FeedPost.fromJson(await _send('POST', '/v1/posts', body: {'videoId': videoId, 'caption': caption}) as Map<String, dynamic>);
+
+  Future<void> deletePost(String id) => _send('DELETE', '/v1/posts/$id');
+  Future<void> respect(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/posts/$id/respect');
+  Future<void> savePost(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/posts/$id/save');
+  Future<void> report(String id, String reason) => _send('POST', '/v1/posts/$id/report', body: {'reason': reason});
+
+  Future<({List<FeedAuthor> players, List<FeedAuthor> nearYou})> searchPlayers(String q) async {
+    final j = await _send('GET', '/v1/players?q=${Uri.encodeQueryComponent(q)}') as Map<String, dynamic>;
+    return (
+      players: [for (final p in j['players'] as List) FeedAuthor.fromJson(p as Map<String, dynamic>)],
+      nearYou: [for (final p in j['nearYou'] as List) FeedAuthor.fromJson(p as Map<String, dynamic>)],
+    );
+  }
+
+  Future<PlayerPage> player(String id) async => PlayerPage.fromJson(await _send('GET', '/v1/players/$id') as Map<String, dynamic>);
+  Future<void> follow(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/players/$id/follow');
+  Future<void> block(String id, bool on) => _send(on ? 'PUT' : 'DELETE', '/v1/players/$id/block');
+
+  Future<ChallengesState> challenges() async => ChallengesState.fromJson(await _send('GET', '/v1/challenges') as Map<String, dynamic>);
+
+  Future<List<Pitch>> pitches() async =>
+      [for (final p in ((await _send('GET', '/v1/pitches') as Map)['pitches'] as List)) Pitch.fromJson(p as Map<String, dynamic>)];
+
+  Future<List<Pitch>> addPitch({required String name, required String surface, required String size, required String town}) async => [
+        for (final p in ((await _send('POST', '/v1/pitches', body: {'name': name, 'surface': surface, 'size': size, 'town': town}) as Map)['pitches'] as List))
+          Pitch.fromJson(p as Map<String, dynamic>)
+      ];
+
+  Future<List<Pitch>> confirmPitch(String id) async =>
+      [for (final p in ((await _send('PUT', '/v1/pitches/$id/confirm') as Map)['pitches'] as List)) Pitch.fromJson(p as Map<String, dynamic>)];
+
+  // ------------------------------------------------------------- card
+
+  Future<CardState> card() async => CardState.fromJson(await _send('GET', '/v1/card') as Map<String, dynamic>);
+
+  Future<CardState> setCardLink(bool on, {bool newLink = false}) async =>
+      CardState.fromJson(await _send('PUT', '/v1/card/link', body: {'on': on, 'newLink': newLink}) as Map<String, dynamic>);
+
+  Future<CardState> updateCard({Map<String, bool>? show, List<String>? portfolio}) async =>
+      CardState.fromJson(await _send('PATCH', '/v1/card', body: {
+        if (show != null) 'show': show,
+        if (portfolio != null) 'portfolio': portfolio,
+      }) as Map<String, dynamic>);
+
+  // ------------------------------------------------------------- guardian
+
+  Future<GuardianState> guardian() async =>
+      GuardianState.fromJson(await _send('GET', '/v1/guardian') as Map<String, dynamic>);
+
+  Future<GuardianState> setGuardian({required String phone, String? relation, String? name}) async =>
+      GuardianState.fromJson(await _send('PUT', '/v1/guardian', body: {
+        'phone': phone,
+        if (relation != null) 'relation': relation,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+      }) as Map<String, dynamic>);
+
+  Future<GuardianState> resendGuardian() async =>
+      GuardianState.fromJson(await _send('POST', '/v1/guardian/resend') as Map<String, dynamic>);
+
+  /// Take back a request to delete the account, before the guardian answers.
+  Future<GuardianState> cancelDeleteRequest() async =>
+      GuardianState.fromJson(await _send('DELETE', '/v1/guardian/requests/delete') as Map<String, dynamic>);
+
+  /// Ask the guardian for something new: post | share_card | search | delete.
+  Future<GuardianState> askGuardian(String kind) async =>
+      GuardianState.fromJson(await _send('POST', '/v1/guardian/requests', body: {'kind': kind}) as Map<String, dynamic>);
+
+  Future<List<ReviewTip>> tips() async =>
+      [for (final t in await _send('GET', '/v1/tips') as List) ReviewTip.fromJson(t as Map<String, dynamic>)];
+
   Future<CoachSummary> coach() async =>
       CoachSummary.fromJson(await _send('GET', '/v1/coach') as Map<String, dynamic>);
 
   Future<bool> opportunitiesComingSoon() async =>
       ((await _send('GET', '/v1/opportunities')) as Map<String, dynamic>)['comingSoon'] as bool? ?? true;
+
+  // ---------------------------------------------------------------- training
+
+  String _d(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<Week> week({DateTime? start}) async =>
+      Week.fromJson(await _send('GET', start == null ? '/v1/week' : '/v1/week?start=${_d(start)}') as Map<String, dynamic>);
+
+  Future<SessionPlan> session(String key) async =>
+      SessionPlan.fromJson(await _send('GET', '/v1/sessions/$key') as Map<String, dynamic>);
+
+  Future<Week> moveSession(String key, DateTime to) async =>
+      Week.fromJson(await _send('POST', '/v1/sessions/$key/move', body: {'to': _d(to)}) as Map<String, dynamic>);
+
+  Future<Week> skipSession(String key) async =>
+      Week.fromJson(await _send('POST', '/v1/sessions/$key/skip') as Map<String, dynamic>);
+
+  Future<Week> restoreSession(String key) async =>
+      Week.fromJson(await _send('POST', '/v1/sessions/$key/restore') as Map<String, dynamic>);
+
+  /// Log a finished session. Returns the follow-up line to show.
+  Future<String> finishSession(String key, {required String effort, required bool hurt}) async {
+    final r = await _send('POST', '/v1/sessions/$key/done', body: {'effort': effort, 'hurt': hurt}) as Map<String, dynamic>;
+    return r['next'] as String? ?? '';
+  }
+
+  Future<List<FootballEvent>> events() async =>
+      (await _send('GET', '/v1/events') as List).map((e) => FootballEvent.fromJson(e as Map<String, dynamic>)).toList();
+
+  Future<FootballEvent> addEvent(Map<String, dynamic> body) async =>
+      FootballEvent.fromJson(await _send('POST', '/v1/events', body: body) as Map<String, dynamic>);
+
+  Future<FootballEvent> updateEvent(String id, Map<String, dynamic> body) async =>
+      FootballEvent.fromJson(await _send('PATCH', '/v1/events/$id', body: body) as Map<String, dynamic>);
+
+  Future<void> deleteEvent(String id) => _send('DELETE', '/v1/events/$id');
+
+  Future<HealthState> health() async => HealthState.fromJson(await _send('GET', '/v1/health') as Map<String, dynamic>);
+
+  Future<HealthState> setHealth(String status, {String? area}) async =>
+      HealthState.fromJson(await _send('PUT', '/v1/health', body: {'status': status, 'area': area}) as Map<String, dynamic>);
 }

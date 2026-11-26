@@ -35,6 +35,23 @@ services:
         sync: false
       - key: PEP_LAB_PASSWORD
         generateValue: true
+      # Signs players' logins. Render makes a long random one; never change it
+      # after launch (everyone would be logged out). The API refuses to start
+      # in prod with the development default.
+      - key: PEP_JWT_SECRET
+        generateValue: true
+      - key: PEP_PUBLIC_URL         # this service's address, e.g. https://pep-api.onrender.com (or api.tracka.app)
+        sync: false
+      - key: PEP_CORS_ORIGINS       # the web app's address, as a list: ["https://tracka.pages.dev"]
+        sync: false
+      - key: GEMINI_API_KEY         # optional: without it Pep writes rule-based notes
+        sync: false
+      - key: PEP_FCM_SERVICE_ACCOUNT  # optional: push notifications (docs/PUSH_SETUP.md)
+        sync: false
+      - key: PEP_SENTRY_DSN         # optional: error tracking (docs/RUNBOOK.md)
+        sync: false
+      - key: PEP_SUPPORT_EMAIL      # shown on /delete-account and /child-safety
+        sync: false
       - key: PEP_STORAGE
         value: s3
       - key: PEP_S3_BUCKET

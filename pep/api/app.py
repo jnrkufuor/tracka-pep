@@ -54,6 +54,7 @@ from .. import MODEL_VERSION, db
 from ..config import ROOT, settings
 from ..contracts import POSITIONS, AnalysisRequest
 from ..drills.runner import drill_catalogue
+from ..errors import setup_error_tracking
 from ..log import get_logger, setup_logging
 from ..scoring.roles import roles
 from ..storage import LocalStorage, storage, verify_local
@@ -70,10 +71,32 @@ QUEUE = Gauge("pep_jobs", "Jobs by status", ["status"])
 OLDEST = Gauge("pep_oldest_queued_seconds", "Age of the oldest queued job")
 
 
+DEV_DEFAULTS = {"jwt_secret": "dev-jwt-secret-change-me-please-32b", "api_key": "dev-key"}
+
+
+def _refuse_unsafe_prod_settings() -> None:
+    """
+    Fail fast (handbook chapter 10): in production, refuse to start with a
+    development secret. Anyone could sign a login token with the default
+    JWT secret and act as any player. A crash at deploy time is caught by the
+    health check and the old version keeps running; a silent start is not.
+    """
+    s = settings()
+    if s.env != "prod":
+        return
+    bad = [k for k, v in DEV_DEFAULTS.items() if getattr(s, k) == v]
+    if not s.lab_password:
+        bad.append("lab_password")
+    if bad:
+        raise RuntimeError(f"Refusing to start in prod with development settings: {', '.join(bad)}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Runs once at start-up (before `yield`) and once at shutdown (after)."""
     setup_logging()
+    _refuse_unsafe_prod_settings()
+    setup_error_tracking()  # off unless PEP_SENTRY_DSN is set: pep/errors.py
     db.engine()  # create tables, fail fast if the DB is unreachable
     if settings().inline_worker:
         from ..worker import start_inline_worker
@@ -100,9 +123,25 @@ app.add_middleware(
 )
 
 # The player app's API (accounts, profile, videos, coach): pep/players/routes.py
-from ..players.routes import router as player_router  # noqa: E402  (after `app` exists; routes import kick_workers)
+# (imported after `app` exists, because routes import kick_workers)
+from ..players.routes import router as player_router  # noqa: E402
 
 app.include_router(player_router)
+
+# Web pages for people without the app (a guardian opening /g/4F7K): pep/players/pages.py
+from ..players.pages import router as pages_router  # noqa: E402
+
+app.include_router(pages_router)
+
+# Staff moderation of Pitchside (Lab › Safety): pep/players/moderation.py
+from ..players.moderation import router as moderation_router  # noqa: E402
+
+app.include_router(moderation_router)
+
+# Staff view of app crash reports (Lab › App errors): pep/players/app_errors.py
+from ..players.app_errors import lab_router as app_errors_lab  # noqa: E402
+
+app.include_router(app_errors_lab)
 
 
 @app.middleware("http")

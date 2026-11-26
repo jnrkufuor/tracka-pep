@@ -1,5 +1,42 @@
 # Tracka design (app and Lab)
 
+## Player app: design system v2 (November 2026)
+
+The player app is built from the design canvas ("Tracka player app:
+screen concepts v2"). The sections further down describe the first version
+and apply only to the Lab (staff console).
+
+- **Colours have jobs** (`app/lib/theme/tokens.dart`, class `Tk`):
+  - **main colour** = you: your buttons, progress, "Strong" and "Standout".
+    Volt `#E5FF00` by default; players can pick Electric blue `#1A8CFF`,
+    Electric pink `#FF1AA6`, Ice `#00E5FF` or Aqua `#00FFB3` in Settings ›
+    Main colour (`MainColour`, saved as the `mainColour` setting);
+  - **purple** `#B98CFF` = Pep speaking; **gold** `#FFC21A` = watch out;
+    **stone** `#C8CCC2` = calm extras; pure black `#000` behind everything.
+  - Never offered as a main colour: purple, gold/orange, red, plain green.
+    There is **no red** anywhere in the app.
+- **Type**: Bricolage Grotesque ExtraBold for headings and big numbers,
+  Figtree for text (both SIL Open Font License, in `app/assets/fonts`).
+- **Ratings**: no overall score and no numbers out of 100. Each measured
+  skill gets a band (Below average · Average · Above average · Strong ·
+  Standout), its measured average, confidence dots and a trend tag.
+- **Motion** (`app/lib/theme/motion.dart`): short and quick, and
+  everything still works with reduce motion on (phone setting or
+  Settings › Accessibility). Per-screen list: the "Motion, screen by
+  screen" board.
+- **Components** (`app/lib/widgets/ds.dart`): chips (single-choice chips
+  have no checkmark), band pill, confidence dots, trend tag, AI note
+  (stone) and safety note (gold), edit sheets on pure black (grabber,
+  close button, saves as you go), toasts at the bottom, failsafe
+  `StateView`, offline banner, loading skeletons.
+- **Icons**: the "Line, burst, play" pack (48 x 48, square ends, a few
+  solid shapes). Defined in `scripts/build_brand.py` (`LINE_ICONS`),
+  generated to `web/assets/icons/line/` and `app/lib/widgets/line_icons.g.dart`,
+  drawn in the app with `TIcon('name')`. Add an icon in the script, run it.
+- **Tabs**: Home, Pitchside, + (add a clip), Pep, Me. The splash fades
+  the mark in, then "Tracka".
+
+
 **Brief:** YesBut's design language, turned to *night-match* mode. A darker,
 sportier Tracka, still with the neon.
 
@@ -33,13 +70,17 @@ sportier Tracka, still with the neon.
 - **Mobile**: the nav becomes a floating bottom pill (thumb reach).
 
 ## In the Flutter app
-The app (`app/`) is the main product, and uses the same system:
-- tokens in `app/lib/theme/theme.dart` (`TColors`, `TRadius`, `TType`)
-  mirror `web/app.css :root`; change both together;
-- the icon set is generated into `app/lib/widgets/loopy_icons.g.dart`;
-- five tabs in a floating pill: Home, Videos, Pep, Chances, Profile;
-- one neon card per screen (the Pep score on Home, the clip score on a
-  video, the "on its way" card on Chances).
+The app uses **only design system v2** (top of this file). The v1 pieces
+(`TColors`, `TRadius`, loopy icons, kit-number scores, tape stripes, score
+bars, `common.dart`, `skill_card.dart`) were removed in November 2026; the
+Lab keeps v1 on the web.
+- tokens: `app/lib/theme/tokens.dart` (`Tk`, `MainColour`, `Band`, `Confidence`);
+- components: `app/lib/widgets/ds.dart`; brand: `app/lib/widgets/brand.dart`
+  (`TrackaMark`, `TrackaLogo`: the mark in your main colour, then "Tracka");
+- icons: the line pack, `TIcon('name')` (`line_icons.g.dart`, generated);
+- accessibility: text size on top of the phone's (`textSize`), higher
+  contrast (`highContrast`: a colour filter that lifts every grey, black stays
+  black), less motion (`reduceMotion` plus the phone's setting).
 
 ## The logo
 `scripts/build_brand.py` redraws Tracka's mark as clean vectors (head

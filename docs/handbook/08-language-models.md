@@ -87,6 +87,23 @@ The coach notes come from **Gemini 3.8 Flash**, which can watch video
 - **Cost**: roughly 1–2 US cents per 30-second clip at introductory
   prices (chapter 12).
 
+### From notes to a review (pep/players/review.py)
+
+The model's notes are data; the player needs a story. Pep asks the model
+to label each moment with a short **title** and a **skill area** id from a
+fixed list (an `enum` in the schema), and to tie each tip to a moment's time.
+Picking from a list is something LLMs do reliably; making up free-form
+labels is not. Pep then does the rest itself, with plain code:
+
+- the drill for a tip comes from `pep/data/training.json`, filtered by the
+  kit the player has. The model never picks drills, so it can't suggest one
+  that needs a wall the player hasn't got;
+- if the model gave no tip for a "work on" moment, a **rule tip** fills in;
+- the newest review's "work on" areas go to the front of the training plan.
+
+The review is **derived state**: worked out from the stored result on every
+request, never stored, so better wording reaches every old clip for free.
+
 ## Words to know
 LLM · multimodal · token · context window · hallucination · prompt ·
 system prompt · temperature · structured output · schema · RAG · tool
@@ -103,6 +120,9 @@ calling · agent · fine-tuning · guardrail · fallback · open-weight model
    do the moments change?
 4. Write five "test clips" with what a good coach would say, and score
    Gemini's notes against them by hand. That's an **eval**.
+5. In `tests/test_review.py`, change the kit in
+   `test_drills_fit_the_kit` to `["ball", "wall"]` for `close_control`.
+   Which drill does Pep pick now, and which line of `pick_drill` decides?
 
 **Questions**
 
@@ -126,3 +146,10 @@ summaries; `coachSource` is `rules`. Nothing fails.
 
 *Answer:* They're opinions from watching, not measurements, and less
 reliable. They add information but shouldn't dominate a player's profile.
+
+**5. Why does the model choose a skill area from a fixed list instead of
+writing its own?**
+
+*Answer:* A fixed list (an enum in the schema) means every tip lands
+somewhere the app can show (Me › Growth) and Pep can find a drill for.
+Free text like "awareness" or "vision" would match nothing.
