@@ -113,9 +113,14 @@ whose free plan includes monthly credits:
    appear when it finishes.
 
 Watch the credits in Modal's dashboard. `max_containers=4` caps how many
-GPUs run at once. The 2-minute safety-net run costs a little even when the
-queue is empty: while testing, you can change `schedule=modal.Period(minutes=2)`
-in `deploy/modal_app.py` to 30 minutes, since the kick starts clips anyway.
+GPUs run at once. The safety-net run (every 30 minutes while testing) costs a
+little even when the queue is empty; set it to 2-5 minutes at launch in
+`deploy/modal_app.py`.
+
+Instead of steps 1 and 4 on a laptop, CI can deploy it: add `MODAL_TOKEN_ID`
+and `MODAL_TOKEN_SECRET` (Modal › Settings › API Tokens) as GitHub secrets, and
+every merge to main redeploys the worker. Create `pep-secrets` in Modal's
+dashboard (Secrets › Custom) with the same values as step 3.
 
 ## Pushes not arriving
 
