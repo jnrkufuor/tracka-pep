@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:tracka/api/api_client.dart';
 import 'package:tracka/api/cache.dart';
 import 'package:tracka/main.dart' show highContrastFilter;
+import 'package:tracka/screens/auth_screen.dart';
 import 'package:tracka/screens/card_screens.dart';
 import 'package:tracka/screens/feed_screens.dart';
 import 'package:tracka/screens/guardian_screens.dart';
@@ -250,6 +251,10 @@ Future<AppState> readyState() async {
 }
 
 final screens = <String, Widget Function()>{
+  'Welcome': () => const WelcomeScreen(),
+  'Sign up: phone': () => const PhoneScreen(),
+  'Sign up: email': () => const AuthScreen(signUp: true),
+  'Log in': () => const AuthScreen(signUp: false),
   'Tabs: Home, Pitchside, Pep, Me': () => const Shell(),
   'Customise home': () => const CustomiseHomeScreen(),
   'Focus and tests': () => const FocusScreen(),

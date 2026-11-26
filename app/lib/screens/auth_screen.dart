@@ -36,7 +36,7 @@ class WelcomeScreen extends StatelessWidget {
     final mq = MediaQuery.of(context);
     // The board is 900 tall. On shorter phones the picture gives up height
     // first, so the buttons always fit without scrolling.
-    final heroH = (mq.size.height - 410 - mq.padding.bottom).clamp(300.0, 460.0);
+    final heroH = (mq.size.height - 440 - mq.padding.top - mq.padding.bottom).clamp(280.0, 460.0);
     void go(Widget page) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     return Scaffold(
       backgroundColor: Tk.bg,
@@ -44,7 +44,7 @@ class WelcomeScreen extends StatelessWidget {
       // IntrinsicHeight: the picture uses a LayoutBuilder, which can't report one.)
       body: SingleChildScrollView(
         child: SizedBox(
-          height: math.max(mq.size.height, heroH + mq.padding.top + 400 * mq.textScaler.scale(1) + mq.padding.bottom),
+          height: math.max(mq.size.height, heroH + mq.padding.top + 440 * mq.textScaler.scale(1) + mq.padding.bottom),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               _Hero(height: heroH, topInset: mq.padding.top),
               Transform.translate(
