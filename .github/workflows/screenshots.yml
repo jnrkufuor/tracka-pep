@@ -10,7 +10,7 @@ name: Screenshots
 on:
   workflow_dispatch:
   push:
-    branches: [player-app]
+    branches: [main]
     paths: ["app/lib/**", "pep/players/**", ".github/workflows/screenshots.yml"]
 
 permissions:
