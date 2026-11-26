@@ -28,6 +28,6 @@ jobs:
         run: |
           if [ ! -d "${{ inputs.benchmark }}" ]; then python training/make_benchmark.py "${{ inputs.benchmark }}"; fi
       - run: python training/evaluate.py "${{ inputs.benchmark }}" --report report.md --max-speed-error 0.12
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with: { name: evaluation-report, path: report.md }
