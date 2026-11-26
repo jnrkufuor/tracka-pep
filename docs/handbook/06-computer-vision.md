@@ -1,118 +1,88 @@
 # 06 · Computer vision: turning video into numbers
 
+Pep finds the player in every frame, follows them through the clip, removes the camera's own movement, and converts pixels into metres. Every number it reports says how it was measured and how sure it is.
+
 ## The idea
 
-To a computer, a video is just a stack of pictures (**frames**), usually
-25–60 per second. Each frame is a grid of **pixels**, and each pixel is
-three numbers (red, green, blue). **Computer vision** is getting useful
-facts out of those grids: *where is the player, where is the ball, how
-fast did he run?*
+To a computer, a video is a stack of pictures (**frames**), usually 25–60 a second. Each frame is a grid of **pixels**, and each pixel is three numbers (red, green, blue). **Computer vision** is getting useful facts out of those grids: where is the player, where is the ball, how fast did they run?
 
-The big problem: pixels aren't metres. A player near the camera looks
-big and moves many pixels per step; the same player far away looks tiny.
-Most of vision engineering is turning "pixels in a picture" into "metres
-on a pitch" honestly.
+The hard part: pixels aren't metres. A player near the camera looks big and moves many pixels per step; the same player far away looks tiny. Most of the work is turning "pixels in a picture" into "metres on a pitch" honestly.
 
-## The common building blocks
+## The usual building blocks
 
-### 1. Detection: what is where?
-An **object detector** looks at a frame and draws **bounding boxes**
-around things it knows ("person 92% sure", "sports ball 61% sure").
+**1. Detection: what is where?** An **object detector** draws **boxes** around things it recognises ("person, 92% sure"). Popular families: **YOLO** ("You Only Look Once": one pass per frame, fast, the most widely used), **RT-DETR** (transformer-based, accurate), and older two-stage designs like Faster R-CNN. Bigger model sizes are more accurate and slower.
 
-| Detector family | Notes |
-|---|---|
-| **YOLO** ("You Only Look Once"; Ultralytics YOLOv8 → YOLO11 → YOLO26) | One pass per frame; fast enough for real time; the most popular choice |
-| **DETR / RT-DETR** | Transformer-based; accurate, newer |
-| Faster R-CNN | Older two-stage design; accurate but slow |
+**2. Pose: where are the joints?** A **pose model** finds **keypoints** (shoulders, hips, knees, ankles) on each person. From those you get knee bend, height in pixels, and which foot touched the ball.
 
-Key ideas: **confidence threshold** (ignore boxes below, say, 30%);
-**IoU** (intersection over union: how much two boxes overlap, 0 to 1);
-**NMS** (non-maximum suppression: remove duplicate boxes of the same
-object). Model sizes come in n/s/m/l/x: bigger is more accurate and slower.
+**3. Tracking: who is who over time?** Detection works frame by frame; it doesn't know the box in frame 10 is the same person as in frame 11. A **tracker** links boxes into **tracks** with IDs. **ByteTrack** is a popular one that also keeps blurred or half-hidden people. The classic error is an **ID switch**: the tracker swaps two people.
 
-### 2. Pose estimation: where are the joints?
-A **pose model** finds **keypoints** (nose, shoulders, hips, knees,
-ankles…) on each person. From keypoints you get body angles (knee bend),
-height in pixels, and which foot touched the ball.
+**4. Camera motion.** Phone videos pan and shake. If the camera turns right, everyone appears to move left. **Camera-motion compensation** follows hundreds of points on the grass and stands (**optical flow**), ignores points on people, fits the best camera movement while ignoring outliers (**RANSAC**), and subtracts it.
 
-### 3. Tracking: who is who over time?
-Detection works frame by frame; it doesn't know that the box in frame 10
-is the same person as in frame 11. A **multi-object tracker** links
-boxes into **tracks** with IDs.
+**5. Pixels to metres (calibration).**
 
-| Tracker | Idea |
-|---|---|
-| SORT | Predict where each box goes next, match by overlap |
-| **ByteTrack** | SORT plus a second pass that also uses low-confidence boxes, so blurred or half-hidden players aren't dropped |
-| DeepSORT, BoT-SORT | Also compare what people look like (appearance), to re-find someone after being hidden |
-
-**ID switches** (the tracker swaps two people's IDs) are the classic
-tracking error.
-
-### 4. Camera motion
-Phone videos pan and shake. If the camera turns right, everyone appears
-to move left. **Camera-motion compensation** estimates how the background
-moved between frames (track hundreds of corner points on the grass and
-stands with **optical flow**, ignore points on people, fit the best
-motion with **RANSAC**, which ignores outliers) and subtracts it.
-
-### 5. From pixels to metres: calibration
 | Method | Needs | Accuracy |
-|---|---|---|
-| **Homography** | 4+ known points on the ground (cones, pitch lines) | Good on flat ground; the standard for sports |
+| --- | --- | --- |
+| **Homography** | 4+ known points on the ground (cones, pitch lines) | Good on flat ground; the sports standard |
 | **Body as a ruler** | The player's real height | Rougher, but works on any clip |
-| Multiple cameras / stereo | Two+ synchronised cameras | Best; impractical on phones |
+| Two or more cameras | Synchronised cameras | Best; impractical on phones |
 
-A **homography** is a 3×3 matrix that maps points on one flat plane (the
-image of the pitch) to another (the pitch seen from above). Four cones
-whose real positions you know are enough to compute it.
+**6. Smoothing.** Measured positions jitter, and speed (the change in position) makes jitter much worse. A **Kalman filter** blends where physics says the player should be with where they were measured, trusting whichever is more reliable. A **smoother** then runs backwards over the clip so each moment benefits from what came after.
 
-### 6. Cleaning up noisy positions: filtering
-Measured positions jitter: boxes wobble a few pixels every frame, and
-speed (the change in position) amplifies jitter badly. A **Kalman filter**
-blends two guesses (where physics says the player should be, and where
-we measured him), trusting whichever is more reliable. A **smoother**
-(Rauch–Tung–Striebel, RTS) then runs backwards over the whole clip so each
-moment benefits from what happened after it too.
+## What we chose and why
 
-## How Tracka does it
+- **YOLO26, small sizes** (`yolo26s` for detection, `yolo26n-pose` for joints): fast and accurate enough on a phone video, and cheap per clip.
+- **A second, zoomed-in look for the ball** near the player's feet. In phone video the ball is often a few pixels wide, and detectors miss small things.
+- **10–15 frames a second**, not 60: enough for running, and four to six times cheaper.
+- **The player taps themselves** on upload, so Pep follows the right person in a crowded match. Tracks are stitched back together across ID switches by position and time.
+- **Homography from cones for drills, body-as-a-ruler for matches.** Drills are where accuracy matters most, so we ask for cones there; matches get a rougher measure with lower confidence, rather than none.
+- **Honesty rules**: every measurement records how it was measured; skills aren't scored when the player was tracked too briefly; gaps over a second split the track instead of being filled with a guess.
+- **Licence**: Ultralytics YOLO is AGPL-3.0. Running it in a hosted service means either open-sourcing that service or buying a commercial licence. Permissively licensed alternatives (RTMDet, RTMPose) exist; chapter 12 covers the decision.
 
-The pipeline lives in `pep/pipeline.py`, one stage per folder:
+## How it's set up
 
-| Stage | Code | Choice and why |
-|---|---|---|
-| Read frames | `pep/video/frames.py` | Sample ~10–15 fps: enough for running, and much cheaper than 60 |
-| Detect people + ball | `pep/vision/perception.py` | **YOLO26-s** (det) and **YOLO26-n-pose** (keypoints). Small and fast; the ball gets a second, zoomed-in look near the player's feet because it's tiny |
-| Track | `perception.py` (ByteTrack via Ultralytics) | Keeps blurred, half-hidden players |
-| Camera motion | `pep/vision/camera.py` | Shi-Tomasi corners + Lucas-Kanade optical flow + RANSAC affine fit, ignoring points on people |
-| Which player is *you*? | `pep/vision/target.py` | The app asks the player to tap themselves; tracks are **stitched** together across ID switches by position and time |
-| Pixels → metres | `pep/vision/calibration.py` | **Homography** from cones for drills (accurate); **body ruler** from the profile's height for matches (rougher, so confidence is lower) |
-| Clean up and measure | `pep/metrics/kinematics.py` | Kalman + RTS smoother → speed, acceleration, distance, sprints |
-| Ball skills, technique | `pep/metrics/ball.py`, `technique.py` | Touches, close control, turns, knee bend, head checks from keypoints |
-| Drills | `pep/drills/runner.py` | e.g. the 30 m sprint: clock starts after 20 cm of movement, like timing gates |
+The whole analysis, stage by stage, is in `pep/pipeline.py`:
 
-Honesty rules built in:
-- Every measurement knows **how it was measured** (`method`: homography
-  or body), and body-ruler numbers get lower confidence.
-- If the player was tracked for too little time, skills are marked as
-  not measured rather than guessed.
-- Gaps longer than a second (player hidden or off-screen) split the track
-  into separate pieces instead of being bridged with a guess.
-
-**Licence note:** Ultralytics YOLO is **AGPL-3.0**. Using it in a hosted
-service means either open-sourcing that service or buying their
-commercial licence. Alternatives with permissive licences (RT-DETR via
-other libraries, RTMDet/RTMPose from OpenMMLab) are listed in chapter 12.
+| Stage | Code |
+| --- | --- |
+| Read frames | `pep/video/frames.py` |
+| Detect people and ball, track | `pep/vision/perception.py` |
+| Camera motion | `pep/vision/camera.py` |
+| Which player is you | `pep/vision/target.py` |
+| Pixels to metres | `pep/vision/calibration.py` |
+| Smooth and measure speed, sprints | `pep/metrics/kinematics.py` |
+| Ball skills and technique | `pep/metrics/ball.py`, `pep/metrics/technique.py` |
+| Drills (e.g. the 30 m sprint) | `pep/drills/runner.py` |
 
 ## Words to know
-frame · pixel · fps · object detection · bounding box · confidence ·
-IoU · NMS · pose estimation · keypoint · multi-object tracking · track ·
-ID switch · ByteTrack · optical flow · RANSAC · camera-motion
-compensation · calibration · homography · Kalman filter · smoother
+
+frame · pixel · fps · object detection · bounding box · confidence · pose estimation · keypoint · tracking · ID switch · ByteTrack · optical flow · RANSAC · camera-motion compensation · calibration · homography · Kalman filter · smoother
 
 ## Workbook 06
 
 **Try it**
+
+1. Run `pep analyse clip.mp4 --positions RW --overlay debug.mp4` on a short clip and open `debug.mp4`: boxes, your trail, speeds.
+2. Run YOLO on one frame in Python: `from ultralytics import YOLO; YOLO("yolo26s.pt")("frame.jpg")[0].show()`. Change the confidence threshold and watch boxes appear and disappear.
+3. Film a 30 m sprint with four cones in shot and compare Pep's time with a stopwatch. Then film it without cones and compare again.
+
+**Questions**
+
+**1. What goes wrong if you skip camera-motion compensation?**
+
+*Answer:* Panning makes the player appear to move (or stand still while sprinting), so speeds and distances are wrong.
+
+**2. Why are drills more accurate than matches?**
+
+*Answer:* Drills have cones at known positions, so pixels map to metres precisely. Matches have no known points, so Pep uses the player's height as a ruler, which is rougher.
+
+**3. What does a Kalman filter trade off?**
+
+*Answer:* Trusting the measurement (quick to react but jittery) against trusting the physics (smooth but slow to react). It sets the blend from how noisy each one is.
+
+## More practice
+
+Exercises added as features were built. Each one points at real code.
+
 1. `pip install -e ".[vision]"`, then
    `pep analyse clip.mp4 --positions RW --overlay debug.mp4` on a short
    clip. Open `debug.mp4`: boxes, the target's trail, speeds.
@@ -123,28 +93,3 @@ compensation · calibration · homography · Kalman filter · smoother
    a stopwatch. Then film it without cones (body ruler) and compare again.
 4. Read `kalman_rts` in `pep/metrics/kinematics.py`. Plot raw positions
    vs smoothed positions for one clip.
-
-**Questions**
-
-**1. Why does Pep look for the ball a second time, zoomed in?**
-
-*Answer:* In a phone video the ball is often only a few pixels wide;
-detectors miss small objects. Cropping around the player's feet and
-enlarging makes the ball big enough to detect.
-
-**2. What goes wrong if you skip camera-motion compensation?**
-
-*Answer:* Panning the camera makes the player appear to move (or stand
-still while sprinting), so speeds and distances are wrong.
-
-**3. Why are drills more accurate than matches?**
-
-*Answer:* Drills have cones at known positions, so a homography maps
-pixels to metres precisely. Matches have no known points, so Pep uses the
-player's height as a ruler, which is rougher.
-
-**4. What does a Kalman filter trade off?**
-
-*Answer:* Trusting the measurement (responsive but jittery) vs trusting
-the motion model (smooth but slow to react). The Kalman gain sets the
-blend based on how noisy each is.
