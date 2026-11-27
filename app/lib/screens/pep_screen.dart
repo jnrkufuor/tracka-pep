@@ -166,15 +166,16 @@ class _PepScreenState extends State<PepScreen> {
 
   List<Widget> _main(AppState s, FocusState? f, String name, PepMood mood, List<Video> ready, Video? newest) {
     final a = context.accent;
-    final shortcuts = <(String, String, int?, VoidCallback)>[
-      ('clip', 'Reviews', ready.isEmpty ? null : ready.length, () => _go(const ReviewsScreen())),
-      ('target', 'Tips', tips?.length, () => _go(const TipsScreen())),
-      ('calendar', 'Schedule', null, () => _go(const WeekScreen())),
-      ('streak', 'Sessions', null, () => _go(const WeekScreen())),
-      ('vision', 'Focus', null, () => _go(const FocusScreen())),
-      ('heart', 'Health', null, () => showHealthSheet(context)),
+    // The canvas's icons and colours: Pep's things purple, your training in
+    // your main colour, health in calm stone.
+    final shortcuts = <(String, Color, String, int?, VoidCallback)>[
+      ('vision', Tk.pep, 'Reviews', ready.isEmpty ? null : ready.length, () => _go(const ReviewsScreen())),
+      ('help', Tk.pep, 'Tips', tips?.length, () => _go(const TipsScreen())),
+      ('calendar', a.main, 'Schedule', null, () => _go(const WeekScreen())),
+      ('pace', a.main, 'Sessions', null, () => _go(const SessionsScreen())),
+      ('target', a.main, 'Focus', null, () => _go(const FocusScreen())),
+      ('shield', Tk.stone, 'Health', null, () => _go(const HealthScreen())),
     ];
-    final next = s.week?.nextSession;
     return [
       Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
         _TapPep(mood: mood),
@@ -209,7 +210,7 @@ class _PepScreenState extends State<PepScreen> {
           clipBehavior: Clip.none,
           padding: const EdgeInsets.only(top: 6),
           children: [
-            for (final (icon, label, count, onTap) in shortcuts)
+            for (final (icon, iconColour, label, count, onTap) in shortcuts)
               Semantics(
                 button: true,
                 label: count != null && count > 0 ? '$label, $count new' : label,
@@ -229,7 +230,7 @@ class _PepScreenState extends State<PepScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(color: (count ?? 0) > 0 ? a.main : Tk.lineStrong, width: (count ?? 0) > 0 ? 2 : 1.5),
                           ),
-                          child: TIcon(icon, size: 22, color: (count ?? 0) > 0 ? Tk.ink : Tk.muted),
+                          child: TIcon(icon, size: 22, color: iconColour),
                         ),
                         if ((count ?? 0) > 0)
                           Positioned(
@@ -280,44 +281,7 @@ class _PepScreenState extends State<PepScreen> {
             ),
           ]),
         ),
-      Panel(
-        onTap: next == null ? () => _go(const WeekScreen()) : () => _go(SessionScreen(sessionKey: next.$2.id)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Container(
-              width: 44,
-              height: 44,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: a.tile, borderRadius: BorderRadius.circular(14)),
-              child: TIcon('ball', size: 22, color: a.main),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(next == null ? 'THIS WEEK' : (next.$1.isToday ? "TODAY'S TRAINING" : 'NEXT · ${next.$1.weekday.toUpperCase()}'),
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .66, color: a.main)),
-                const SizedBox(height: 2),
-                Text(next?.$2.title ?? 'All sessions done',
-                    style: const TextStyle(fontFamily: TType.display, fontSize: 20, fontWeight: FontWeight.w600, height: 1.15, color: Tk.ink)),
-              ]),
-            ),
-            if (next != null)
-              Container(
-                width: 46,
-                height: 46,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: a.main, shape: BoxShape.circle),
-                child: TIcon('play', size: 16, color: a.on),
-              ),
-          ]),
-          const SizedBox(height: 12),
-          Text(
-            next == null ? "You've done this week's sessions. Rest well, and I'll plan next week." : 'I picked this from your goal and your latest clips.',
-            style: const TextStyle(fontSize: 13.5, height: 1.45, color: Tk.lab),
-          ),
-          if (next?.$2.durationMin != null) ...[const SizedBox(height: 4), Text('${next!.$2.durationMin} minutes', style: bNote)],
-        ]),
-      ),
+      const TrainingCard(),
       Pressable(
         onTap: () => showHealthSheet(context),
         child: const SafetyNote('In pain or injured? Rest, and see a doctor or physio. I can give you an easier plan.'),
@@ -463,7 +427,7 @@ class _GrowRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 9),
       decoration: divider ? const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))) : null,
       child: Row(children: [
-        TIcon('up', size: 16, color: c.main),
+        TIcon(switch (a.group.toLowerCase()) { 'reading the game' => 'vision', 'body' => 'pace', 'attitude' => 'heart', _ => 'pass' }, size: 16, color: Tk.inkSoft),
         const SizedBox(width: 10),
         Expanded(child: Text(a.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Tk.body))),
         Container(

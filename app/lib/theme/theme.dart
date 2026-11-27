@@ -148,8 +148,33 @@ ThemeData trackaTheme({MainColour colour = MainColour.volt}) {
       trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: a.main, linearTrackColor: Tk.line),
+    // Canvas: a new screen's content fades in (0.35 s, ease-out). Same on
+    // every phone, so Android and iPhone feel like the design.
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: ZoomPageTransitionsBuilder(),
+      TargetPlatform.android: FadeInPageTransitionsBuilder(),
+      TargetPlatform.iOS: FadeInPageTransitionsBuilder(),
+      TargetPlatform.linux: FadeInPageTransitionsBuilder(),
+      TargetPlatform.macOS: FadeInPageTransitionsBuilder(),
+      TargetPlatform.windows: FadeInPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: FadeInPageTransitionsBuilder(),
     }),
   );
+}
+
+
+/// Page transition from the canvas: the new screen fades in over 0.35 s while
+/// rising 12 px; the old one fades out underneath. With reduce motion the
+/// route still changes, just without movement.
+class FadeInPageTransitionsBuilder extends PageTransitionsBuilder {
+  const FadeInPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(PageRoute<T> route, BuildContext context, Animation<double> animation, Animation<double> secondary, Widget child) {
+    if (Motion.reduced(context)) return child;
+    final a = CurvedAnimation(parent: animation, curve: Curves.easeOut, reverseCurve: Curves.easeIn);
+    return FadeTransition(
+      opacity: a,
+      child: SlideTransition(position: Tween(begin: const Offset(0, .015), end: Offset.zero).animate(a), child: child),
+    );
+  }
 }

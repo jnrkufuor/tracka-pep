@@ -267,7 +267,11 @@ class BRow extends StatelessWidget {
     this.divider = true,
     this.titleSize = 14.5,
     this.leading,
+    this.round = false,
   });
+
+  /// A round tile with an outline (Sessions: coming up) instead of a square one.
+  final bool round;
 
   /// Something else in the tile (the colour wheel in Settings).
   final Widget? leading;
@@ -294,7 +298,13 @@ class BRow extends StatelessWidget {
             width: tile,
             height: tile,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: tileColor ?? Tk.field, borderRadius: BorderRadius.circular(tile * 0.3)),
+            decoration: round
+                ? BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: tileColor,
+                    border: tileColor == null ? Border.all(color: const Color(0xFF333333), width: 2) : null,
+                  )
+                : BoxDecoration(color: tileColor ?? Tk.field, borderRadius: BorderRadius.circular(tile * 0.3)),
             child: leading,
           )
         else
@@ -368,4 +378,196 @@ class _WheelPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WheelPainter old) => false;
+}
+
+/// A page under a tab (canvas: Reviews, Your schedule, Health…): a round
+/// back button with an optional note on the right, the eyebrow ("Pep"),
+/// a big title and a short line, then the content, 18 apart.
+class BPage extends StatelessWidget {
+  const BPage({
+    super.key,
+    this.eyebrow,
+    this.eyebrowColor,
+    this.title,
+    this.sub,
+    this.topNote,
+    required this.children,
+    this.bottom,
+    this.gap = 18,
+  });
+
+  final String? eyebrow;
+  final Color? eyebrowColor;
+  final String? title;
+  final String? sub;
+  final String? topNote;
+  final List<Widget> children;
+  final Widget? bottom;
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[
+      Row(children: [
+        Semantics(
+          button: true,
+          label: 'Back',
+          excludeSemantics: true,
+          child: Pressable(
+            onTap: () => Navigator.of(context).maybePop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: Tk.field, shape: BoxShape.circle),
+              child: const TIcon('back', size: 16, color: Tk.ink),
+            ),
+          ),
+        ),
+        const Spacer(),
+        if (topNote != null) Text(topNote!, style: bNote),
+      ]),
+      if (title != null)
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (eyebrow != null) ...[
+            Text(eyebrow!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: eyebrowColor ?? Tk.pep)),
+            const SizedBox(height: 6),
+          ],
+          Text(title!, style: Theme.of(context).textTheme.headlineLarge),
+          if (sub != null) ...[const SizedBox(height: 6), Text(sub!, style: bNote.copyWith(fontSize: 13))],
+        ]),
+      ...children,
+    ];
+    return Scaffold(
+      body: SafeArea(
+        child: Column(children: [
+          Expanded(
+            child: EnterFade(
+              child: ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 32), children: [
+                for (final (i, w) in items.indexed) ...[if (i > 0) SizedBox(height: i == 1 ? 14 : gap), w],
+              ]),
+            ),
+          ),
+          if (bottom != null) Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 16), child: bottom),
+        ]),
+      ),
+    );
+  }
+}
+
+/// A coloured block in a day (canvas: Your schedule): tinted background,
+/// a 3 px edge in the thing's colour, title, time.
+class BBlock extends StatelessWidget {
+  const BBlock({super.key, required this.title, this.sub, required this.edge, required this.fill, this.onTap, this.done = false, this.faded = false});
+
+  final String title;
+  final String? sub;
+  final Color edge;
+  final Color fill;
+  final VoidCallback? onTap;
+  final bool done;
+  final bool faded;
+
+  @override
+  Widget build(BuildContext context) {
+    final box = Opacity(
+      opacity: faded ? .5 : 1,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(11, 8, 11, 8),
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: BorderRadius.circular(12),
+          border: Border(left: BorderSide(color: edge, width: 3)),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Tk.ink,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                    decorationColor: Tk.muted,
+                  )),
+              if (sub != null && sub!.isNotEmpty) Text(sub!, style: const TextStyle(fontSize: 11.5, color: Tk.muted)),
+            ]),
+          ),
+          if (done) TIcon('check', size: 14, color: context.accent.main, stroke: 6),
+          if (onTap != null && !done) const TIcon('chevron', size: 11, color: Tk.muted),
+        ]),
+      ),
+    );
+    return onTap == null ? box : Pressable(onTap: onTap, child: box);
+  }
+}
+
+/// A small ghost chip with an icon ("+ School", "Team training").
+class BGhostChip extends StatelessWidget {
+  const BGhostChip({super.key, required this.icon, required this.label, required this.onTap});
+
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Pressable(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF333333), width: 1.5)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            TIcon(icon, size: 14, color: Tk.ink),
+            const SizedBox(width: 6),
+            Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Tk.ink)),
+          ]),
+        ),
+      );
+}
+
+/// A segmented choice in a dark pill (canvas `.seg`): the picked one fills
+/// with your main colour.
+class BSeg<V> extends StatelessWidget {
+  const BSeg({super.key, required this.options, required this.value, required this.onChanged});
+
+  final Map<V, String> options;
+  final V value;
+  final ValueChanged<V> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = context.accent;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999)),
+      child: Row(children: [
+        for (final e in options.entries)
+          Expanded(
+            child: Semantics(
+              button: true,
+              selected: e.key == value,
+              label: e.value,
+              excludeSemantics: true,
+              child: Pressable(
+                onTap: () => onChanged(e.key),
+                child: AnimatedContainer(
+                  duration: Motion.of(context, Motion.select),
+                  curve: Motion.change,
+                  padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: e.key == value ? a.main : Colors.transparent, borderRadius: BorderRadius.circular(999)),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(e.value,
+                        maxLines: 1,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: e.key == value ? a.on : const Color(0xFFC2C6BA))),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
 }

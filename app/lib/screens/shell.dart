@@ -31,7 +31,7 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => ShellState();
 }
 
-class ShellState extends State<Shell> {
+class ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   late int index = (widget.initialTab ?? int.tryParse(AppConfig.param('tab') ?? '') ?? 0).clamp(0, 3);
 
   @override
@@ -44,7 +44,22 @@ class ShellState extends State<Shell> {
     }
   }
 
-  void go(int i) => setState(() => index = i);
+  /// Each tab fades in when you open it (canvas: every screen's content
+  /// arrives with a 0.35 s fade).
+  late final AnimationController _fade = AnimationController(vsync: this, duration: Motion.enter, value: 1);
+
+  @override
+  void dispose() {
+    _fade.dispose();
+    super.dispose();
+  }
+
+  void go(int i) {
+    if (i == index) return;
+    setState(() => index = i);
+    if (Motion.reduced(context)) return;
+    _fade.forward(from: 0);
+  }
 
   /// The + button (canvas: The + button): what do you want to do?
   void _add() => showPlusSheet(context);
@@ -53,12 +68,15 @@ class ShellState extends State<Shell> {
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     final scaffold = Scaffold(
-      body: IndexedStack(index: index, children: [
-        HomeScreen(onOpenTab: go),
-        const PitchsideScreen(),
-        const PepScreen(),
-        const ProfileScreen(),
-      ]),
+      body: FadeTransition(
+        opacity: CurvedAnimation(parent: _fade, curve: Curves.easeOut),
+        child: IndexedStack(index: index, children: [
+          // TickerMode: hidden tabs stay alive (they keep their scroll) but stop
+          // animating, so Pep on a tab you can't see doesn't use the phone's time.
+          for (final (i, tab) in [HomeScreen(onOpenTab: go), const PitchsideScreen(), const PepScreen(), const ProfileScreen()].indexed)
+            TickerMode(enabled: i == index, child: tab),
+        ]),
+      ),
       bottomNavigationBar: TabBarT(index: index, onTab: go, onAdd: _add),
     );
     if (!s.tourPending) return scaffold;
