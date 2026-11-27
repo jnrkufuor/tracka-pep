@@ -61,7 +61,8 @@ ThemeData trackaTheme({MainColour colour = MainColour.volt}) {
   );
   OutlineInputBorder border(Color c) => OutlineInputBorder(
         borderRadius: BorderRadius.circular(Tk.rField),
-        borderSide: BorderSide(color: c, width: 1.5),
+        // Quiet edges: a thin line at rest, your colour when you type.
+        borderSide: BorderSide(color: c, width: c == Tk.lineStrong ? 1 : 1.5),
       );
   return ThemeData(
     useMaterial3: true,
@@ -113,7 +114,7 @@ ThemeData trackaTheme({MainColour colour = MainColour.volt}) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: Tk.ink,
-        side: const BorderSide(color: Tk.lineStrong, width: 1.5),
+        side: const BorderSide(color: Color(0xFF262626)),
         minimumSize: const Size(64, Tk.btnInCard),
         padding: const EdgeInsets.symmetric(horizontal: 18),
         shape: const StadiumBorder(),

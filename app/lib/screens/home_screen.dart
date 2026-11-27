@@ -116,7 +116,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final dayOne = !tested && s.videos.isEmpty;
     final startOpen = start.any((x) => !x.done);
     final ready = s.videos.where((v) => v.status == 'READY').firstOrNull;
-    final children = <Widget>[
+    // Goal "just looking around" (canvas: Home for players just looking around):
+    // no plan, no checklist; the best of Pitchside and an open door to a goal.
+    final looking = me?.profile.goal == 'looking';
+    final children = looking ? _explorer(s, name) : <Widget>[
       if (s.offline) const OfflineBanner(),
       const GuardianCard(),
       const UploadsCard(),
@@ -144,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
               week: s.week!,
               firstWeek: dayOne,
               picked: picked,
-              onPick: dayOne ? null : (d) => setState(() => picked = d),
+              onPick: dayOne ? (_) => _go(const WeekScreen()) : (d) => setState(() => picked = d),
             ),
         ]),
       ),
@@ -230,6 +233,79 @@ class _HomeScreenState extends State<HomeScreen> {
 
 const _progressPages = {'progress', 'challenge', 'readiness', 'streak'};
 
+extension on _HomeScreenState {
+  List<Widget> _explorer(AppState s, String name) {
+    final a = context.accent;
+    final top = feed?.firstOrNull;
+    final w = challenges?.thisWeek;
+    return [
+      if (s.offline) const OfflineBanner(),
+      Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Expanded(child: EnterFade(child: BHead(eyebrow: _greeting(), title: name.isEmpty ? 'Hello' : name, size: 32))),
+        BRoundButton(
+          icon: 'bell',
+          label: s.unread > 0 ? 'Notifications, ${s.unread} new' : 'Notifications',
+          dot: s.unread > 0,
+          onTap: () => _go(const NotificationsScreen()),
+        ),
+      ]),
+      _GoalPill(goal: s.me?.profile.goal),
+      if (top != null) ...[
+        BLab('Top clip near you this week', link: 'Pitchside', onLink: () => widget.onOpenTab(1)),
+        Pressable(
+          onTap: () => _go(FeedScreen(posts: feed!, startAt: 0)),
+          child: BThumb(url: top.thumbnailUrl, height: 220, radius: 20, children: [
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 14,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (top.caption.isNotEmpty)
+                      Text(top.caption, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                    Text([top.author.shirtName, top.author.line].where((x) => x.isNotEmpty).join(' · '), style: const TextStyle(fontSize: 12, color: Color(0xCCFFFFFF))),
+                  ]),
+                ),
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: a.main, shape: BoxShape.circle),
+                  child: TIcon('play', size: 15, color: a.on),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ],
+      if ((feed?.length ?? 0) > 1) ...[
+        BLab('Worth a watch', link: 'Pitchside', onLink: () => widget.onOpenTab(1)),
+        _WorthAWatch(posts: feed!.skip(1).toList()),
+      ],
+      if (w != null)
+        Panel(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('CHALLENGE OF THE WEEK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .66, color: a.main)),
+            const SizedBox(height: 6),
+            Text(w.name, style: const TextStyle(fontFamily: TType.display, fontSize: 19, height: 1.2, fontWeight: FontWeight.w700, color: Tk.ink)),
+            const SizedBox(height: 6),
+            const Text('Film a go and see how you compare with players near you. No pressure.', style: TextStyle(fontSize: 13.5, height: 1.45, color: Tk.inkSoft)),
+            const SizedBox(height: 12),
+            BCta('Give it a go', ghost: true, height: Tk.btnInCard, onTap: () => _go(ChallengeRecordScreen(challenge: w))),
+          ]),
+        ),
+      BPepNote(
+        mood: PepMood.asking,
+        title: 'Want a plan?',
+        text: "Pick a goal whenever you're ready. I'll build your week and start analysing your clips.",
+        onTap: () => _go(const EditProfileScreen()),
+      ),
+      BCta('Pick a goal', ghost: true, onTap: () => _go(const EditProfileScreen())),
+    ];
+  }
+}
+
 /// "Goal: get into an academy" under your name. Tap to change it.
 class _GoalPill extends StatelessWidget {
   const _GoalPill({required this.goal});
@@ -289,20 +365,26 @@ class _WeekStrip extends StatelessWidget {
     return Panel(
       padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
       child: Column(children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(children: [
-            Expanded(child: Text(firstWeek ? 'Your first week' : 'This week', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab))),
-            Flexible(
-              child: Text(
-                firstWeek
-                    ? 'Built by Pep from your schedule'
-                    : '$done of ${pep.length} sessions${match == null ? '' : ' · match ${match.weekday.substring(0, 3)}'}',
-                textAlign: TextAlign.right,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Tk.muted),
+        // The header opens your full schedule (it's how you get there from Home).
+        Pressable(
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WeekScreen())),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(children: [
+              Expanded(child: Text(firstWeek ? 'Your first week' : 'This week', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab))),
+              Flexible(
+                child: Text(
+                  firstWeek
+                      ? 'Schedule'
+                      : '$done of ${pep.length} sessions${match == null ? '' : ' · match ${match.weekday.substring(0, 3)}'}',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Tk.muted),
+                ),
               ),
-            ),
-          ]),
+              const SizedBox(width: 4),
+              const TIcon('chevron', size: 11, color: Tk.muted),
+            ]),
+          ),
         ),
         const SizedBox(height: 10),
         Row(children: [

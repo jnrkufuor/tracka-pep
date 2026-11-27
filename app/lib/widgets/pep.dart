@@ -104,6 +104,12 @@ Matrix4 _scale(double sx, [double? sy]) => Matrix4.diagonal3Values(sx, sy ?? sx,
   return (Matrix4.translationValues(x, y, 0), 1);
 }
 
+(Matrix4, double) _wakeUp(double t) {
+  final p = ((t - .2) / .9).clamp(0.0, 1.0);
+  final v = _kf([(0, .12), (.6, 1.08), (1, 1)], p, const Cubic(.34, 1.56, .64, 1));
+  return (_about(24, 24, _scale(1, v)), 1);
+}
+
 (Matrix4, double) _scan(double t) =>
     (Matrix4.translationValues(_kf([(0, -4), (.5, 4), (1, -4)], _phase(t, 1.6), _io), 0, 0), 1);
 
@@ -338,7 +344,11 @@ String pepSvg(PepMood mood, {Color color = Tk.pep}) =>
 /// Everything stops when the phone or Tracka asks for less motion; Pep then
 /// stands still at full size, the same picture as [pepSvg].
 class PepFace extends StatefulWidget {
-  const PepFace(this.mood, {super.key, this.size = 40, this.color = Tk.pep, this.breathe = true});
+  const PepFace(this.mood, {super.key, this.size = 40, this.color = Tk.pep, this.breathe = true, this.wake = false});
+
+  /// Open his eye when he appears (canvas "Bottom tabs": the Pep tab wakes
+  /// up when you open it; pepWake, 0.9 s with a little overshoot).
+  final bool wake;
 
   final PepMood mood;
   final double size;
@@ -391,7 +401,13 @@ class _PepFaceState extends State<PepFace> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final size = widget.size;
-    final (layers, whole) = _mood(widget.mood);
+    var (layers, whole) = _mood(widget.mood);
+    if (widget.wake && widget.mood == PepMood.justHere) {
+      // The ring and the eye open after the breath, before blinking starts.
+      layers = [
+        for (final (i, l) in layers.indexed) i == 0 ? l : _Layer(l.svg, [l.fx.first, _wakeUp, ...l.fx.skip(1)]),
+      ];
+    }
     final hex = _hex(widget.color);
     final k = size / 52; // grid units → pixels (the view box is 52 wide)
     final pics = [

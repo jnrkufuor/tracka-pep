@@ -10,6 +10,7 @@ import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import '../widgets/pep.dart';
 import 'home_screen.dart' show openUpload;
+import 'profile_screen.dart' show EditProfileScreen;
 import 'review_screens.dart';
 import 'training_screens.dart';
 
@@ -91,7 +92,10 @@ class _PepScreenState extends State<PepScreen> {
       'sore' => PepMood.calm,
       _ => dayOne || newest != null ? PepMood.excited : pepIdleMood(),
     };
-    final children = dayOne ? _dayOne(s, name, mood) : _main(s, f, name, mood, ready, newest);
+    // Goal "just looking around" (canvas: Pep tab without a goal): Pep offers
+    // to coach you instead of showing a plan you didn't ask for.
+    final looking = s.me?.profile.goal == 'looking';
+    final children = looking ? _locked() : (dayOne ? _dayOne(s, name, mood) : _main(s, f, name, mood, ready, newest));
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
@@ -105,6 +109,36 @@ class _PepScreenState extends State<PepScreen> {
         ),
       ),
     );
+  }
+
+  List<Widget> _locked() {
+    Widget perk(String icon, String t) => Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Row(children: [
+            IconTile(icon: icon, color: Tk.pep, background: Tk.pepTile, size: 40),
+            const SizedBox(width: 14),
+            Expanded(child: Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink))),
+          ]),
+        );
+    return [
+      const SizedBox(height: 12),
+      const Center(child: PepFace(PepMood.asking, size: 96)),
+      Column(children: [
+        const Text('Pep', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.pep)),
+        const SizedBox(height: 6),
+        Text('Want me to coach you?', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 6),
+        const Text("I coach players who have a goal. Pick one and here's what you get.", textAlign: TextAlign.center, style: TextStyle(fontSize: 13.5, height: 1.45, color: Tk.muted)),
+      ]),
+      Column(children: [
+        perk('calendar', 'A week built around your life'),
+        perk('vision', "Pep's read on every clip you film"),
+        perk('clock', 'Timed tests and PBs'),
+        perk('chart', "A profile that shows how you're growing"),
+      ]),
+      BCta('Pick a goal', onTap: () => _go(const EditProfileScreen())),
+      const Text('You can keep watching and doing challenges without one.', textAlign: TextAlign.center, style: bNote),
+    ];
   }
 
   List<Widget> _dayOne(AppState s, String name, PepMood mood) {
@@ -449,28 +483,6 @@ class _GrowRow extends StatelessWidget {
 
 String _day(DateTime d) => const ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][d.weekday - 1];
 
-Band? _band(String? name) => Band.fromName(name);
-
-class _AreaRow extends StatelessWidget {
-  const _AreaRow(this.a);
-
-  final AreaLine a;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(a.name, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-              Text('${a.group} · ${a.trendWords}', style: const TextStyle(fontSize: 12.5, color: Tk.muted)),
-            ]),
-          ),
-          if (_band(a.band) != null) BandPill(_band(a.band)!),
-        ]),
-      );
-}
-
 /// Pep › Focus and tests: what we're working on, and how we check it.
 class FocusScreen extends StatefulWidget {
   const FocusScreen({super.key});
@@ -501,72 +513,126 @@ class _FocusScreenState extends State<FocusScreen> {
   @override
   Widget build(BuildContext context) {
     final v = f;
-    if (failed) return Scaffold(appBar: AppBar(), body: StateView.error(onRetry: _load));
-    if (v == null) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        const Text('PEP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8)),
-        const SizedBox(height: 4),
-        Text('Focus and tests', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 4),
-        const Text("What we're working on, and how we check it.", style: TextStyle(fontSize: 13.5, color: Tk.muted)),
-        const SizedBox(height: 18),
-        const SectionLabel('Working on now'),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Column(children: [
-            for (final a in v.focus) _AreaRow(a),
-            if (v.focus.isEmpty)
-              const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('Send a clip or do a test and I\'ll pick your focus.')),
-          ]),
-        ),
-        const SizedBox(height: 6),
-        const Text('I pick these from your goal and your clips. When one is going well, we move on to the next.',
-            style: TextStyle(fontSize: 12, color: Tk.faint)),
+    final a = context.accent;
+    if (failed || v == null) {
+      return BPage(eyebrow: 'Pep', title: 'Focus and tests', children: [
+        if (failed) StateView.error(onRetry: _load) else ...[const Skeleton(height: 180), const Skeleton(height: 140)],
+      ]);
+    }
+    return BPage(
+      eyebrow: 'Pep',
+      title: 'Focus and tests',
+      sub: "What we're working on, and how we check it.",
+      children: [
+        const BLab('Working on now'),
+        if (v.focus.isEmpty)
+          const BDashed(child: Text("Send a clip or do a test and I'll pick your focus.", style: TextStyle(fontSize: 13, height: 1.45, color: Tk.muted)))
+        else
+          Panel(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            child: Column(children: [
+              for (final (i, x) in v.focus.indexed)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: i == v.focus.length - 1 ? null : const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))),
+                  child: Row(children: [
+                    IconTile(icon: _areaIcon(x.group), color: a.main, background: a.tile, size: 38),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(x.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+                        const SizedBox(height: 4),
+                        Align(alignment: Alignment.centerLeft, child: TrendPill(x)),
+                        const SizedBox(height: 6),
+                        Text('${x.group} · I check this in your clips.', style: bNote),
+                      ]),
+                    ),
+                  ]),
+                ),
+            ]),
+          ),
+        const BPepNote(mood: PepMood.reading, text: 'I pick these from your goal and your clips. When one is going well, we move on to the next.'),
         if (v.nextTest != null) ...[
-          const SizedBox(height: 18),
-          const SectionLabel('Next test'),
+          const BLab('Next test'),
           Panel(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(v.nextTest!.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Tk.ink)),
-              Text(v.nextTest!.date == null ? 'Due now · about 20 min' : '${_day(v.nextTest!.date!)} · about 20 min',
-                  style: const TextStyle(fontSize: 13, color: Tk.muted)),
-              const SizedBox(height: 6),
-              const Text('Do it the same way each time so you can see real change.', style: TextStyle(fontSize: 13.5, color: Tk.inkSoft)),
-              const SizedBox(height: 10),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TestScreen(drill: v.nextTest!.drill, name: v.nextTest!.name))),
-                child: const Text('See how it works'),
-              ),
+              Row(children: [
+                IconTile(icon: 'clock', color: a.main, background: a.tile, size: 40),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(v.nextTest!.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Tk.ink)),
+                    Text(v.nextTest!.date == null ? 'Due now · about 20 min' : '${_day(v.nextTest!.date!)} · about 20 min', style: bNote),
+                  ]),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              const Text('Do it the same way each time so you can see real change.', style: TextStyle(fontSize: 13.5, height: 1.45, color: Tk.inkSoft)),
+              const SizedBox(height: 12),
+              BCta('See how it works', ghost: true, height: Tk.btnInCard, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TestScreen(drill: v.nextTest!.drill, name: v.nextTest!.name)))),
             ]),
           ),
         ],
-        const SizedBox(height: 18),
-        const SectionLabel('Your best so far'),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Column(children: [
-            for (final b in v.bests)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(b.label, style: const TextStyle(fontSize: 14.5, color: Tk.ink)),
-                      Text(b.unit == 's' ? 'Timed by Pep' : 'Counted by Pep', style: const TextStyle(fontSize: 12, color: Tk.muted)),
-                    ]),
-                  ),
-                  Text('${b.value}${b.unit.isEmpty ? '' : ' ${b.unit}'}',
-                      style: const TextStyle(fontFamily: TType.display, fontSize: 18, fontWeight: FontWeight.w800, color: Tk.ink)),
-                ]),
-              ),
-            if (v.bests.isEmpty)
-              const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Text('No tests yet. Your first one sets your starting point.')),
-          ]),
-        ),
-        const SizedBox(height: 14),
+        const BLab('Your best so far'),
+        if (v.bests.isEmpty)
+          const BDashed(child: Text('No tests yet. Your first one sets your starting point.', style: TextStyle(fontSize: 13, height: 1.45, color: Tk.muted)))
+        else
+          Panel(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            child: Column(children: [
+              for (final (i, b) in v.bests.indexed)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  decoration: i == v.bests.length - 1 ? null : const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))),
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(b.label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink)),
+                        Text(b.unit == 's' ? 'Timed by Pep' : 'Counted by Pep', style: bNote),
+                      ]),
+                    ),
+                    Text('${b.value}${b.unit.isEmpty ? '' : ' ${b.unit}'}',
+                        style: const TextStyle(fontFamily: TType.display, fontSize: 18, fontWeight: FontWeight.w700, color: Tk.ink)),
+                  ]),
+                ),
+            ]),
+          ),
         const InfoNote(InfoNote.measured),
+      ],
+    );
+  }
+}
+
+String _areaIcon(String group) => switch (group.toLowerCase()) {
+      'reading the game' => 'vision',
+      'body' => 'pace',
+      'attitude' => 'heart',
+      _ => 'ball',
+    };
+
+/// How fast an area is growing, as three little bars (canvas: Focus and tests).
+class TrendPill extends StatelessWidget {
+  const TrendPill(this.a, {super.key});
+
+  final AreaLine a;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.accent;
+    final bars = switch (a.trend) { 'growing' => a.band == 'well_above' || a.band == 'above' ? 3 : 2, 'steady' => 1, 'dipping' => 1, _ => 1 };
+    final growing = a.trend == 'growing';
+    final fg = growing ? c.main : (a.trend == 'dipping' ? Tk.gold : Tk.stone);
+    final bg = growing ? c.tile : (a.trend == 'dipping' ? Tk.goldTile : Tk.stoneTile);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+        for (final (i, h) in [6.0, 9.0, 12.0].indexed) ...[
+          if (i > 0) const SizedBox(width: 2),
+          Container(width: 4, height: h, decoration: BoxDecoration(color: i < bars ? fg : Tk.lineStrong, borderRadius: BorderRadius.circular(3))),
+        ],
+        const SizedBox(width: 6),
+        Text(bars == 3 && growing ? 'Growing fast' : a.trendWords, style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: fg)),
       ]),
     );
   }
@@ -581,55 +647,66 @@ class TestScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final a = context.accent;
     final d = context.read<AppState>().meta?.drills[drill];
+    const kitNames = {'ball': ('ball', 'A ball'), 'wall': ('target', 'A wall'), 'cones': ('cone', 'Cones or markers'), 'friends': ('users', 'A friend to film'), 'space': ('pace', 'Space to run')};
+    final needs = [for (final n in d?.needs ?? const <String>[]) if (kitNames[n] != null) kitNames[n]!, ('camera', 'Your phone')];
     final steps = [
       ('Warm up for 5 minutes', 'Jog, skips, a few short sprints at half speed.'),
       (d?.label ?? name, d?.how ?? 'Follow the steps on the upload screen.'),
       ('Film it', d?.needsCalibration ?? false ? 'Phone side-on, and mark the cones when you upload.' : 'Phone on its side, all of you in shot.'),
     ];
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        const Text('TEST', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8)),
-        const SizedBox(height: 4),
-        Text(name, style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 4),
-        const Text('About 20 minutes. Do it the same way every time.', style: TextStyle(fontSize: 13.5, color: Tk.muted)),
-        const SizedBox(height: 18),
-        const SectionLabel('How it works'),
+    return BPage(
+      eyebrow: 'Test',
+      title: name,
+      sub: 'About 20 minutes. Do it the same way every time.',
+      bottom: BCta('Film the test', icon: 'camera', onTap: () => openUpload(context, drill: drill, title: name)),
+      children: [
+        const BLab('You need'),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final (icon, label) in needs)
+            Container(
+              constraints: const BoxConstraints(minHeight: Tk.btnSmall),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF2A2A2A))),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                TIcon(icon, size: 14, color: Tk.inkSoft),
+                const SizedBox(width: 6),
+                Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Tk.ink)),
+              ]),
+            ),
+        ]),
+        const BLab('How it works'),
         Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Column(children: [
             for (final (i, (title, how)) in steps.indexed)
-              Padding(
+              Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: i == steps.length - 1 ? null : const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Container(
                     width: 26,
                     height: 26,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: context.accent.tile),
-                    child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.accent.main)),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: a.tile),
+                    child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: a.main)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(title, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-                      Text(how, style: const TextStyle(fontSize: 13, color: Tk.muted)),
+                      const SizedBox(height: 2),
+                      Text(how, style: bNote.copyWith(fontSize: 12.5)),
                     ]),
                   ),
                 ]),
               ),
           ]),
         ),
-        const SizedBox(height: 10),
-        const Text('I time you from the video. Your best goes into Focus and tests, and onto your skill areas in Me.',
-            style: TextStyle(fontSize: 12.5, color: Tk.faint)),
-        const SizedBox(height: 12),
+        const BPepNote(mood: PepMood.counting, text: 'I time you from the video. Your best goes into Focus and tests, and onto your skill areas in Me.'),
         const SafetyNote("Stop if anything hurts. Skip the test if you're sick or injured."),
-        const SizedBox(height: 16),
-        FilledButton(onPressed: () => openUpload(context, drill: drill, title: name), child: const Text('Film the test')),
-      ]),
+      ],
     );
   }
 }

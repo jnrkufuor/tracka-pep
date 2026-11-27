@@ -47,7 +47,7 @@ from ..contracts import POSITIONS, AnalysisRequest, Calibration, Point
 from ..drills.runner import drill_catalogue
 from ..log import get_logger
 from ..storage import storage
-from . import auth, details, guardian, pitchside, review, sms, store
+from . import auth, details, guardian, photos, pitchside, review, sms, store
 from .coach import summary
 from .skill_areas import skill_areas
 
@@ -214,6 +214,8 @@ def _me(user: dict) -> dict:
             "guardianPhone": d["guardian_phone"],
             "guardianRelation": d["guardian_relation"],
             "casual": d["casual"],
+            # Your photo, only for you (pep/players/photos.py). Older apps ignore it.
+            "photoUrl": photos.photo_url(user["id"]),
         },
         "settings": p["settings"],
         # The app shows onboarding until these are filled in.
@@ -528,3 +530,6 @@ router.include_router(account_router)
 from .app_errors import router as app_errors_router  # noqa: E402
 
 router.include_router(app_errors_router)
+
+# Your profile photo (PUT/DELETE /v1/me/photo): pep/players/photos.py
+router.include_router(photos.router)

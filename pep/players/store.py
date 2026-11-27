@@ -169,6 +169,10 @@ def delete_user(uid: str) -> list[str]:
                     keys += [k for k in (job.overlay_key, job.thumb_key) if k]
                 c.execute(delete(db.jobs).where(db.jobs.c.id == v.job_id))
                 c.execute(delete(db.ratings).where(db.ratings.c.job_id == v.job_id))
+        # Files that aren't videos: the profile photo (pep/players/photos.py).
+        photo = db.metadata.tables.get("profile_photos")
+        if photo is not None:
+            keys += [r.photo_key for r in c.execute(select(photo.c.photo_key).where(photo.c.user_id == uid))]
         # Every row in every table that points at this user, children first
         # (SQLite doesn't enforce ON DELETE CASCADE unless asked to). Found from the
         # foreign keys themselves, so a new feature's table is covered the day it's
