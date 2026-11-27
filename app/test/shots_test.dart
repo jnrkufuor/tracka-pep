@@ -15,7 +15,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:tracka/screens/auth_screen.dart';
 import 'package:tracka/screens/onboarding_screen.dart';
+import 'package:tracka/screens/review_screens.dart';
 import 'package:tracka/screens/settings_screen.dart';
+import 'package:tracka/screens/training_screens.dart';
 import 'package:tracka/screens/shell.dart';
 import 'package:tracka/state/app_state.dart';
 import 'package:tracka/theme/theme.dart';
@@ -84,6 +86,11 @@ void main() {
     '17-pep-day-one': () => const Shell(initialTab: 2),
     '18-me-day-one': () => const Shell(initialTab: 3),
     '20-pep-moods': () => const _Moods(),
+    '21-schedule': () => const WeekScreen(),
+    '22-sessions': () => const SessionsScreen(),
+    '23-health': () => const HealthScreen(),
+    '24-reviews': () => const ReviewsScreen(),
+    '25-tips': () => const TipsScreen(),
   };
 
   for (final MapEntry(key: name, value: make) in shots.entries) {
