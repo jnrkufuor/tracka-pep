@@ -24,17 +24,6 @@ String _dayLabel(DateTime d) => '${d.day} ${_monthShort[d.month - 1]}';
 
 /// Colour and icon for each kind of item, by job: you (main colour) for Pep's
 /// sessions and tests, stone for your own football, gold for rest.
-(String, Color, Color) _look(BuildContext context, WeekItem i) {
-  final a = context.accent;
-  return switch (i.kind) {
-    'pep' => ('pep', a.main, a.tile),
-    'test' => ('pace', a.main, a.tile),
-    'rest' => ('hurt', Tk.gold, Tk.goldTile),
-    'match' => ('trophy', Tk.stone, Tk.stoneTile),
-    _ => ('ball', Tk.stone, Tk.stoneTile),
-  };
-}
-
 String _itemLine(WeekItem i) {
   final parts = <String>[
     if (i.time != null) i.time!,
@@ -156,7 +145,7 @@ class _WeekScreenState extends State<WeekScreen> {
           Text(t, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Tk.muted)),
         ]);
     Future<void> add(String kind) async {
-      await showEventSheet(context, kind: kind);
+      await showEventSheet(context, initialKind: kind);
       if (mounted) await _load(_start);
     }
 
@@ -928,8 +917,8 @@ class TrainingCard extends StatelessWidget {
 /// Add or change your own football: team training, matches, school, games.
 /// Pep fits its sessions around these. Adding has its own button; changing an
 /// existing one saves as you go (the edit-sheet rule), with Remove at the end.
-Future<void> showEventSheet(BuildContext context, {String? eventId, String? kind}) async {
-  final kindArg = kind;
+Future<void> showEventSheet(BuildContext context, {String? eventId, String? initialKind}) async {
+  final String? kindArg = initialKind;
   final s = context.read<AppState>();
   FootballEvent? found;
   if (eventId != null) {
