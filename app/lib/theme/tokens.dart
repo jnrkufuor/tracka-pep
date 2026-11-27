@@ -30,6 +30,8 @@ class Tk {
   static const inkSoft = Color(0xFFC9CDC2);
   static const muted = Color(0xFFA7AC9C);
   static const faint = Color(0xFF8C9183);
+  static const lab = Color(0xFFD5D9CE); // section labels (canvas .lab)
+  static const body = Color(0xFFE4E7DE); // card body text
 
   // Pep (purple). Pep's colour never changes, whatever main colour you pick.
   static const pep = Color(0xFFB98CFF);
