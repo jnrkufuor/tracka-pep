@@ -733,7 +733,7 @@ class HealthScreen extends StatelessWidget {
               child: Row(children: [
                 TIcon('shield', size: 18, color: Tk.gold),
                 SizedBox(width: 10),
-                Text('If something hurts', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFFF0DFAE))),
+                Flexible(child: Text('If something hurts', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFFF0DFAE)))),
               ]),
             ),
             step(1, 'Stop and rest', "Don't play through pain."),
