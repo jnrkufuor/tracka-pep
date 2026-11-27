@@ -8,12 +8,27 @@ import '../api/models.dart';
 import '../config.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import 'card_screens.dart' show PrivacyScreen;
 import 'guardian_screens.dart';
 import 'home_screen.dart' show CustomiseHomeScreen;
 import 'notifications_screen.dart' show NotificationSettingsScreen;
-import 'profile_screen.dart' show MainColourPicker;
+import 'profile_screen.dart' show EditProfileScreen, MainColourPicker;
+
+/// Opens Settings as a sheet over Me (canvas: Settings: grabber, round close
+/// button, big title). Swipe down or tap the close button to go back.
+Future<void> showSettingsSheet(BuildContext context) => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Tk.bg,
+      barrierColor: Colors.black,
+      sheetAnimationStyle: Motion.reduced(context)
+          ? const AnimationStyle(duration: Duration.zero, reverseDuration: Duration.zero)
+          : const AnimationStyle(duration: Motion.sheet, reverseDuration: Motion.select),
+      builder: (_) => const SettingsScreen(),
+    );
 
 /// Settings (canvas: Settings and its sections). Every switch saves as you go.
 ///
@@ -34,81 +49,135 @@ class SettingsScreen extends StatelessWidget {
     final me = s.me;
     final st = s.settings;
     final p = me?.profile;
+    final a = context.accent;
     final minor = p?.age != null && p!.age! < 18;
     final initials = (p?.displayName ?? '?').split(' ').where((w) => w.isNotEmpty).map((w) => w[0]).take(2).join().toUpperCase();
-    Widget row(String title, String sub, VoidCallback onTap, {Widget? trailing}) => ListTile(
-          title: Text(title),
-          subtitle: Text(sub),
-          trailing: trailing ?? const TIcon('chevron', size: 14, color: Tk.faint),
-          onTap: onTap,
-        );
     final colour = MainColour.fromName(st.mainColour);
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        Text('Settings', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 16),
-        Panel(
-          child: Row(children: [
-            Container(
-              width: 48,
-              height: 48,
+    Widget group(List<BRow> rows) => Panel(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+          child: Column(children: [
+            for (final (i, r) in rows.indexed)
+              BRow(
+                icon: r.icon,
+                title: r.title,
+                sub: r.sub,
+                iconColor: r.iconColor,
+                tileColor: r.tileColor,
+                onTap: r.onTap,
+                trailing: r.trailing ?? const TIcon('chevron', size: 14, color: Tk.faint),
+                divider: i < rows.length - 1,
+              ),
+          ]),
+        );
+    BRow mine(String icon, String title, String sub, VoidCallback onTap, {Widget? trailing}) =>
+        BRow(icon: icon, title: title, sub: sub, iconColor: a.main, tileColor: a.tile, onTap: onTap, trailing: trailing);
+    final children = <Widget>[
+      Center(child: Container(width: 40, height: 5, decoration: BoxDecoration(color: const Color(0xFF333333), borderRadius: BorderRadius.circular(9)))),
+      Row(children: [
+        Expanded(child: Text('Settings', style: Theme.of(context).textTheme.headlineLarge)),
+        Semantics(
+          button: true,
+          label: 'Close',
+          excludeSemantics: true,
+          child: Pressable(
+            onTap: () => Navigator.of(context).maybePop(),
+            child: Container(
+              width: 40,
+              height: 40,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: context.accent.tile, borderRadius: BorderRadius.circular(14)),
-              child: Text(initials, style: TextStyle(fontWeight: FontWeight.w800, color: context.accent.main)),
+              decoration: const BoxDecoration(color: Tk.field, shape: BoxShape.circle),
+              child: const TIcon('close', size: 16, color: Tk.ink),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p?.displayName ?? '', style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-                Text(
-                  minor ? 'Player account · ${me?.guardianStatus == 'approved' ? 'guardian approved' : 'waiting for your guardian'}' : 'Player account',
-                  style: const TextStyle(fontSize: 12.5, color: Tk.muted),
-                ),
-              ]),
-            ),
-          ]),
+          ),
         ),
-        const SizedBox(height: 18),
-        const SectionLabel('Your app'),
-        Panel(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(children: [
-            row('Home screen', 'Pick your cards and their order', () => _go(context, const CustomiseHomeScreen())),
-            row('Notifications', 'Pep, reviews, reminders · quiet 9 pm to 7 am', () => _go(context, const NotificationSettingsScreen())),
-            row(
-              'Main colour',
-              colour.label,
-              () => showEditSheet<void>(context, title: 'Main colour', child: const MainColourPicker()),
-              trailing: Container(width: 22, height: 22, decoration: BoxDecoration(shape: BoxShape.circle, color: colour.main)),
-            ),
-            row('Accessibility', 'Text ${st.textSize.toUpperCase()} · ${st.highContrast ? 'higher contrast · ' : ''}${st.reduceMotion ? 'less motion' : 'full motion'}',
-                () => _go(context, const AccessibilityScreen())),
-            row('How Pep talks to you', '${st.pepVoice == 'street' ? 'Street talk' : 'Coach talk'} · English · ${st.units == 'mph' ? 'mph' : 'metres, km/h'}',
-                () => _go(context, const VoiceScreen())),
-          ]),
-        ),
-        const SizedBox(height: 18),
-        const SectionLabel('Privacy and data'),
-        Panel(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(children: [
-            row('Privacy and safety', 'Who can see your profile', () => _go(context, const PrivacyScreen())),
-            if (minor) row('Your guardian', me?.guardianStatus == 'approved' ? 'Approved · can change these settings' : 'Waiting for their yes', () => _go(context, const GuardianScreen())),
-            row('Your data', '${s.videos.length} clip${s.videos.length == 1 ? '' : 's'} · download or delete', () => _go(context, const DataScreen())),
-          ]),
-        ),
-        const SizedBox(height: 18),
-        const SectionLabel('Help and legal'),
-        Panel(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(children: [row('Help', 'Report a problem, terms, privacy policy', () => _go(context, const HelpScreen()))]),
-        ),
-        const SizedBox(height: 18),
-        OutlinedButton(onPressed: s.logOut, child: const Text('Sign out')),
-        const SizedBox(height: 14),
-        const Center(child: Text('Tracka $version', style: TextStyle(fontSize: 12, color: Tk.faint))),
       ]),
+      Panel(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        onTap: () => _go(context, const EditProfileScreen()),
+        child: Row(children: [
+          Container(
+            width: 52,
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF1A1A1A), border: Border.all(color: a.main, width: 2.5)),
+            child: Text(initials, style: const TextStyle(fontFamily: TType.display, fontSize: 18, fontWeight: FontWeight.w700, color: Tk.ink)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(p?.displayName ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Tk.ink)),
+              const SizedBox(height: 2),
+              Text(
+                minor ? 'Player account · ${me?.guardianStatus == 'approved' ? 'guardian approved' : 'waiting for your guardian'}' : 'Player account',
+                style: bNote,
+              ),
+            ]),
+          ),
+          const TIcon('chevron', size: 14, color: Tk.faint),
+        ]),
+      ),
+      const BLab('Your app'),
+      group([
+        mine('home', 'Home screen', 'Pick your cards and their order', () => _go(context, const CustomiseHomeScreen())),
+        mine('bell', 'Notifications', 'Pep, reviews, reminders · quiet 9 pm to 7 am', () => _go(context, const NotificationSettingsScreen())),
+        BRow(
+          icon: 'spot',
+          title: 'Main colour',
+          sub: colour.label,
+          tileColor: a.tile,
+          iconColor: colour.main,
+          onTap: () => showEditSheet<void>(context, title: 'Main colour', child: const MainColourPicker()),
+          trailing: Container(width: 20, height: 20, decoration: BoxDecoration(shape: BoxShape.circle, color: colour.main)),
+        ),
+        mine('text', 'Accessibility', 'Text ${st.textSize.toUpperCase()} · ${st.highContrast ? 'higher contrast · ' : ''}${st.reduceMotion ? 'less motion' : 'full motion'}',
+            () => _go(context, const AccessibilityScreen())),
+        BRow(
+          icon: 'pep',
+          title: 'How Pep talks to you',
+          sub: '${st.pepVoice == 'street' ? 'Street talk' : 'Coach talk'} · English · ${st.units == 'mph' ? 'mph' : 'metres, km/h'}',
+          iconColor: Tk.pep,
+          tileColor: Tk.pepTile,
+          onTap: () => _go(context, const VoiceScreen()),
+        ),
+      ]),
+      const BLab('Privacy and data'),
+      group([
+        BRow(icon: 'shield', title: 'Privacy and safety', sub: 'Who can see your profile', iconColor: Tk.stone, tileColor: Tk.stoneTile, onTap: () => _go(context, const PrivacyScreen())),
+        if (minor)
+          BRow(
+            icon: 'users',
+            title: 'Your guardian',
+            sub: me?.guardianStatus == 'approved' ? 'Approved · can change these settings' : 'Waiting for their yes',
+            iconColor: Tk.stone,
+            tileColor: Tk.stoneTile,
+            onTap: () => _go(context, const GuardianScreen()),
+          ),
+        BRow(
+          icon: 'download',
+          title: 'Your data',
+          sub: '${s.videos.length} clip${s.videos.length == 1 ? '' : 's'} · download or delete',
+          iconColor: Tk.stone,
+          tileColor: Tk.stoneTile,
+          onTap: () => _go(context, const DataScreen()),
+        ),
+      ]),
+      const BLab('Help and legal'),
+      group([
+        BRow(icon: 'help', title: 'Help and legal', sub: 'Report a problem, terms, privacy policy', iconColor: Tk.stone, tileColor: Tk.stoneTile, onTap: () => _go(context, const HelpScreen())),
+      ]),
+      BCta('Sign out', ghost: true, onTap: () {
+        Navigator.of(context).maybePop();
+        s.logOut();
+      }),
+      const Center(child: Text('Tracka $version', style: TextStyle(fontSize: 12, color: Tk.faint))),
+    ];
+    return Scaffold(
+      backgroundColor: Tk.bg,
+      body: SafeArea(
+        child: ListView(padding: const EdgeInsets.fromLTRB(20, 10, 20, 32), children: [
+          for (final (i, w) in children.indexed) ...[if (i > 0) const SizedBox(height: 16), w],
+        ]),
+      ),
     );
   }
 }
