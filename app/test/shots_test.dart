@@ -74,6 +74,7 @@ void main() {
     '08-step-3-journey': () => const OnboardingScreen(startPage: 3),
     '09-step-4-profile': () => const OnboardingScreen(startPage: 4),
     '10-step-5-schedule': () => const OnboardingScreen(startPage: 5),
+    '10b-all-set': () => const OnboardingScreen(startPage: 7),
     '11-home': () => const Shell(),
     '12-pitchside': () => const Shell(initialTab: 1),
     '13-pep': () => const Shell(initialTab: 2),

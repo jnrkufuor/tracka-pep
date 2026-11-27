@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/board.dart';
+import '../widgets/brand.dart';
 import '../widgets/ds.dart';
 import '../widgets/pep.dart';
 import '../widgets/pitch_picker.dart';
 import '../widgets/profile_fields.dart';
+import 'auth_screen.dart' show PitchPainter;
 
 /// Onboarding v2 (canvas page 1): Meet Pep, then five steps, then "All set".
 ///
@@ -783,51 +785,121 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (d.positionOrder.isNotEmpty) d.positionOrder.first,
       if (age != null) (age < 13 ? 'U13' : age < 15 ? 'U15' : age < 17 ? 'U17' : age < 20 ? 'U20' : 'Adult'),
     ].join(' · ');
-    Widget stop(String label, String title, Color colour, {bool filled = false}) => Row(children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: filled ? colour : Colors.transparent,
-              border: Border.all(color: colour, width: 2),
-            ),
-          ),
+    final h = MediaQuery.sizeOf(context).height;
+    final hero = (h * 0.6).clamp(300.0, 540.0);
+    Widget stop(Widget mark, String title, String sub, Color colour) => Row(children: [
+          SizedBox(width: 30, child: Center(child: mark)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: Tk.faint)),
-              Text(title, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Tk.ink)),
+              Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: colour)),
+              Text(sub, style: const TextStyle(fontSize: 13, color: Tk.muted)),
             ]),
           ),
         ]);
-    // Align: a list stretches its children to full width, so a bare 2 px line
-    // would draw as a wide grey bar.
-    Widget line() => Align(
-          alignment: Alignment.centerLeft,
-          child: Container(margin: const EdgeInsets.only(left: 12), width: 2, height: 28, color: const Color(0xFF2A2A2A)),
-        );
-    return ListView(padding: const EdgeInsets.fromLTRB(24, 48, 24, 24), children: [
-      Text('All set, ${d.firstName.trim()}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: a.main)),
-      const SizedBox(height: 8),
-      Text(d.goal == 'fun' || d.goal == 'looking' ? 'Your game\nstarts today.' : 'Your road\nstarts today.',
-          style: Theme.of(context).textTheme.displayMedium),
-      const SizedBox(height: 30),
-      stop("You're here", here.isEmpty ? 'Starting out' : here, a.main, filled: true),
-      line(),
-      stop('Next', d.goal == 'fun' ? 'Keep playing' : d.goal == 'looking' ? 'Look around' : 'Put in the work', Tk.stone),
-      line(),
-      stop('Your goal', goal?.$3 ?? 'Find your goal', Tk.gold),
-      const SizedBox(height: 40),
-      FilledButton(
-        onPressed: () async {
-          await showHowPepWorks(context);
-          s.startTour();
-          await s.finishOnboarding();
-        },
-        child: const Text('Show me around'),
+    // Canvas "All set": a pitch at the top fading to black, your road below it.
+    return ListView(padding: EdgeInsets.zero, children: [
+      SizedBox(
+        height: hero,
+        child: Stack(fit: StackFit.expand, children: [
+          const CustomPaint(painter: PitchPainter()),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0, .4, 1],
+                colors: [Color(0x4D000000), Color(0x1A000000), Color(0xFF000000)],
+              ),
+            ),
+          ),
+          const Positioned(left: 24, top: 40, child: TrackaLogo(size: 30)),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 8,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('All set, ${d.firstName.trim()}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: a.main)),
+              const SizedBox(height: 6),
+              Text(d.goal == 'fun' || d.goal == 'looking' ? 'Your game\nstarts today.' : 'Your road\nstarts today.',
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 40, height: 1)),
+            ]),
+          ),
+        ]),
       ),
-      TextButton(onPressed: s.finishOnboarding, child: const Text("I'll explore myself")),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+        child: Stack(children: [
+          // The road: main colour from you, fading through grey to your gold goal.
+          Positioned(
+            left: 14,
+            top: 20,
+            bottom: 20,
+            child: Container(
+              width: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0, .45, .6, 1],
+                  colors: [a.main, a.main, const Color(0xFF3A3D36), Tk.gold],
+                ),
+              ),
+            ),
+          ),
+          Column(children: [
+            stop(
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: a.main, boxShadow: [BoxShadow(color: a.main.withValues(alpha: .18), spreadRadius: 6)]),
+                child: TIcon('pin', size: 14, color: a.on),
+              ),
+              "You're here",
+              here.isEmpty ? 'Starting out' : here,
+              a.main,
+            ),
+            const SizedBox(height: 24),
+            stop(
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Tk.bg, border: Border.all(color: a.main, width: 2)),
+                child: Text('1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: a.main)),
+              ),
+              d.goal == 'fun' ? 'Keep playing' : d.goal == 'looking' ? 'Look around' : 'Put in the work',
+              'Grow, work, have fun',
+              Tk.ink,
+            ),
+            const SizedBox(height: 24),
+            stop(
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: Tk.gold, borderRadius: BorderRadius.circular(9)),
+                child: const TIcon('flag', size: 14, color: Colors.black),
+              ),
+              goal?.$3 ?? 'Find your goal',
+              'Your goal',
+              Tk.gold,
+            ),
+          ]),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        child: Column(children: [
+          BCta('Show me around', onTap: () async {
+            await showHowPepWorks(context);
+            s.startTour();
+            await s.finishOnboarding();
+          }),
+          TextButton(onPressed: s.finishOnboarding, child: const Text("I'll explore myself")),
+        ]),
+      ),
     ]);
   }
 }

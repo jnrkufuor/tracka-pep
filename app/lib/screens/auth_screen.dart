@@ -103,7 +103,7 @@ class _Hero extends StatelessWidget {
         double y(double v) => topInset + v * k;
         final cardW = math.min(w * 0.43, 168.0) * (0.85 + 0.15 * k);
         return Stack(clipBehavior: Clip.hardEdge, children: [
-          const Positioned.fill(child: CustomPaint(painter: _PitchPainter())),
+          const Positioned.fill(child: CustomPaint(painter: PitchPainter())),
           const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -151,8 +151,8 @@ class _Hero extends StatelessWidget {
 
 /// A grass pitch at night, drawn rather than photographed: mowing stripes and
 /// a chalk line. No photo means no brand logos and nothing to download.
-class _PitchPainter extends CustomPainter {
-  const _PitchPainter();
+class PitchPainter extends CustomPainter {
+  const PitchPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
