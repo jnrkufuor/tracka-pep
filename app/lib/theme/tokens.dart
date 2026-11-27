@@ -47,6 +47,16 @@ class Tk {
   static const stoneTile = Color(0xFF23251F);
 
   // Shapes.
+  // Button heights: one scale everywhere, like iOS and Material apps.
+  //   main     50  the one main action on a screen (Continue, Start training)
+  //   inCard   44  buttons inside a card, or two side by side
+  //   small    36  chips, filters and small pills
+  // 44 is also the smallest comfortable tap target, so nothing tappable is
+  // shorter than 44 except chips, which get extra space around them.
+  static const btnMain = 50.0;
+  static const btnInCard = 44.0;
+  static const btnSmall = 36.0;
+
   static const rCard = 20.0;
   static const rTile = 12.0;
   static const rField = 14.0;

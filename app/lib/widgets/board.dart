@@ -184,12 +184,12 @@ class BRoundButton extends StatelessWidget {
         child: Pressable(
           onTap: onTap,
           child: Container(
-            width: 44,
-            height: 44,
+            width: 40,
+            height: 40,
             alignment: Alignment.center,
             decoration: const BoxDecoration(color: Tk.field, shape: BoxShape.circle),
             child: Stack(clipBehavior: Clip.none, children: [
-              TIcon(icon, size: 20, color: Tk.ink),
+              TIcon(icon, size: 18, color: Tk.ink),
               if (dot)
                 Positioned(
                   right: -3,
@@ -208,7 +208,7 @@ class BRoundButton extends StatelessWidget {
 
 /// The big round button (canvas `.cta`): main colour, or ghost.
 class BCta extends StatelessWidget {
-  const BCta(this.label, {super.key, required this.onTap, this.ghost = false, this.height = 56, this.icon});
+  const BCta(this.label, {super.key, required this.onTap, this.ghost = false, this.height = Tk.btnMain, this.icon});
 
   final String label;
   final VoidCallback? onTap;
@@ -231,18 +231,18 @@ class BCta extends StatelessWidget {
             constraints: BoxConstraints(minHeight: height),
             width: double.infinity,
             alignment: Alignment.center,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
               color: ghost ? Tk.field : a.main,
               borderRadius: BorderRadius.circular(999),
               border: ghost ? Border.all(color: const Color(0xFF333333), width: 1.5) : null,
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              if (icon != null) ...[TIcon(icon!, size: 18, color: fg), const SizedBox(width: 8)],
+              if (icon != null) ...[TIcon(icon!, size: 16, color: fg), const SizedBox(width: 8)],
               Flexible(
                 child: Text(label,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, fontWeight: ghost ? FontWeight.w600 : FontWeight.w700, color: fg)),
+                    style: TextStyle(fontSize: height < Tk.btnMain ? 14.5 : 15, fontWeight: FontWeight.w600, color: fg)),
               ),
             ]),
           ),
@@ -514,13 +514,13 @@ class BGhostChip extends StatelessWidget {
   Widget build(BuildContext context) => Pressable(
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          constraints: const BoxConstraints(minHeight: Tk.btnSmall),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF333333), width: 1.5)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             TIcon(icon, size: 14, color: Tk.ink),
             const SizedBox(width: 6),
-            Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Tk.ink)),
+            Text(label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: Tk.ink)),
           ]),
         ),
       );
@@ -554,7 +554,7 @@ class BSeg<V> extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: Motion.of(context, Motion.select),
                   curve: Motion.change,
-                  padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(color: e.key == value ? a.main : Colors.transparent, borderRadius: BorderRadius.circular(999)),
                   child: FittedBox(

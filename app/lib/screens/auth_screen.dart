@@ -318,7 +318,7 @@ class _Chip extends StatelessWidget {
 
 /// The board's big rounded buttons: main colour, or dark with a border.
 class _Cta extends StatelessWidget {
-  const _Cta({required this.label, required this.onTap, this.icon, this.ghost = false, this.busy = false, this.size = 16});
+  const _Cta({required this.label, required this.onTap, this.icon, this.ghost = false, this.busy = false, this.size = 15});
 
   final String label;
   final VoidCallback? onTap;
@@ -336,8 +336,8 @@ class _Cta extends StatelessWidget {
       child: Pressable(
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 56),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          constraints: const BoxConstraints(minHeight: Tk.btnMain),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: ghost ? Tk.field : (onTap == null ? a.main.withValues(alpha: 0.45) : a.main),
@@ -347,11 +347,11 @@ class _Cta extends StatelessWidget {
           child: busy
               ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: fg))
               : Row(mainAxisSize: MainAxisSize.min, children: [
-                  if (icon != null) ...[TIcon(icon!, size: 18, color: fg, stroke: 4), const SizedBox(width: 8)],
+                  if (icon != null) ...[TIcon(icon!, size: 16, color: fg, stroke: 4), const SizedBox(width: 8)],
                   Flexible(
                     child: Text(label,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: size, fontWeight: ghost ? FontWeight.w600 : FontWeight.w700, color: fg)),
+                        style: TextStyle(fontSize: size, fontWeight: FontWeight.w600, color: fg)),
                   ),
                 ]),
         ),
