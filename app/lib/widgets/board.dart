@@ -571,3 +571,102 @@ class BSeg<V> extends StatelessWidget {
     );
   }
 }
+
+/// A switch like the canvas's (Settings): a 48 × 28 pill, your colour when on.
+class BSwitch extends StatelessWidget {
+  const BSwitch({super.key, required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = context.accent;
+    final d = Motion.of(context, Motion.toggle);
+    return Semantics(
+      toggled: value,
+      enabled: onChanged != null,
+      child: GestureDetector(
+        onTap: onChanged == null ? null : () => onChanged!(!value),
+        child: Opacity(
+          opacity: onChanged == null ? .5 : 1,
+          child: AnimatedContainer(
+            duration: d,
+            curve: Motion.change,
+            width: 48,
+            height: 28,
+            decoration: BoxDecoration(color: value ? a.main : const Color(0xFF2A2A2A), borderRadius: BorderRadius.circular(999)),
+            child: Stack(children: [
+              AnimatedPositioned(
+                duration: d,
+                curve: Motion.change,
+                left: value ? 23 : 3,
+                top: 3,
+                child: AnimatedContainer(
+                  duration: d,
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: value ? a.on : const Color(0xFF8A8F80)),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One settings row: title, a note, and a switch, a value with a chevron,
+/// or an "Always on" lock (canvas: Settings sections).
+class BSettingRow extends StatelessWidget {
+  const BSettingRow({super.key, required this.title, this.sub, this.toggle, this.onToggle, this.value, this.onTap, this.always = false, this.divider = true, this.danger = false});
+
+  final String title;
+  final String? sub;
+  final bool? toggle;
+  final ValueChanged<bool>? onToggle;
+  final String? value;
+  final VoidCallback? onTap;
+  final bool always;
+  final bool divider;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Container(
+      constraints: const BoxConstraints(minHeight: 56),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: divider ? const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))) : null,
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text(title, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: danger ? Tk.gold : Tk.ink)),
+            if (sub != null) ...[const SizedBox(height: 2), Text(sub!, style: bNote)],
+          ]),
+        ),
+        const SizedBox(width: 12),
+        if (toggle != null) BSwitch(value: toggle!, onChanged: onToggle),
+        if (always)
+          Row(mainAxisSize: MainAxisSize.min, children: const [
+            TIcon('lock', size: 12, color: Tk.muted),
+            SizedBox(width: 5),
+            Text('Always on', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Tk.muted)),
+          ]),
+        if (value != null) Flexible(child: Text(value!, textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, color: Tk.muted))),
+        if (onTap != null && toggle == null) ...[const SizedBox(width: 6), const TIcon('chevron', size: 12, color: Tk.faint)],
+      ]),
+    );
+    return onTap == null ? row : Pressable(onTap: onTap, child: row);
+  }
+}
+
+/// A group of settings rows in a card.
+class BGroup extends StatelessWidget {
+  const BGroup(this.rows, {super.key});
+
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) => Panel(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2), child: Column(children: rows));
+}

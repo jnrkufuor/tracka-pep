@@ -10,6 +10,7 @@ import '../state/app_state.dart';
 import '../theme/theme.dart';
 import '../widgets/board.dart';
 import '../widgets/ds.dart';
+import '../widgets/pep.dart';
 import 'card_screens.dart' show PrivacyScreen;
 import 'guardian_screens.dart';
 import 'home_screen.dart' show CustomiseHomeScreen;
@@ -191,41 +192,30 @@ class AccessibilityScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        Text('Accessibility', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 16),
-        const SectionLabel('Text size'),
-        SingleChips<String>(
-          options: const {'s': 'S', 'm': 'M', 'l': 'L', 'xl': 'XL'},
-          value: s.settings.textSize,
-          onChanged: (v) => s.saveSettings({'textSize': v}),
-          scroll: false,
-        ),
-        const SizedBox(height: 12),
+    final st = s.settings;
+    return BPage(
+      title: 'Accessibility',
+      children: [
+        const BLab('Text size'),
+        BSeg<String>(options: const {'s': 'S', 'm': 'M', 'l': 'L', 'xl': 'XL'}, value: st.textSize, onChanged: (v) => s.saveSettings({'textSize': v})),
         const Panel(child: Text('Look over your shoulder before the ball comes.', style: TextStyle(fontSize: 15, color: Tk.ink))),
-        const SizedBox(height: 6),
-        const Text("This adds to your phone's own text size.", style: TextStyle(fontSize: 12, color: Tk.faint)),
-        const SizedBox(height: 18),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Column(children: [
-            SwitchListTile(
-              title: const Text('Higher contrast'),
-              subtitle: const Text('Brighter text and lines on the dark background'),
-              value: s.settings.highContrast,
-              onChanged: (v) => s.saveSettings({'highContrast': v}),
-            ),
-            SwitchListTile(
-              title: const Text('Less motion'),
-              subtitle: const Text("Turn off fades and moving Pep. Your phone's own setting also works."),
-              value: s.settings.reduceMotion,
-              onChanged: (v) => s.saveSettings({'reduceMotion': v}),
-            ),
-          ]),
-        ),
-      ]),
+        BGroup([
+          BSettingRow(
+            title: 'Less motion',
+            sub: 'Turn off moving Pep and fades',
+            toggle: st.reduceMotion,
+            onToggle: (v) => s.saveSettings({'reduceMotion': v}),
+          ),
+          BSettingRow(
+            title: 'Higher contrast',
+            sub: 'Brighter text on dark',
+            toggle: st.highContrast,
+            onToggle: (v) => s.saveSettings({'highContrast': v}),
+            divider: false,
+          ),
+        ]),
+        const Text("Text size adds to your phone's own setting.", style: bNote),
+      ],
     );
   }
 }
@@ -238,44 +228,32 @@ class VoiceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     final st = s.settings;
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        Text('How Pep talks to you', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 16),
-        const SectionLabel('Voice'),
-        SingleChips<String>(
-          options: const {'street': 'Street talk', 'coach': 'Coach talk'},
-          value: st.pepVoice,
-          onChanged: (v) => s.saveSettings({'pepVoice': v}),
-          scroll: false,
+    return BPage(
+      title: 'How Pep talks to you',
+      children: [
+        const BLab('Voice'),
+        BSeg<String>(options: const {'street': 'Street talk', 'coach': 'Coach talk'}, value: st.pepVoice, onChanged: (v) => s.saveSettings({'pepVoice': v})),
+        BPepNote(
+          mood: PepMood.listening,
+          text: st.pepVoice == 'street' ? '"Charlie, you dey check your shoulder well!"' : '"Good scanning before you received the ball."',
         ),
-        const SizedBox(height: 8),
-        Text(st.pepVoice == 'street' ? '"Charlie, you dey check your shoulder well!"' : '"Good scanning before you received the ball."',
-            style: const TextStyle(fontSize: 13.5, color: Tk.muted, fontStyle: FontStyle.italic)),
-        const SizedBox(height: 18),
-        const SectionLabel('Units'),
-        SingleChips<String>(
-          options: const {'kmh': 'Metres, km/h', 'mph': 'Miles per hour'},
-          value: st.units,
-          onChanged: (v) => s.saveSettings({'units': v}),
-          scroll: false,
-        ),
-        const SizedBox(height: 18),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Column(children: [
-            const ListTile(title: Text('Language'), subtitle: Text('English. More languages later.')),
-            const ListTile(title: Text('Plain football words'), subtitle: Text('No short-hand or slang in the app'), trailing: Text('Always on', style: TextStyle(fontSize: 12, color: Tk.faint))),
-            SwitchListTile(
-              title: const Text("Pep's AI notes"),
-              subtitle: const Text('Pep watches each clip and writes tips. Off: notes come from your numbers only.'),
-              value: st.coachNotes,
-              onChanged: (v) => s.saveSettings({'coachNotes': v}),
-            ),
-          ]),
-        ),
-      ]),
+        BGroup([
+          const BSettingRow(title: 'Language', value: 'English'),
+          BSettingRow(
+            title: 'Units',
+            value: st.units == 'mph' ? 'Miles per hour' : 'Metres, km/h',
+            onTap: () => s.saveSettings({'units': st.units == 'mph' ? 'kmh' : 'mph'}),
+          ),
+          const BSettingRow(title: 'Plain football words', sub: 'No short-hand or slang', always: true),
+          BSettingRow(
+            title: "Pep's AI notes",
+            sub: 'Pep watches each clip and writes tips. Off: notes come from your numbers only.',
+            toggle: st.coachNotes,
+            onToggle: (v) => s.saveSettings({'coachNotes': v}),
+            divider: false,
+          ),
+        ]),
+      ],
     );
   }
 }
@@ -419,44 +397,32 @@ class DataScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        Text('Your data', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 16),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Column(children: [
-            ListTile(title: const Text('Clips on Tracka'), trailing: Text('${s.videos.length}', style: const TextStyle(fontWeight: FontWeight.w700))),
-            SwitchListTile(
-              title: const Text('Upload on Wi-Fi only'),
-              subtitle: const Text('Saves your data. Clips wait on your phone until Wi-Fi.'),
-              value: s.settings.uploadOnWifiOnly,
-              onChanged: (v) => s.saveSettings({'uploadOnWifiOnly': v}),
-            ),
-            ListTile(
-              title: const Text('Download your data'),
-              subtitle: const Text('Everything Tracka holds about you, in one file'),
-              trailing: const TIcon('download', size: 18, color: Tk.faint),
-              onTap: () => _download(context),
-            ),
-            ListTile(
-              title: const Text('Delete clips'),
-              subtitle: const Text('Choose clips'),
-              trailing: const TIcon('trash', size: 18, color: Tk.faint),
-              onTap: () => _deleteClips(context),
-            ),
-          ]),
-        ),
-        const SizedBox(height: 18),
-        OutlinedButton(
-          style: OutlinedButton.styleFrom(foregroundColor: Tk.gold, side: const BorderSide(color: Color(0x66FFC21A))),
-          onPressed: () => _deleteAccount(context),
-          child: const Text('Delete my account'),
-        ),
-        const SizedBox(height: 10),
+    final minor = s.me?.profile.age != null && s.me!.profile.age! < 18;
+    return BPage(
+      title: 'Your data',
+      children: [
+        BGroup([
+          BSettingRow(title: 'Clips on Tracka', value: '${s.videos.length}'),
+          BSettingRow(
+            title: 'Upload on Wi-Fi only',
+            sub: 'Clips wait on your phone until Wi-Fi',
+            toggle: s.settings.uploadOnWifiOnly,
+            onToggle: (v) => s.saveSettings({'uploadOnWifiOnly': v}),
+          ),
+          BSettingRow(title: 'Download your data', sub: 'Everything Tracka holds about you, in one file', onTap: () => _download(context)),
+          BSettingRow(title: 'Delete clips', sub: 'Choose clips', onTap: () => _deleteClips(context), divider: false),
+        ]),
+        BGroup([
+          BSettingRow(
+            title: 'Delete account',
+            sub: minor ? "Your guardian has to agree. You can't undo this." : "You can't undo this.",
+            danger: true,
+            onTap: () => _deleteAccount(context),
+            divider: false,
+          ),
+        ]),
         const InfoNote('Tracka never sells your data. Only your region is ever shown to others.'),
-      ]),
+      ],
     );
   }
 }
@@ -504,40 +470,30 @@ class HelpScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(),
-        body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-          Text('Help and legal', style: Theme.of(context).textTheme.headlineLarge),
-          const SizedBox(height: 16),
-          Panel(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Column(children: [
-              ListTile(
-                title: const Text('Show me around'),
-                subtitle: const Text("Pep's tour of Home, again"),
-                onTap: () {
-                  context.read<AppState>().startTour();
-                  Navigator.of(context).popUntil((r) => r.isFirst);
-                },
-              ),
-              ListTile(title: const Text('Report a problem'), subtitle: const Text('Something broke, someone is unsafe, or an idea'), onTap: () => _report(context)),
-              ListTile(
-                title: const Text('Terms of use'),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _Legal('Terms of use'))),
-              ),
-              ListTile(
-                title: const Text('Privacy policy'),
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _Legal('Privacy policy'))),
-              ),
-              ListTile(
-                title: const Text('Open-source licences'),
-                onTap: () => showLicensePage(context: context, applicationName: 'Tracka', applicationVersion: SettingsScreen.version),
-              ),
-            ]),
-          ),
-          const SizedBox(height: 14),
+  Widget build(BuildContext context) => BPage(
+        title: 'Help and legal',
+        children: [
+          BGroup([
+            BSettingRow(
+              title: 'Show me around',
+              sub: "Pep's tour of Home, again",
+              onTap: () {
+                context.read<AppState>().startTour();
+                Navigator.of(context).popUntil((r) => r.isFirst);
+              },
+            ),
+            BSettingRow(title: 'Report a problem', sub: 'Something broke, someone is unsafe, or an idea', onTap: () => _report(context)),
+            BSettingRow(title: 'Keeping young players safe', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _Legal('Keeping young players safe')))),
+            BSettingRow(title: 'Terms', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _Legal('Terms of use')))),
+            BSettingRow(title: 'Privacy policy', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _Legal('Privacy policy')))),
+            BSettingRow(
+              title: 'Open-source licences',
+              onTap: () => showLicensePage(context: context, applicationName: 'Tracka', applicationVersion: SettingsScreen.version),
+              divider: false,
+            ),
+          ]),
           const InfoNote(InfoNote.pep),
-        ]),
+        ],
       );
 }
 
@@ -548,8 +504,9 @@ class _Legal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(),
-        body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+        body: SafeArea(child: ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 32), children: [
+          Align(alignment: Alignment.centerLeft, child: BRoundButton(icon: 'back', label: 'Back', onTap: () => Navigator.of(context).maybePop())),
+          const SizedBox(height: 14),
           Text(title, style: Theme.of(context).textTheme.headlineLarge),
           const SizedBox(height: 14),
           const Text(
@@ -558,6 +515,6 @@ class _Legal extends StatelessWidget {
             'download or delete your data at any time in Settings › Your data.',
             style: TextStyle(fontSize: 15, height: 1.5, color: Tk.inkSoft),
           ),
-        ]),
+        ])),
       );
 }

@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../api/models.dart';
 import '../theme/theme.dart';
+import 'board.dart';
 import 'ds.dart';
+import 'pep.dart';
 
 /// Me › Growth: "What scouts look for", group by group (canvas: Me, and the
 /// "Rating system" board). Each measured area shows its band, the measured
@@ -82,3 +84,46 @@ String _groupIcon(String group) => switch (group.toLowerCase()) {
       'attitude' => 'heart',
       _ => 'target',
     };
+
+/// One skill area (canvas: Me › One skill area): its band, how sure Pep is,
+/// which way it's going, and what Pep measures. No score out of 100.
+class SkillScreen extends StatelessWidget {
+  const SkillScreen({super.key, required this.item, required this.group, required this.comparedWith});
+
+  final SkillItem item;
+  final String group;
+  final String comparedWith;
+
+  @override
+  Widget build(BuildContext context) {
+    final band = item.measured ? Band.fromName(item.band) : null;
+    return BPage(
+      topNote: group,
+      title: item.name,
+      children: [
+        if (band != null)
+          Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            BandPill(band),
+            ConfidenceDots(Confidence.fromName(item.confidence)),
+            TrendTag(SkillAreasView.trendOf(item.trend)),
+          ]),
+        Text(
+          item.measured
+              ? 'Compared with $comparedWith.${item.average == null ? '' : ' Your average: ${item.average}.'}'
+              : '${item.stateLabel}. It fills in as Pep sees your tests and clips.',
+          style: bNote.copyWith(fontSize: 13),
+        ),
+        BPepNote(
+          mood: PepMood.reading,
+          title: 'How Pep measures this',
+          text: item.measurements > 0
+              ? 'From ${item.measurements} measurement${item.measurements == 1 ? '' : 's'} in your clips and tests. More clips make it more certain.'
+              : item.state == 'coming_later' || item.state == 'cant_see'
+                  ? "Pep can't measure this from video yet. It's coming later."
+                  : 'Film a match or do a test and Pep will start measuring it.',
+        ),
+        const InfoNote(InfoNote.measured),
+      ],
+    );
+  }
+}

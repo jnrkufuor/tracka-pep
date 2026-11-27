@@ -99,7 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final t = focus?.nextTest;
           _go(t == null ? const FocusScreen() : TestScreen(drill: t.drill, name: t.name));
         }),
-        if (areas != null) SkillAreasView(areas: areas),
+        if (areas != null) SkillAreasView(areas: areas, onOpen: (i) => _openSkill(areas, i)),
       ] else ...[
         BSeg<String>(
           options: const {'growth': 'Growth', 'clips': 'Clips', 'about': 'About'},
@@ -178,10 +178,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _openSkill(SkillAreas areas, SkillItem i) {
+    final g = areas.groups.where((g) => g.items.contains(i)).firstOrNull;
+    _go(SkillScreen(item: i, group: g?.name ?? '', comparedWith: areas.comparedWith));
+  }
+
   List<Widget> _growth(SkillAreas? areas) {
     final bests = focus?.bests ?? const [];
     return [
-      if (areas != null) SkillAreasView(areas: areas),
+      if (areas != null) SkillAreasView(areas: areas, onOpen: (i) => _openSkill(areas, i)),
       if (bests.isNotEmpty) ...[
         const BLab('Your bests'),
         LayoutBuilder(builder: (context, box) {
@@ -659,13 +664,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final meta = context.watch<AppState>().meta;
     Widget gap() => const SizedBox(height: 18);
     return Scaffold(
-      appBar: AppBar(actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-          child: Center(child: Text(_status, style: TextStyle(fontSize: 12.5, color: _status == "Couldn't save" ? Tk.gold : Tk.faint))),
-        ),
-      ]),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+      body: SafeArea(child: ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 32), children: [
+        Row(children: [
+          BRoundButton(icon: 'back', label: 'Back', onTap: () => Navigator.of(context).maybePop()),
+          const Spacer(),
+          Text(_status, style: TextStyle(fontSize: 12.5, color: _status == "Couldn't save" ? Tk.gold : Tk.faint)),
+        ]),
+        const SizedBox(height: 14),
         Text('Edit profile', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 16),
         const _PhotoRow(),
@@ -775,7 +780,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }),
         const SizedBox(height: 14),
         const InfoNote('Others only ever see your shirt name, position, age group and region. Your full name, date of birth and town stay private.'),
-      ]),
+      ])),
     );
   }
 }
