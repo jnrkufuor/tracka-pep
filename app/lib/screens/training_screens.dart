@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' show FontFeature;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -366,166 +369,318 @@ class SessionScreen extends StatefulWidget {
 class _SessionScreenState extends State<SessionScreen> {
   late Future<SessionPlan> _plan = context.read<AppState>().api.session(widget.sessionKey);
 
+  /// Which step you're on, how long is left on it, and whether the clock runs
+  /// (canvas: In a session). The clock is a guide; you move on when ready.
+  int _at = 0;
+  int? _left;
+  bool _running = false;
+  Timer? _tick;
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: FutureBuilder<SessionPlan>(
-        future: _plan,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return StateView.error(onRetry: () => setState(() => _plan = context.read<AppState>().api.session(widget.sessionKey)));
-          }
-          if (!snap.hasData) {
-            return ListView(padding: const EdgeInsets.all(20), children: const [
-              Skeleton(height: 40, width: 220),
-              SizedBox(height: 16),
-              Skeleton(height: 90),
-              SizedBox(height: 10),
-              Skeleton(height: 90),
-            ]);
-          }
-          final p = snap.data!;
-          final t = Theme.of(context).textTheme;
-          final canFinish = p.status == 'planned' && p.mode != 'rest' && !p.date.isAfter(DateTime.now());
-          return ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 40), children: [
-            EnterFade(child: Text(p.title, style: t.headlineLarge)),
-            const SizedBox(height: 4),
-            Text(
-              [if (p.minutes > 0) '${p.minutes} min', if (p.focus.isNotEmpty) 'Works on ${p.focus.join(' and ').toLowerCase()}'].join(' · '),
-              style: const TextStyle(fontSize: 14, color: Tk.muted),
-            ),
-            const SizedBox(height: 18),
-            for (var i = 0; i < p.steps.length; i++)
-              EnterFade(
-                delay: Duration(milliseconds: 40 * i),
-                child: Padding(padding: const EdgeInsets.only(bottom: 10), child: _StepCard(step: p.steps[i], n: i + 1)),
-              ),
-            const SizedBox(height: 6),
-            SafetyNote(p.safety),
-            const SizedBox(height: 20),
-            if (canFinish)
-              FilledButton(
-                onPressed: () async {
-                  final ok = await showDoneSheet(context, p.key);
-                  if (ok && context.mounted) Navigator.of(context).pop();
-                },
-                child: const Text('Finish training'),
-              ),
-            if (p.status == 'done')
-              const Text("Done. Nice work.", textAlign: TextAlign.center, style: TextStyle(color: Tk.muted)),
-            if (p.mode == 'rest')
-              OutlinedButton(onPressed: () => showHealthSheet(context), child: const Text("Update how your body feels")),
-          ]);
-        },
-      ),
-    );
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
   }
-}
 
-class _StepCard extends StatelessWidget {
-  const _StepCard({required this.step, required this.n});
+  void _toggle(SessionPlan p) {
+    setState(() {
+      _left ??= p.steps[_at].minutes * 60;
+      _running = !_running;
+    });
+    _tick?.cancel();
+    if (_running) {
+      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (!mounted) return;
+        setState(() {
+          _left = (_left ?? 0) - 1;
+          if (_left! <= 0) {
+            _left = 0;
+            _running = false;
+            _tick?.cancel();
+          }
+        });
+      });
+    }
+  }
 
-  final SessionStep step;
-  final int n;
+  void _next(SessionPlan p) {
+    _tick?.cancel();
+    setState(() {
+      _running = false;
+      if (_at < p.steps.length - 1) {
+        _at++;
+        _left = p.steps[_at].minutes * 60;
+      } else {
+        _at = p.steps.length;
+      }
+    });
+    if (_at >= p.steps.length) _finish(p);
+  }
+
+  Future<void> _finish(SessionPlan p) async {
+    final ok = await showDoneSheet(context, p.key, title: p.title, minutes: p.minutes);
+    if (ok && mounted) Navigator.of(context).pop();
+  }
+
+  String _clock(int s) => '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
     final a = context.accent;
-    final needs = step.needs.where((n) => n != 'nothing').toList();
-    return Panel(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            width: 26,
-            height: 26,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(color: a.tile, shape: BoxShape.circle),
-            child: Text('$n', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: a.main)),
+    return FutureBuilder<SessionPlan>(
+      future: _plan,
+      builder: (context, snap) {
+        if (snap.hasError || !snap.hasData) {
+          return BPage(children: [
+            if (snap.hasError)
+              StateView.error(onRetry: () => setState(() => _plan = context.read<AppState>().api.session(widget.sessionKey)))
+            else ...[const Skeleton(height: 220), const Skeleton(height: 260)],
+          ]);
+        }
+        final p = snap.data!;
+        final live = p.status == 'planned' && p.mode != 'rest' && !p.date.isAfter(DateTime.now()) && p.steps.isNotEmpty;
+        final at = _at.clamp(0, p.steps.length - 1);
+        final step = p.steps.isEmpty ? null : p.steps[at];
+        final left = _left ?? (step?.minutes ?? 0) * 60;
+        final film = p.steps.where((x) => x.film != null).firstOrNull;
+        return Scaffold(
+          body: SafeArea(
+            child: EnterFade(
+              child: ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 32), children: [
+                Row(children: [
+                  BRoundButton(icon: 'back', label: 'Back', onTap: () => Navigator.of(context).maybePop()),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(["Today's training", if (p.minutes > 0) '${p.minutes} min'].join(' · '), style: bNote),
+                      Text(p.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Tk.ink)),
+                    ]),
+                  ),
+                  PepFace(_running ? PepMood.counting : PepMood.focused, size: 26),
+                ]),
+                const SizedBox(height: 18),
+                if (step != null && live)
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: const Color(0xFF222222)),
+                      gradient: LinearGradient(
+                        begin: const Alignment(-.6, -1),
+                        end: const Alignment(.6, 1),
+                        stops: const [0, .7],
+                        colors: [Color.alphaBlend(a.main.withValues(alpha: .08), const Color(0xFF111111)), const Color(0xFF111111)],
+                      ),
+                    ),
+                    child: Column(children: [
+                      Wrap(spacing: 6, alignment: WrapAlignment.center, children: [
+                        BChip('Now', color: a.on, background: a.main, caps: true),
+                        if (p.focus.isNotEmpty) BChip(p.focus.first, color: Tk.ink, background: const Color(0xFF1C1C1C), caps: true),
+                      ]),
+                      const SizedBox(height: 10),
+                      Text(step.name, textAlign: TextAlign.center, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Tk.ink)),
+                      const SizedBox(height: 10),
+                      Text(_clock(left),
+                          style: TextStyle(fontFamily: TType.display, fontSize: 60, height: 1, fontWeight: FontWeight.w800, color: a.main, fontFeatures: const [FontFeature.tabularFigures()])),
+                      const SizedBox(height: 10),
+                      Text(step.how, textAlign: TextAlign.center, style: bNote.copyWith(fontSize: 13)),
+                      const SizedBox(height: 14),
+                      Row(children: [
+                        Expanded(child: BCta(_running ? 'Pause' : (_left == null ? 'Start' : 'Go on'), ghost: true, height: 48, onTap: () => _toggle(p))),
+                        const SizedBox(width: 10),
+                        Expanded(child: BCta(at < p.steps.length - 1 ? 'Next drill' : 'Finish', height: 48, onTap: () => _next(p))),
+                      ]),
+                    ]),
+                  ),
+                if (step != null && live) const SizedBox(height: 18),
+                Panel(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  child: Column(children: [
+                    for (final (i, x) in p.steps.indexed)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))),
+                        child: Row(children: [
+                          _StepMark(n: i + 1, done: p.status == 'done' || (live && i < at), now: live && i == at),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(x.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: live && i < at ? Tk.faint : Tk.ink)),
+                              const SizedBox(height: 2),
+                              Text(x.how, maxLines: live && i == at ? 1 : 3, overflow: TextOverflow.ellipsis, style: bNote),
+                            ]),
+                          ),
+                          const SizedBox(width: 8),
+                          Text('${x.minutes} min', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Tk.muted)),
+                        ]),
+                      ),
+                    if (film != null)
+                      Pressable(
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => UploadScreen(drill: film.film))),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(children: [
+                            const TIcon('camera', size: 14, color: Tk.muted),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text('Film the ${film.name.toLowerCase()} if you can. I\'ll count it from the video.', style: bNote)),
+                          ]),
+                        ),
+                      ),
+                  ]),
+                ),
+                const SizedBox(height: 18),
+                SafetyNote(p.safety),
+                const SizedBox(height: 18),
+                if (live) ...[
+                  BCta('Finish training', ghost: true, onTap: () => _finish(p)),
+                  Center(
+                    child: TextButton(onPressed: () => Navigator.of(context).maybePop(), child: const Text('Stop for today', style: TextStyle(color: Tk.faint))),
+                  ),
+                ],
+                if (p.status == 'done') const Text('Done. Nice work.', textAlign: TextAlign.center, style: TextStyle(color: Tk.muted)),
+                if (p.mode == 'rest') BCta('Update how your body feels', ghost: true, onTap: () => showHealthSheet(context)),
+              ]),
+            ),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(step.name, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Tk.ink))),
-          Text('${step.minutes} min', style: const TextStyle(fontSize: 12.5, color: Tk.faint)),
-        ]),
-        const SizedBox(height: 8),
-        Text(step.how, style: const TextStyle(fontSize: 14, height: 1.45, color: Tk.inkSoft)),
-        if (needs.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text('You need: ${needs.join(', ')}', style: const TextStyle(fontSize: 12.5, color: Tk.faint)),
-        ],
-        if (step.film != null) ...[
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => UploadScreen(drill: step.film))),
-            child: Text(step.test != null ? 'Film the test' : 'Film it and Pep counts'),
-          ),
-        ],
-      ]),
+        );
+      },
+    );
+  }
+}
+
+class _StepMark extends StatelessWidget {
+  const _StepMark({required this.n, required this.done, required this.now});
+
+  final int n;
+  final bool done;
+  final bool now;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = context.accent;
+    return Container(
+      width: 28,
+      height: 28,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: done ? a.main : null,
+        border: done ? null : Border.all(color: now ? a.main : const Color(0xFF3A3D36), width: 2),
+        boxShadow: now ? [BoxShadow(color: a.main.withValues(alpha: .14), spreadRadius: 5)] : null,
+      ),
+      child: done
+          ? TIcon('check', size: 13, color: a.on, stroke: 6)
+          : Text('$n', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: now ? a.main : Tk.faint)),
     );
   }
 }
 
 // ───────────────────────────── training done
 
-/// "How was it?" after a session: how hard (Easy / Just right / Hard) and
-/// whether anything hurt. Something hurt → Pep makes sessions lighter and
-/// points to an adult, coach, doctor or physio. Returns true when logged.
-Future<bool> showDoneSheet(BuildContext context, String key) async {
-  final s = context.read<AppState>();
-  var effort = 'right';
-  var hurt = false;
-  var saving = false;
-  final logged = await showEditSheet<bool>(
-    context,
-    title: 'How was it?',
-    child: StatefulBuilder(
-      builder: (ctx, setState) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SectionLabel('How hard was it?'),
-        const SizedBox(height: 8),
-        SingleChips<String>(
-          options: const {'easy': 'Easy', 'right': 'Just right', 'hard': 'Hard'},
-          value: effort,
-          onChanged: (v) => setState(() => effort = v),
-          scroll: false,
-        ),
-        const SizedBox(height: 22),
-        const SectionLabel('Did anything hurt?'),
-        const SizedBox(height: 8),
-        SingleChips<bool>(
-          options: const {false: 'No', true: 'Yes'},
-          value: hurt,
-          onChanged: (v) => setState(() => hurt = v),
-          scroll: false,
-        ),
-        if (hurt) ...[
-          const SizedBox(height: 14),
-          const SafetyNote("Pep will make your next sessions lighter. Don't play through pain, and tell an adult or your coach."),
-        ],
-        const SizedBox(height: 26),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: saving
-                ? null
-                : () async {
-                    setState(() => saving = true);
-                    try {
-                      final next = await s.api.finishSession(key, effort: effort, hurt: hurt);
-                      await s.loadWeek();
-                      if (ctx.mounted) Navigator.of(ctx).pop(true);
-                      if (context.mounted) showToast(context, 'Training logged', detail: next);
-                    } catch (e) {
-                      setState(() => saving = false);
-                      if (ctx.mounted) showToast(ctx, "Couldn't save it", detail: '$e', ok: false, aboveTabs: false);
-                    }
-                  },
-            child: const Text('Done'),
+/// "Training done!" (canvas: Training done): how it felt, whether anything
+/// hurt, send the clip. Something hurt → Pep makes the next session easier
+/// and points to an adult, doctor or physio. Returns true when logged.
+Future<bool> showDoneSheet(BuildContext context, String key, {String? title, int? minutes}) async =>
+    await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => SessionDoneScreen(sessionKey: key, title: title, minutes: minutes))) ?? false;
+
+class SessionDoneScreen extends StatefulWidget {
+  const SessionDoneScreen({super.key, required this.sessionKey, this.title, this.minutes});
+
+  final String sessionKey;
+  final String? title;
+  final int? minutes;
+
+  @override
+  State<SessionDoneScreen> createState() => _SessionDoneScreenState();
+}
+
+class _SessionDoneScreenState extends State<SessionDoneScreen> {
+  String effort = 'right';
+  bool hurt = false;
+  bool saving = false;
+
+  Future<void> _done() async {
+    final s = context.read<AppState>();
+    setState(() => saving = true);
+    try {
+      final next = await s.api.finishSession(widget.sessionKey, effort: effort, hurt: hurt);
+      await s.loadWeek();
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      showToast(context, 'Training logged', detail: next);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => saving = false);
+      showToast(context, "Couldn't save it", detail: '$e', ok: false, aboveTabs: false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final line = [if (widget.title != null) widget.title!, if ((widget.minutes ?? 0) > 0) '${widget.minutes} min'].join(' · ');
+    return Scaffold(
+      body: SafeArea(
+        child: Column(children: [
+          Expanded(
+            child: EnterFade(
+              child: ListView(padding: const EdgeInsets.fromLTRB(20, 32, 20, 16), children: [
+                Center(child: PepFace(hurt ? PepMood.concerned : PepMood.celebrating, size: 76)),
+                const SizedBox(height: 10),
+                Text('Training done!', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineLarge),
+                const SizedBox(height: 6),
+                Text('${line.isEmpty ? '' : '$line. '}It\'s saved in your schedule.', textAlign: TextAlign.center, style: bNote.copyWith(fontSize: 14)),
+                const SizedBox(height: 20),
+                Panel(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 14, bottom: 10),
+                      child: Text('How did it feel?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Tk.lab)),
+                    ),
+                    BSeg<String>(options: const {'easy': 'Easy', 'right': 'Just right', 'hard': 'Hard'}, value: effort, onChanged: (v) => setState(() => effort = v)),
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 14, bottom: 10),
+                      child: Text('Did anything hurt?', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Tk.lab)),
+                    ),
+                    BSeg<bool>(options: const {false: 'No', true: 'Yes'}, value: hurt, onChanged: (v) => setState(() => hurt = v)),
+                    const SizedBox(height: 14),
+                  ]),
+                ),
+                if (hurt) ...[
+                  const SizedBox(height: 14),
+                  Pressable(
+                    onTap: () => showHealthSheet(context),
+                    child: const SafetyNote("Rest, and tell a parent or coach. If it still hurts, see a doctor or physio. I'll make your next session easier."),
+                  ),
+                ] else if (effort == 'hard') ...[
+                  const SizedBox(height: 14),
+                  const BPepNote(mood: PepMood.listening, text: "Thanks for telling me. I'll make the next one a bit easier."),
+                ],
+                const SizedBox(height: 14),
+                Panel(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  child: BRow(
+                    icon: 'camera',
+                    iconColor: Tk.pep,
+                    tileColor: Tk.pepTile,
+                    tile: 40,
+                    title: 'Filmed it?',
+                    sub: "Send it and I'll review it with you.",
+                    trailing: const TIcon('chevron', size: 12, color: Tk.faint),
+                    divider: false,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UploadScreen())),
+                  ),
+                ),
+              ]),
+            ),
           ),
-        ),
-      ]),
-    ),
-  );
-  return logged ?? false;
+          Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 16), child: BCta(saving ? 'Saving…' : 'Done', onTap: saving ? null : _done)),
+        ]),
+      ),
+    );
+  }
 }
 
 // ───────────────────────────── how your body feels
