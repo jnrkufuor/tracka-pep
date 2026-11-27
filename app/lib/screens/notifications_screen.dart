@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import 'guardian_screens.dart';
 import 'review_screens.dart' show TipsScreen;
@@ -227,39 +228,35 @@ class NotificationSettingsScreen extends StatelessWidget {
       ('events', 'Events', "Games and training you've added"),
       ('respect', 'Respect on your clips', 'When players give you respect'),
     ];
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        Text('Notifications', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 16),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Column(children: [
-            for (final (k, t, d) in kinds)
-              SwitchListTile(
-                title: Text(t),
-                subtitle: Text(d),
-                value: st.notifications[k] ?? true,
-                onChanged: (v) => s.saveSettings({
-                  'notifications': {k: v},
-                }),
-              ),
-          ]),
-        ),
-        const SizedBox(height: 18),
-        const SectionLabel('Quiet hours'),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: SwitchListTile(
-            title: const Text('No notifications 9 pm to 7 am'),
-            subtitle: Text(minor ? 'Always on for under 18s' : 'They wait in the bell until morning'),
-            value: minor || (s.me?.settings.quietHours ?? true),
-            onChanged: minor ? null : (v) => s.saveSettings({'quietHours': v}),
-          ),
-        ),
-        const SizedBox(height: 12),
+    return BPage(
+      title: 'Notifications',
+      children: [
+        BGroup([
+          for (final (i, (k, t, d)) in kinds.indexed)
+            BSettingRow(
+              title: t,
+              sub: d,
+              toggle: st.notifications[k] ?? true,
+              onToggle: (v) => s.saveSettings({
+                'notifications': {k: v},
+              }),
+              divider: i < kinds.length - 1,
+            ),
+        ]),
+        BGroup([
+          if (minor)
+            const BSettingRow(title: 'Quiet hours', sub: 'No notifications 9 pm to 7 am. Your guardian can change this.', always: true, divider: false)
+          else
+            BSettingRow(
+              title: 'Quiet hours',
+              sub: 'No notifications 9 pm to 7 am',
+              toggle: s.me?.settings.quietHours ?? true,
+              onToggle: (v) => s.saveSettings({'quietHours': v}),
+              divider: false,
+            ),
+        ]),
         const InfoNote('Messages from your guardian and about your safety always come through.'),
-      ]),
+      ],
     );
   }
 }
