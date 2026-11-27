@@ -67,7 +67,6 @@ typedef _Fx = (Matrix4, double) Function(double t);
 const _io = Cubic(.42, 0, .58, 1); // CSS ease-in-out
 const _out = Cubic(0, 0, .58, 1); // CSS ease-out
 const _in = Cubic(.42, 0, 1, 1); // CSS ease-in
-const _ease = Cubic(.25, .1, .25, 1); // CSS ease
 
 /// A CSS keyframe track: [k] is (progress 0–1, value). The easing applies to
 /// each step between two keyframes, as in CSS.
