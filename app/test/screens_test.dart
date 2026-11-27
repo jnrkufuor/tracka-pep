@@ -25,6 +25,7 @@ import 'package:tracka/screens/pep_screen.dart';
 import 'package:tracka/screens/review_screens.dart';
 import 'package:tracka/screens/settings_screen.dart';
 import 'package:tracka/screens/shell.dart';
+import 'package:tracka/screens/training_screens.dart';
 import 'package:tracka/screens/uploads_screen.dart';
 import 'package:tracka/screens/videos_screen.dart';
 import 'package:tracka/state/app_state.dart';
@@ -278,6 +279,9 @@ final screens = <String, Widget Function()>{
   'Uploads': () => const UploadsScreen(),
   'Your clips': () => const VideosScreen(),
   'Search players': () => const SearchScreen(),
+  'Schedule': () => const WeekScreen(),
+  'Sessions': () => const SessionsScreen(),
+  'Health': () => const HealthScreen(),
 };
 
 void main() {

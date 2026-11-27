@@ -416,7 +416,7 @@ class RatingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final measured = band != null;
     final row = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 11),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(
@@ -424,19 +424,19 @@ class RatingRow extends StatelessWidget {
               Flexible(
                 child: Text(name,
                     style: TextStyle(
-                        fontSize: 14.5, fontWeight: measured ? FontWeight.w600 : FontWeight.w400, color: measured ? Tk.ink : Tk.muted)),
+                        fontSize: 14, height: 1.3, fontWeight: measured ? FontWeight.w600 : FontWeight.w500, color: measured ? Tk.ink : Tk.faint)),
               ),
               if (keySkill)
                 Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(left: 6),
+                  width: 7,
+                  height: 7,
+                  margin: const EdgeInsets.only(left: 8),
                   decoration: BoxDecoration(shape: BoxShape.circle, color: context.accent.main),
                 ),
             ]),
           ),
           const SizedBox(width: 10),
-          if (measured) BandPill(band!) else Text(state ?? 'Not seen yet', style: const TextStyle(fontSize: 12, color: Tk.faint)),
+          if (measured) BandPill(band!) else Text(state ?? 'Not seen yet', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF6E7368))),
         ]),
         if (measured) ...[
           if (average != null) ...[
@@ -496,9 +496,9 @@ class SafetyNote extends StatelessWidget {
         text: text,
         icon: icon,
         iconColor: Tk.gold,
-        textColor: Tk.goldInk,
+        textColor: const Color(0xFFF0DFAE),
         background: Tk.goldTile,
-        border: Tk.gold.withValues(alpha: 0.22),
+        border: const Color(0xFF5A4512),
       );
 }
 
@@ -523,7 +523,7 @@ class _Note extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14), border: Border.all(color: border)),
+        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14), border: Border.all(color: border, width: 1.5)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(padding: const EdgeInsets.only(top: 1), child: TIcon(icon, size: 16, color: iconColor)),
           const SizedBox(width: 10),

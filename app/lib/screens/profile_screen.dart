@@ -97,7 +97,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }),
         if (areas != null) SkillAreasView(areas: areas),
       ] else ...[
-        SingleChips<String>(
+        BSeg<String>(
           options: const {'growth': 'Growth', 'clips': 'Clips', 'about': 'About'},
           value: tab,
           onChanged: (v) => setState(() => tab = v),
@@ -339,7 +339,9 @@ class _MeCard extends StatelessWidget {
               ]),
               const SizedBox(height: 8),
               Wrap(spacing: 6, runSpacing: 6, children: [
-                for (final x in sees.skip(1)) BChip(x, color: a.main, background: a.tile),
+                // What Pep saw you do well in your colour; plain facts in grey (canvas Me).
+                for (final (i, x) in sees.skip(1).indexed)
+                  i < 2 ? BChip(x, color: a.main, background: a.tile) : BChip(x, color: Tk.lab, background: const Color(0xFF1A1A1A)),
               ]),
             ],
             const SizedBox(height: 14),

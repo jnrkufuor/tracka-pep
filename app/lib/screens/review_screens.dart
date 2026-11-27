@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import '../widgets/pep.dart';
 import 'home_screen.dart' show openUpload;
@@ -257,16 +258,23 @@ class TipCard extends StatelessWidget {
                   Text(tip.areaName, style: const TextStyle(fontSize: 12, color: Tk.pep, fontWeight: FontWeight.w600)),
                 ]),
               ),
-            Text(tip.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Tk.ink)),
-            const SizedBox(height: 3),
-            Text(tip.text, style: const TextStyle(fontSize: 13.5, height: 1.45, color: Tk.inkSoft)),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: drill != null ? () => showTipDrill(context, tip) : () => _seeMoment(context),
-                child: Text(drill != null ? 'Try the drill · ${drill.minutes} min' : 'See the moment'),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Padding(padding: EdgeInsets.only(top: 2), child: PepFace(PepMood.cheeky, size: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(tip.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Tk.ink)),
+                  const SizedBox(height: 3),
+                  Text(tip.text, style: const TextStyle(fontSize: 13.5, height: 1.45, color: Tk.inkSoft)),
+                ]),
               ),
+            ]),
+            const SizedBox(height: 12),
+            BCta(
+              drill != null ? 'Try the drill · ${drill.minutes} min' : 'See the moment',
+              ghost: true,
+              height: 44,
+              onTap: drill != null ? () => showTipDrill(context, tip) : () => _seeMoment(context),
             ),
           ]),
         ),
@@ -320,63 +328,45 @@ class ReviewsScreen extends StatelessWidget {
     final s = context.watch<AppState>();
     final watching = s.videos.where((v) => v.processing).toList();
     final ready = s.videos.where((v) => v.status == 'READY').toList();
-    return Scaffold(
-      appBar: AppBar(),
-      body: ready.isEmpty && watching.isEmpty
-          ? StateView(
-              icon: 'clip',
-              title: 'No reviews yet',
-              message: "Send a clip and you'll get what went well and what to work on, with a time for each.",
-              actionLabel: 'Add a clip',
-              onAction: () => openUpload(context),
-            )
-          : RefreshIndicator(
-              onRefresh: s.refresh,
-              child: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-                const Text('PEP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8)),
-                const SizedBox(height: 4),
-                Text('Reviews', style: Theme.of(context).textTheme.headlineLarge),
-                const SizedBox(height: 4),
-                const Text("Send me a clip and I'll tell you what went well and what to work on.",
-                    style: TextStyle(fontSize: 13, color: Tk.muted)),
-                const SizedBox(height: 18),
-                for (final v in watching) ...[
-                  Panel(
-                    child: Row(children: [
-                      const SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: Tk.pep)),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Pep is watching ${v.displayTitle}',
-                              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-                          const Text("Usually ready in a few minutes. You can leave this screen.",
-                              style: TextStyle(fontSize: 12.5, color: Tk.muted)),
-                        ]),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 10),
-                ],
-                if (ready.isNotEmpty) ...[const SizedBox(height: 4), const SectionLabel('Ready')],
-                for (final v in ready) ...[_ReviewRow(v), const SizedBox(height: 10)],
-                const SizedBox(height: 6),
-                OutlinedButton.icon(
-                  onPressed: () => openUpload(context),
-                  icon: const TIcon('camera', size: 18, color: Tk.ink),
-                  label: const Text('Send Pep a clip'),
-                ),
-                const SizedBox(height: 14),
-                const InfoNote(InfoNote.pep),
-              ]),
-            ),
+    return BPage(
+      eyebrow: 'Pep',
+      title: 'Reviews',
+      sub: "Send me a clip and I'll tell you what went well and what to work on.",
+      children: [
+        for (final v in watching)
+          Panel(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(children: [
+              const PepFace(PepMood.watching, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Pep is watching ${v.displayTitle}', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
+                  const SizedBox(height: 2),
+                  const Text("Usually ready in a few minutes. I'll let you know.", style: bNote),
+                ]),
+              ),
+            ]),
+          ),
+        if (ready.isEmpty && watching.isEmpty)
+          const BDashed(
+            child: Text("No reviews yet. Send a clip and you'll get what went well and what to work on, with a time for each.",
+                style: TextStyle(fontSize: 13, height: 1.45, color: Tk.muted)),
+          ),
+        if (ready.isNotEmpty) const BLab('Ready'),
+        for (final (i, v) in ready.indexed) _ReviewRow(v, fresh: i == 0),
+        BCta('Send Pep a clip', ghost: true, icon: 'camera', onTap: () => openUpload(context)),
+        const InfoNote(InfoNote.pep),
+      ],
     );
   }
 }
 
 class _ReviewRow extends StatelessWidget {
-  const _ReviewRow(this.v);
+  const _ReviewRow(this.v, {this.fresh = false});
 
   final Video v;
+  final bool fresh;
 
   @override
   Widget build(BuildContext context) => Panel(
@@ -387,18 +377,31 @@ class _ReviewRow extends StatelessWidget {
             ClipRRect(
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(Tk.rCard)),
               child: SizedBox(
-                width: 96,
-                child: v.thumbnailUrl == null
-                    ? const ColoredBox(color: Tk.card2, child: Center(child: TIcon('play', size: 16, color: Tk.faint)))
-                    : Image.network(v.thumbnailUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const ColoredBox(color: Tk.card2)),
+                width: 100,
+                child: BThumb(url: v.thumbnailUrl, height: 100, radius: 0, children: [
+                  Positioned(
+                    left: 8,
+                    bottom: 8,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(color: Color(0x99000000), shape: BoxShape.circle),
+                      child: const TIcon('play', size: 10, color: Colors.white),
+                    ),
+                  ),
+                ]),
               ),
             ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(clipKind(v.clipType).toUpperCase(),
-                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.6)),
+                  Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                    Text(clipKind(v.clipType).toUpperCase(),
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.6)),
+                    if (fresh) BChip('New', color: context.accent.on, background: context.accent.main, caps: true),
+                  ]),
                   const SizedBox(height: 4),
                   Text(v.displayTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
                   if (v.reviewNote != null) ...[
@@ -429,54 +432,37 @@ class _TipsScreenState extends State<TipsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: FutureBuilder<List<ReviewTip>>(
-        future: _tips,
-        builder: (context, snap) {
-          if (snap.hasError) return StateView.error(onRetry: _reload);
-          if (!snap.hasData) {
-            return ListView(padding: const EdgeInsets.all(20), children: const [
-              Skeleton(height: 28, width: 200),
-              SizedBox(height: 20),
-              Skeleton(height: 220),
-              SizedBox(height: 12),
-              Skeleton(height: 220),
-            ]);
-          }
-          final all = snap.data!;
-          if (all.isEmpty) {
-            return StateView(
-              icon: 'target',
-              title: 'No tips yet',
-              message: 'Each tip comes from a moment in one of your clips. Send a clip to get your first.',
-              actionLabel: 'Add a clip',
-              onAction: () => openUpload(context),
-            );
-          }
-          final groups = ['All', ...{for (final t in all) t.group}];
-          final shown = _group == 'All' ? all : all.where((t) => t.group == _group).toList();
-          return ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-            const Text('PEP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.8)),
-            const SizedBox(height: 4),
-            Text('Tips from your clips', style: Theme.of(context).textTheme.headlineLarge),
-            const SizedBox(height: 4),
-            const Text('Each tip comes from a moment in one of your clips.', style: TextStyle(fontSize: 13, color: Tk.muted)),
-            const SizedBox(height: 16),
-            if (groups.length > 2) ...[
-              SingleChips<String>(
-                options: {for (final g in groups) g: g},
-                value: _group,
-                onChanged: (g) => setState(() => _group = g),
-              ),
-              const SizedBox(height: 16),
+    return FutureBuilder<List<ReviewTip>>(
+      future: _tips,
+      builder: (context, snap) {
+        final all = snap.data ?? const <ReviewTip>[];
+        final groups = ['All', ...{for (final t in all) t.group}];
+        final shown = _group == 'All' ? all : all.where((t) => t.group == _group).toList();
+        return BPage(
+          eyebrow: 'Pep',
+          title: 'Tips from your clips',
+          sub: 'Each tip comes from a moment in one of your clips.',
+          gap: 14,
+          children: [
+            if (snap.hasError)
+              StateView.error(onRetry: _reload)
+            else if (!snap.hasData) ...[
+              const Skeleton(height: 220),
+              const Skeleton(height: 220),
+            ] else if (all.isEmpty)
+              const BDashed(
+                child: Text('No tips yet. Each tip comes from a moment in one of your clips. Send a clip to get your first.',
+                    style: TextStyle(fontSize: 13, height: 1.45, color: Tk.muted)),
+              )
+            else ...[
+              if (groups.length > 2)
+                SingleChips<String>(options: {for (final g in groups) g: g}, value: _group, onChanged: (g) => setState(() => _group = g)),
+              for (final t in shown) TipCard(tip: t, showClip: true),
+              const InfoNote(InfoNote.pep),
             ],
-            for (final t in shown) ...[TipCard(tip: t, showClip: true), const SizedBox(height: 12)],
-            const SizedBox(height: 4),
-            const InfoNote(InfoNote.pep),
-          ]);
-        },
-      ),
+          ],
+        );
+      },
     );
   }
 }

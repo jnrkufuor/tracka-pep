@@ -404,7 +404,9 @@ class _PepFaceState extends State<PepFace> with SingleTickerProviderStateMixin {
     return Semantics(
       label: 'Pep',
       image: true,
-      child: ValueListenableBuilder<double>(
+      // RepaintBoundary: Pep redraws 60 times a second; this keeps that redraw
+      // to his own square instead of the whole screen around him.
+      child: RepaintBoundary(child: ValueListenableBuilder<double>(
         valueListenable: _t,
         builder: (_, t, __) {
           final dy = whole == _Whole.hop
@@ -420,7 +422,7 @@ class _PepFaceState extends State<PepFace> with SingleTickerProviderStateMixin {
             ),
           );
         },
-      ),
+      )),
     );
   }
 
@@ -438,7 +440,10 @@ class _PepFaceState extends State<PepFace> with SingleTickerProviderStateMixin {
     final px = Matrix4.diagonal3Values(k, k, 1)..multiply(Matrix4.translationValues(2, 2, 0));
     final back = Matrix4.translationValues(-2, -2, 0)..multiply(Matrix4.diagonal3Values(1 / k, 1 / k, 1));
     final mm = px..multiply(m)..multiply(back);
-    return Opacity(opacity: o.clamp(0.0, 1.0), child: Transform(transform: mm, child: pic));
+    final moved = Transform(transform: mm, child: pic);
+    // Only fade when the move asks for it: a see-through layer costs the phone
+    // an extra drawing pass every frame.
+    return o >= .999 ? moved : Opacity(opacity: o.clamp(0.0, 1.0), child: moved);
   }
 }
 
