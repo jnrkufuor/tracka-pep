@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import 'guardian_screens.dart';
 
@@ -212,11 +213,12 @@ class _ShareCardScreenState extends State<ShareCardScreen> {
     }
     final minor = s.me?.profile.age != null && s.me!.profile.age! < 18;
     return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+      body: SafeArea(child: ListView(padding: const EdgeInsets.fromLTRB(20, 12, 20, 32), children: [
+        Align(alignment: Alignment.centerLeft, child: BRoundButton(icon: 'back', label: 'Back', onTap: () => Navigator.of(context).maybePop())),
+        const SizedBox(height: 14),
         Text('Share your card', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 4),
-        const Text('Send it to a coach, a scout or your friends.', style: TextStyle(fontSize: 13.5, color: Tk.muted)),
+        const SizedBox(height: 6),
+        const Text('Send it to a coach, a scout or your friends.', style: TextStyle(fontSize: 13, color: Tk.muted)),
         const SizedBox(height: 18),
         RepaintBoundary(
           key: _cardKey,
@@ -284,53 +286,43 @@ class _ShareCardScreenState extends State<ShareCardScreen> {
             label: const Text('Save image'),
           ),
           const SizedBox(height: 8),
-          Panel(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: Column(children: [
-              SwitchListTile(
-                title: const Text('Your link'),
-                subtitle: Text(v.linkOn ? 'On: anyone with the link can see your card' : 'Off: nobody can see your card'),
-                value: v.linkOn,
-                onChanged: (on) => _do(() => s.api.setCardLink(on), done: on ? 'Link on' : 'Link off'),
+          BGroup([
+            BSettingRow(
+              title: 'Your link',
+              sub: v.linkOn ? 'On: anyone with the link can see your card' : 'Off: nobody can see your card',
+              toggle: v.linkOn,
+              onToggle: (on) => _do(() => s.api.setCardLink(on), done: on ? 'Link on' : 'Link off'),
+              divider: v.url != null,
+            ),
+            if (v.url != null)
+              BSettingRow(
+                title: 'Make a new link',
+                sub: 'The old link stops working',
+                onTap: () => _do(() => s.api.setCardLink(true, newLink: true), done: 'New link made'),
+                divider: false,
               ),
-              if (v.url != null)
-                ListTile(
-                  title: const Text('Make a new link'),
-                  subtitle: const Text('The old link stops working'),
-                  onTap: () => _do(() => s.api.setCardLink(true, newLink: true), done: 'New link made'),
-                ),
-            ]),
-          ),
+          ]),
         ],
         const SizedBox(height: 18),
-        const SectionLabel('Show on your card'),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Column(children: [
-            for (final (k, t) in const [('bests', 'Your bests'), ('skills', 'Measured skills'), ('clips', 'Portfolio clips')])
-              SwitchListTile(
-                title: Text(t),
-                value: v.show[k] ?? true,
-                onChanged: (x) => _do(() => s.api.updateCard(show: {k: x})),
-              ),
-            ListTile(
-              title: const Text('Pick your portfolio clips'),
-              subtitle: Text(v.portfolio.isEmpty ? 'None yet' : '${v.portfolio.length} picked'),
-              trailing: const TIcon('chevron', size: 14, color: Tk.faint),
-              onTap: () => _pickClips(v),
-            ),
-          ]),
-        ),
+        const BLab('Show on your card'),
+        const SizedBox(height: 10),
+        BGroup([
+          for (final (k, t) in const [('bests', 'Your bests'), ('skills', 'Measured skills'), ('clips', 'Portfolio clips')])
+            BSettingRow(title: t, toggle: v.show[k] ?? true, onToggle: (x) => _do(() => s.api.updateCard(show: {k: x}))),
+          BSettingRow(
+            title: 'Pick your portfolio clips',
+            sub: v.portfolio.isEmpty ? 'None yet' : '${v.portfolio.length} picked',
+            onTap: () => _pickClips(v),
+            divider: false,
+          ),
+        ]),
         const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicCardScreen(card: v.card))),
-          child: const Text("See what they'll see"),
-        ),
+        BCta("See what they'll see", ghost: true, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PublicCardScreen(card: v.card)))),
         const SizedBox(height: 14),
         InfoNote(minor
             ? 'Your profile stays private. Only people with your link can open it, and you can turn the link off any time. Your guardian decides if you can share.'
             : 'Your profile stays private. Only people with your link can open it, and you can turn the link off any time.'),
-      ]),
+      ])),
     );
   }
 
@@ -410,69 +402,78 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
     final s = context.read<AppState>();
     final me = s.me;
     final minor = me?.profile.age != null && me!.profile.age! < 18;
-    Widget always(String t, String d) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(children: [
-            const TIcon('lock', size: 16, color: Tk.faint),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(t, style: const TextStyle(fontSize: 14.5, color: Tk.ink)),
-                Text(d, style: const TextStyle(fontSize: 12.5, color: Tk.muted)),
+    final a = context.accent;
+    final link = c?.linkOn ?? false;
+    Future<void> choose(String v) async {
+      if (c == null) return;
+      if (v == 'link' && !c!.canShare) {
+        if (me?.needsGuardian ?? false) {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GuardianScreen()));
+        } else {
+          await showAskGuardian(context, 'share_card');
+        }
+        return;
+      }
+      try {
+        final x = await s.api.setCardLink(v == 'link');
+        if (mounted) setState(() => c = x);
+      } catch (e) {
+        if (context.mounted) showToast(context, "Couldn't save that", detail: '$e', ok: false, aboveTabs: false);
+      }
+    }
+
+    // Canvas "Who can see your profile": big radio rows, then what's always private.
+    Widget option(String v, String t, bool on) => Semantics(
+          inMutuallyExclusiveGroup: true,
+          checked: on,
+          button: true,
+          label: t,
+          excludeSemantics: true,
+          child: Pressable(
+            onTap: () => choose(v),
+            child: AnimatedContainer(
+              duration: Motion.of(context, Motion.select),
+              constraints: const BoxConstraints(minHeight: 52),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: on ? a.main : Tk.field,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: on ? a.main : const Color(0xFF262626)),
+              ),
+              child: Row(children: [
+                if (on) ...[TIcon('check', size: 14, color: a.on, stroke: 6), const SizedBox(width: 8)],
+                Text(t, style: TextStyle(fontSize: 15, fontWeight: on ? FontWeight.w600 : FontWeight.w500, color: on ? a.on : Tk.ink)),
               ]),
             ),
-          ]),
+          ),
         );
-    return Scaffold(
-      appBar: AppBar(),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
-        Text('Who can see your profile', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 18),
-        if (c != null)
-          SingleChips<String>(
-            options: const {'private': 'Only you', 'link': 'People with your link'},
-            value: c!.linkOn ? 'link' : 'private',
-            scroll: false,
-            onChanged: (v) async {
-              if (v == 'link' && !c!.canShare) {
-                if (me?.needsGuardian ?? false) {
-                  await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GuardianScreen()));
-                } else {
-                  await showAskGuardian(context, 'share_card');
-                }
-                return;
-              }
-              try {
-                final x = await s.api.setCardLink(v == 'link');
-                if (mounted) setState(() => c = x);
-              } catch (e) {
-                if (context.mounted) showToast(context, "Couldn't save that", detail: '$e', ok: false, aboveTabs: false);
-              }
-            },
-          )
+    return BPage(
+      title: 'Who can see your profile',
+      gap: 14,
+      children: [
+        if (c == null)
+          const Skeleton(height: 112)
         else
-          const Skeleton(height: 40),
-        const SizedBox(height: 10),
-        const Panel(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Scouts on Tracka', style: TextStyle(fontSize: 14.5, color: Tk.ink)),
-                Text('Coming later, with checked scouts only', style: TextStyle(fontSize: 12.5, color: Tk.muted)),
-              ]),
-            ),
-            Text('Off', style: TextStyle(color: Tk.faint)),
+          Column(children: [
+            option('private', 'Only you', !link),
+            const SizedBox(height: 8),
+            option('link', 'People with your link', link),
+          ]),
+        const BDashed(
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Scouts on Tracka', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.faint)),
+            SizedBox(height: 2),
+            Text('Coming later, with checked scouts only', style: bNote),
           ]),
         ),
-        const SizedBox(height: 10),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: SwitchListTile(
-            title: const Text('Show up in search'),
-            subtitle: Text(minor ? 'Other players your age can find you. Your guardian has to agree.' : 'Other players can find you on Pitchside.'),
-            value: me?.settings.findable ?? false,
-            onChanged: (v) async {
+        BGroup([
+          BSettingRow(
+            title: 'Show up in search',
+            sub: minor ? 'Other players your age can find you. Your guardian has to agree.' : 'Other players can find you on Pitchside.',
+            toggle: me?.settings.findable ?? false,
+            divider: false,
+            onToggle: (v) async {
               await s.saveSettings({'findable': v});
               if (v && minor && context.mounted) {
                 final g = await s.api.guardian().catchError((_) => GuardianState(needed: true, status: 'none'));
@@ -481,28 +482,19 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
               if (mounted) setState(() {});
             },
           ),
-        ),
-        const SizedBox(height: 18),
-        const SectionLabel('Always private'),
-        Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Column(children: [
-            always('Full name and date of birth', 'People see your shirt name and age group'),
-            always('Exact location', 'Only your region is shown'),
-            always("Clips you haven't posted", 'Pep watches them for you, nobody else'),
-            if (minor) always('No direct messages', 'Contact goes through your guardian'),
-          ]),
-        ),
+        ]),
+        const BLab('Always private'),
+        BGroup([
+          const BSettingRow(title: 'Full name and date of birth', sub: 'People see your shirt name and age group', always: true),
+          const BSettingRow(title: 'Exact location', sub: 'Only your region is shown', always: true),
+          BSettingRow(title: "Clips you haven't posted", sub: 'Pep watches them for you, nobody else', always: true, divider: minor),
+          if (minor) const BSettingRow(title: 'No direct messages', sub: 'Contact goes through your guardian', always: true, divider: false),
+        ]),
         if (minor) ...[
-          const SizedBox(height: 14),
-          const InfoNote("You're under 18, so your guardian has to agree before anyone outside Tracka can see your profile."),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GuardianScreen())),
-            child: const Text('Your guardian'),
-          ),
+          const SafetyNote("You're under 18, so your guardian has to agree before anyone outside Tracka can see your profile.", icon: 'info'),
+          BCta('Your guardian', ghost: true, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GuardianScreen()))),
         ],
-      ]),
+      ],
     );
   }
 }
