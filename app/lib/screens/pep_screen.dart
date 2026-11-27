@@ -649,8 +649,12 @@ class TestScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = context.accent;
     final d = context.read<AppState>().meta?.drills[drill];
-    const kitNames = {'ball': ('ball', 'A ball'), 'wall': ('target', 'A wall'), 'cones': ('cone', 'Cones or markers'), 'friends': ('users', 'A friend to film'), 'space': ('pace', 'Space to run')};
-    final needs = [for (final n in d?.needs ?? const <String>[]) if (kitNames[n] != null) kitNames[n]!, ('camera', 'Your phone')];
+    final cones = d?.cones.length ?? 0;
+    final needs = [
+      if (cones > 0) ('cone', '$cones cones or markers'),
+      ('camera', 'Your phone'),
+      ('users', 'A friend to film, or a phone stand'),
+    ];
     final steps = [
       ('Warm up for 5 minutes', 'Jog, skips, a few short sprints at half speed.'),
       (d?.label ?? name, d?.how ?? 'Follow the steps on the upload screen.'),
