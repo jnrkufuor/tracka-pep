@@ -79,6 +79,9 @@ void main() {
     '13-pep': () => const Shell(initialTab: 2),
     '14-me': () => const Shell(initialTab: 3),
     '15-settings': () => const SettingsScreen(),
+    '16-home-day-one': () => const Shell(),
+    '17-pep-day-one': () => const Shell(initialTab: 2),
+    '18-me-day-one': () => const Shell(initialTab: 3),
     '20-pep-moods': () => const _Moods(),
   };
 
@@ -87,7 +90,7 @@ void main() {
       tester.view.physicalSize = const Size(390 * 3, 844 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
-      final s = (await tester.runAsync(readyState))!;
+      final s = (await tester.runAsync(() => readyState(dayOne: name.contains('day-one'))))!;
       await tester.pumpWidget(ChangeNotifierProvider<AppState>.value(
         value: s,
         child: MaterialApp(debugShowCheckedModeBanner: false, theme: trackaTheme(), home: make()),

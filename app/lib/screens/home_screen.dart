@@ -457,7 +457,7 @@ class _StartHere extends StatelessWidget {
             height: 5,
             child: Stack(children: [
               const Positioned.fill(child: ColoredBox(color: Color(0xFF262626))),
-              FractionallySizedBox(widthFactor: n / items.length, child: ColoredBox(color: a.main)),
+              FractionallySizedBox(widthFactor: n / items.length, heightFactor: 1, child: ColoredBox(color: a.main)),
             ]),
           ),
         ),

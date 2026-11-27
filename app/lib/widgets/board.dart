@@ -266,7 +266,11 @@ class BRow extends StatelessWidget {
     this.onTap,
     this.divider = true,
     this.titleSize = 14.5,
+    this.leading,
   });
+
+  /// Something else in the tile (the colour wheel in Settings).
+  final Widget? leading;
 
   final String icon;
   final String title;
@@ -285,7 +289,16 @@ class BRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: divider ? const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))) : null,
       child: Row(children: [
-        IconTile(icon: icon, color: iconColor ?? Tk.ink, background: tileColor ?? Tk.field, size: tile),
+        if (leading != null)
+          Container(
+            width: tile,
+            height: tile,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: tileColor ?? Tk.field, borderRadius: BorderRadius.circular(tile * 0.3)),
+            child: leading,
+          )
+        else
+          IconTile(icon: icon, color: iconColor ?? Tk.ink, background: tileColor ?? Tk.field, size: tile),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -331,4 +344,28 @@ class BThumb extends StatelessWidget {
           ]),
         ),
       );
+}
+
+/// Four main colours in one dot (Settings › Main colour).
+class BColourWheel extends StatelessWidget {
+  const BColourWheel({super.key, this.size = 20});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(dimension: size, child: CustomPaint(painter: _WheelPainter()));
+}
+
+class _WheelPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const colours = [Color(0xFFE5FF00), Color(0xFF1A8CFF), Color(0xFFFF1AA6), Color(0xFF00E5FF)];
+    final r = Offset.zero & size;
+    for (var i = 0; i < 4; i++) {
+      canvas.drawArc(r, -1.5708 + i * 1.5708, 1.5708, true, Paint()..color = colours[i]);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WheelPainter old) => false;
 }

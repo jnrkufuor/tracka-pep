@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import '../widgets/pep.dart';
 import '../widgets/pitch_picker.dart';
@@ -169,17 +170,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(children: [
           if (showSteps)
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 20, 0),
+              // Canvas: round back button, one bar per step, "Step 2 of 5".
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Row(children: [
-                IconButton(tooltip: 'Back', onPressed: () => _go(-1), icon: const TIcon('back', size: 18, color: Tk.ink)),
-                Text('Step $n of $total', style: const TextStyle(fontSize: 13, color: Tk.muted, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(value: n / total, minHeight: 4),
+                Semantics(
+                  button: true,
+                  label: 'Back',
+                  excludeSemantics: true,
+                  child: Pressable(
+                    onTap: () => _go(-1),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(color: Tk.field, shape: BoxShape.circle),
+                      child: const TIcon('back', size: 16, color: Tk.ink),
+                    ),
                   ),
                 ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Row(children: [
+                    for (var i = 1; i <= total; i++) ...[
+                      if (i > 1) const SizedBox(width: 4),
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: Motion.of(context, Motion.fill),
+                          height: 5,
+                          decoration: BoxDecoration(color: i <= n ? context.accent.main : const Color(0xFF262626), borderRadius: BorderRadius.circular(9)),
+                        ),
+                      ),
+                    ],
+                  ]),
+                ),
+                const SizedBox(width: 14),
+                Text('Step $n of $total', style: const TextStyle(fontSize: 12, color: Color(0xFFC2C6BA), fontWeight: FontWeight.w600)),
               ]),
             ),
           Expanded(
@@ -192,15 +217,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Column(children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: canContinue && !busy ? _continue : null,
-                    child: busy
-                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-                        : Text(page == _Page.meet ? "Let's go" : 'Continue'),
-                  ),
-                ),
+                BCta(busy ? 'Saving…' : (page == _Page.meet ? "Let's go" : 'Continue'), onTap: canContinue && !busy ? _continue : null),
                 if (page == _Page.schedule)
                   TextButton(
                     onPressed: busy
@@ -233,6 +250,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _scroll(String title, String? sub, List<Widget> children) => ListView(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
         children: [
+          // The step's name above its question (canvas: "Personal details").
+          if (_eyebrow != null) ...[
+            Text(_eyebrow!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.accent.main)),
+            const SizedBox(height: 6),
+          ],
           EnterFade(child: Text(title, style: Theme.of(context).textTheme.headlineLarge)),
           if (sub != null) ...[const SizedBox(height: 6), Text(sub, style: const TextStyle(fontSize: 14, color: Tk.muted))],
           const SizedBox(height: 22),
@@ -240,11 +262,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ],
       );
 
+  String? get _eyebrow => switch (page) {
+        _Page.personal => 'Personal details',
+        _Page.location => 'Location',
+        _Page.journey => 'Your journey',
+        _Page.profile => 'Player profile',
+        _Page.schedule => 'Schedule',
+        _Page.casual => 'How you play',
+        _ => null,
+      };
+
   Widget _label(String t, {String? hint}) => Padding(
         padding: const EdgeInsets.only(top: 4, bottom: 8),
         child: Row(children: [
-          Text(t, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink)),
-          if (hint != null) Text('  ·  $hint', style: const TextStyle(fontSize: 12.5, color: Tk.faint)),
+          Text(t, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab)),
+          if (hint != null) Flexible(child: Text(' · $hint', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab))),
         ]),
       );
 
@@ -413,16 +445,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         onChanged: (v) => d.town = v,
       ),
       const SizedBox(height: 22),
-      _label('How should Pep talk to you?'),
-      SingleChips<String>(
-        options: const {'street': 'Street talk', 'coach': 'Coach talk'},
-        value: voice,
-        onChanged: (v) => setState(() => voice = v),
-        scroll: false,
+      const Padding(
+        padding: EdgeInsets.only(top: 4, bottom: 8),
+        child: Row(children: [
+          PepFace(PepMood.listening, size: 18),
+          SizedBox(width: 8),
+          Text('How should Pep talk to you?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab)),
+        ]),
       ),
-      const SizedBox(height: 8),
-      Text(voice == 'street' ? '"Charlie, you dey check your shoulder well!"' : '"Good scanning before you received the ball."',
-          style: const TextStyle(fontSize: 13, color: Tk.muted, fontStyle: FontStyle.italic)),
+      // Two cards with how each one sounds (canvas: Location).
+      for (final (k, t, q) in const [
+        ('street', 'Street talk', '"Charlie, you dey check your shoulder well!"'),
+        ('coach', 'Coach talk', '"Good scanning before you received the ball."'),
+      ])
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Semantics(
+            inMutuallyExclusiveGroup: true,
+            checked: voice == k,
+            button: true,
+            label: '$t. $q',
+            excludeSemantics: true,
+            child: Pressable(
+              onTap: () => setState(() => voice = k),
+              child: AnimatedContainer(
+                duration: Motion.of(context, Motion.select),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: voice == k ? context.accent.tile : const Color(0xFF111111),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: voice == k ? context.accent.main : const Color(0xFF222222), width: voice == k ? 1.5 : 1),
+                ),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+                      const SizedBox(height: 2),
+                      Text(q, style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Tk.muted)),
+                    ]),
+                  ),
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: voice == k ? context.accent.main : null,
+                      border: voice == k ? null : Border.all(color: const Color(0xFF3A3D36), width: 2),
+                    ),
+                    child: voice == k ? TIcon('check', size: 12, color: context.accent.on, stroke: 6) : null,
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
     ]);
   }
 
