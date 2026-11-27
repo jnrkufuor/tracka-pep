@@ -442,7 +442,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
               ),
               child: Row(children: [
                 if (on) ...[TIcon('check', size: 14, color: a.on, stroke: 6), const SizedBox(width: 8)],
-                Text(t, style: TextStyle(fontSize: 15, fontWeight: on ? FontWeight.w600 : FontWeight.w500, color: on ? a.on : Tk.ink)),
+                Flexible(child: Text(t, style: TextStyle(fontSize: 15, fontWeight: on ? FontWeight.w600 : FontWeight.w500, color: on ? a.on : Tk.ink))),
               ]),
             ),
           ),
