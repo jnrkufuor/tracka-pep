@@ -162,9 +162,10 @@ class Panel extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: color ?? Tk.card,
+        // The canvas's card: #111 with a #222 edge, corners 20.
+        color: color ?? const Color(0xFF111111),
         borderRadius: BorderRadius.circular(Tk.rCard),
-        border: Border.all(color: border ?? Tk.line),
+        border: Border.all(color: border ?? const Color(0xFF222222)),
       ),
       // A see-through Material inside the card, so list rows and buttons in it
       // draw their tap ripple on the card instead of underneath it.
@@ -205,7 +206,7 @@ class SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 6, bottom: 2),
         child: Row(children: [
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink))),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab))),
           if (trailing != null) trailing!,
         ]),
       );

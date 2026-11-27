@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 
 import '../theme/theme.dart';
+import 'ds.dart';
 
 /// Profile form pieces, shared by onboarding (one step at a time) and Edit profile (all at once).
 /// Each holds no state of its own: the parent keeps a [ProfileDraft] and rebuilds.
@@ -175,6 +176,7 @@ class RegionPicker extends StatelessWidget {
       initialValue: value,
       isExpanded: true,
       dropdownColor: Tk.card2,
+      icon: Transform.rotate(angle: 1.5708, child: const TIcon('chevron', size: 14, color: Tk.muted)),
       decoration: const InputDecoration(labelText: 'Region'),
       items: [for (final r in regions) DropdownMenuItem(value: r, child: Text(r))],
       onChanged: onChanged,

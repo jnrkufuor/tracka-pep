@@ -7,12 +7,14 @@ import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import '../widgets/pep.dart';
 import '../widgets/pitch_picker.dart';
 import '../widgets/profile_fields.dart';
 import '../widgets/skill_areas_view.dart';
 import 'card_screens.dart';
+import 'pep_screen.dart' show FocusScreen, TestScreen;
 import 'settings_screen.dart';
 import 'video_screen.dart';
 import 'videos_screen.dart';
@@ -30,6 +32,10 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   CardState? card;
+  FocusState? focus;
+
+  /// Growth · Clips · About (canvas Me: "tap Growth, Clips, About").
+  String tab = 'growth';
 
   @override
   void initState() {
@@ -38,9 +44,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _load() async {
+    final api = context.read<AppState>().api;
     try {
-      final c = await context.read<AppState>().api.card();
+      final c = await api.card();
       if (mounted) setState(() => card = c);
+    } catch (_) {}
+    try {
+      final f = await api.focus();
+      if (mounted) setState(() => focus = f);
     } catch (_) {}
   }
 
@@ -61,17 +72,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final s = context.watch<AppState>();
     final me = s.me;
     if (me == null) return const SizedBox.shrink();
-    final p = me.profile;
     final c = card;
-    final ready = s.videos.where((v) => v.status == 'READY').toList();
-    final portfolio = [for (final id in c?.portfolio ?? const <String>[]) ...ready.where((v) => v.id == id)];
-    Widget detail(String k, String v) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          child: Row(children: [
-            Expanded(child: Text(k, style: const TextStyle(fontSize: 14, color: Tk.muted))),
-            Flexible(child: Text(v, textAlign: TextAlign.right, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink))),
-          ]),
-        );
+    final areas = s.coach?.skillAreas;
+    final seen = (areas?.measured ?? 0) > 0 || (focus?.bests.isNotEmpty ?? false);
+    final children = <Widget>[
+      Row(children: [
+        Expanded(child: Text('Me', style: Theme.of(context).textTheme.headlineLarge?.copyWith(fontSize: 30))),
+        _GlassButton(icon: 'share', label: 'Share', onTap: () => _go(const ShareCardScreen())),
+        const SizedBox(width: 8),
+        _GlassButton(icon: 'settings', label: null, semantics: 'Settings', onTap: () => showSettingsSheet(context)),
+      ]),
+      _MeCard(
+        card: c?.card,
+        profile: me.profile,
+        linkOn: c?.linkOn ?? false,
+        onPrivacy: () => _go(const PrivacyScreen()),
+        onEdit: () => _go(const EditProfileScreen()),
+      ),
+      if (!seen) ...[
+        const BPepNote(mood: PepMood.watching, title: "I haven't seen you play yet", text: "Do your first tests and I'll start filling this in."),
+        BCta('Start your first test', onTap: () {
+          final t = focus?.nextTest;
+          _go(t == null ? const FocusScreen() : TestScreen(drill: t.drill, name: t.name));
+        }),
+        if (areas != null) SkillAreasView(areas: areas),
+      ] else ...[
+        SingleChips<String>(
+          options: const {'growth': 'Growth', 'clips': 'Clips', 'about': 'About'},
+          value: tab,
+          onChanged: (v) => setState(() => tab = v),
+        ),
+        ...switch (tab) {
+          'clips' => _clips(s),
+          'about' => _about(me.profile),
+          _ => _growth(areas),
+        },
+      ],
+    ];
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
@@ -80,72 +117,293 @@ class _ProfileScreenState extends State<ProfileScreen> {
             await _load();
           },
           child: ListView(padding: const EdgeInsets.fromLTRB(20, 14, 20, 32), children: [
-            Row(children: [
-              Text('Me', style: Theme.of(context).textTheme.headlineLarge),
-              const Spacer(),
-              IconButton(tooltip: 'Share your card', onPressed: () => _go(const ShareCardScreen()), icon: const TIcon('share', size: 20, color: Tk.ink)),
-              IconButton(tooltip: 'Settings', onPressed: () => _go(const SettingsScreen()), icon: const TIcon('settings', size: 21, color: Tk.ink)),
-            ]),
-            const SizedBox(height: 10),
-            if (c != null) PlayerCardView(card: c.card) else const Skeleton(height: 170),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: OutlinedButton(onPressed: () => _go(const EditProfileScreen()), child: const Text('Edit profile'))),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _go(const PrivacyScreen()),
-                  child: Text(c?.linkOn ?? false ? 'Shared by link' : 'Private'),
-                ),
-              ),
-            ]),
-            if (s.coach?.skillAreas != null) ...[
-              const SizedBox(height: 24),
-              SkillAreasView(areas: s.coach!.skillAreas!),
-            ],
-            const SizedBox(height: 22),
-            SectionLabel('Portfolio', trailing: Pressable(onTap: () => _go(const ShareCardScreen()), child: const Text('Manage', style: TextStyle(fontSize: 13, color: Tk.muted)))),
-            const Text('Your best clips, picked by you. This is what people see when you share your card.', style: TextStyle(fontSize: 12.5, color: Tk.faint)),
-            const SizedBox(height: 10),
-            _ClipStrip(videos: portfolio, empty: 'Pick your best clips in Share your card.'),
-            const SizedBox(height: 22),
-            SectionLabel('All your clips', trailing: Pressable(onTap: () => _go(const VideosScreen()), child: const Text('See all', style: TextStyle(fontSize: 13, color: Tk.muted)))),
-            const Text('Only you can see these until you post them.', style: TextStyle(fontSize: 12.5, color: Tk.faint)),
-            const SizedBox(height: 10),
-            _ClipStrip(videos: s.videos.take(8).toList(), empty: 'No clips yet.'),
-            const SizedBox(height: 22),
-            const SectionLabel('Working towards'),
-            Panel(
-              onTap: () => _go(const EditProfileScreen()),
-              child: Row(children: [
-                const IconTile(icon: 'flag', color: Tk.gold, background: Tk.goldTile, size: 38),
-                const SizedBox(width: 12),
-                Expanded(child: Text(_goals[p.goal] ?? 'Pick a goal', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink))),
-                const Text('Change', style: TextStyle(fontSize: 13, color: Tk.muted)),
-              ]),
-            ),
-            const SizedBox(height: 22),
-            const SectionLabel('Player details'),
-            Panel(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Column(children: [
-                detail('Positions', p.positions.isEmpty ? '–' : [p.positions.first, ...p.positions.skip(1)].join(', ')),
-                if (p.style != null) detail('Your style', p.style!),
-                detail('Stronger foot', p.foot == null ? '–' : '${p.foot![0].toUpperCase()}${p.foot!.substring(1)}'),
-                if (p.weakFoot != null) detail('Weaker foot', '${p.weakFoot} · ${_weak[p.weakFoot! - 1]}'),
-                detail('Height', p.heightM == null ? '–' : '${p.heightM!.toStringAsFixed(2)} m'),
-                detail('Where you play', [if (p.region != null) p.region!].join(', ').isEmpty ? '–' : p.region!),
-                if (p.shirtName != null) detail('Shirt', [p.shirtName!, if (p.shirtNumber != null) '${p.shirtNumber}'].join(' · ')),
-                detail('Born', p.birthDate == null ? '–' : DateFormat.yMMMd().format(p.birthDate!)),
-              ]),
-            ),
-            const SizedBox(height: 14),
-            const InfoNote('Compared with players your age, from your clips and tests. Video measurements can be off. Use them as a guide.'),
+            for (final (i, w) in children.indexed) ...[if (i > 0) const SizedBox(height: 18), w],
           ]),
         ),
       ),
     );
   }
+
+  List<Widget> _growth(SkillAreas? areas) {
+    final bests = focus?.bests ?? const [];
+    return [
+      if (areas != null) SkillAreasView(areas: areas),
+      if (bests.isNotEmpty) ...[
+        const BLab('Your bests'),
+        LayoutBuilder(builder: (context, box) {
+          final w = (box.maxWidth - 10) / 2;
+          return Wrap(spacing: 10, runSpacing: 10, children: [
+            for (final b in bests)
+              SizedBox(
+                width: w,
+                child: Panel(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('${b.value}${b.unit.isEmpty ? '' : ' ${b.unit}'}',
+                        style: const TextStyle(fontFamily: TType.display, fontSize: 26, fontWeight: FontWeight.w700, color: Tk.ink)),
+                    const SizedBox(height: 2),
+                    Text(b.label, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Tk.lab)),
+                    Text(b.unit == 's' ? 'Timed by Pep' : 'Counted by Pep', style: bNote),
+                  ]),
+                ),
+              ),
+          ]);
+        }),
+      ],
+    ];
+  }
+
+  List<Widget> _clips(AppState s) {
+    final ready = s.videos.where((v) => v.status == 'READY').toList();
+    final portfolio = [for (final id in card?.portfolio ?? const <String>[]) ...ready.where((v) => v.id == id)];
+    return [
+      BLab('Portfolio', link: 'Manage', onLink: () => _go(const ShareCardScreen())),
+      Transform.translate(
+        offset: const Offset(0, -10),
+        child: const Text('Your best clips, picked by you. This is what people see when you share your card.', style: bNote),
+      ),
+      _ClipStrip(videos: portfolio, empty: 'Pick your best clips in Share your card.'),
+      BLab('All your clips', link: 'See all', onLink: () => _go(const VideosScreen())),
+      Transform.translate(offset: const Offset(0, -10), child: const Text('Only you can see these until you post them.', style: bNote)),
+      _ClipStrip(videos: s.videos.take(8).toList(), empty: 'No clips yet.'),
+    ];
+  }
+
+  List<Widget> _about(Profile p) {
+    Widget detail(String k, String v, {bool last = false}) => Container(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: last ? null : const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))),
+          child: Row(children: [
+            Expanded(child: Text(k, style: const TextStyle(fontSize: 14, color: Tk.muted))),
+            Flexible(child: Text(v, textAlign: TextAlign.right, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink))),
+          ]),
+        );
+    final rows = <(String, String)>[
+      ('Positions', p.positions.isEmpty ? '–' : p.positions.join(', ')),
+      if (p.style != null) ('Your style', p.style!),
+      ('Stronger foot', p.foot == null ? '–' : '${p.foot![0].toUpperCase()}${p.foot!.substring(1)}'),
+      if (p.weakFoot != null) ('Weaker foot', '${p.weakFoot} · ${_weak[p.weakFoot! - 1]}'),
+      ('Height', p.heightM == null ? '–' : '${(p.heightM! * 100).round()} cm'),
+      ('Where you play', p.region ?? '–'),
+      if (p.shirtName != null) ('Shirt', [p.shirtName!, if (p.shirtNumber != null) '${p.shirtNumber}'].join(' · ')),
+      ('Born', p.birthDate == null ? '–' : DateFormat.yMMMd().format(p.birthDate!)),
+    ];
+    return [
+      const BLab('Working towards'),
+      Panel(
+        onTap: () => _go(const EditProfileScreen()),
+        child: Row(children: [
+          const IconTile(icon: 'flag', color: Tk.gold, background: Tk.goldTile, size: 38),
+          const SizedBox(width: 12),
+          Expanded(child: Text(_goals[p.goal] ?? 'Pick a goal', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink))),
+          const Text('Change', style: TextStyle(fontSize: 13, color: Tk.muted)),
+        ]),
+      ),
+      const BLab('Player details'),
+      Panel(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        child: Column(children: [for (final (i, (k, v)) in rows.indexed) detail(k, v, last: i == rows.length - 1)]),
+      ),
+      const InfoNote('Compared with players your age, from your clips and tests. Video measurements can be off. Use them as a guide.'),
+    ];
+  }
+}
+
+/// The see-through round button on Me (canvas: "Share").
+class _GlassButton extends StatelessWidget {
+  const _GlassButton({required this.icon, required this.label, required this.onTap, this.semantics});
+
+  final String icon;
+  final String? label;
+  final String? semantics;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: semantics ?? label,
+        excludeSemantics: true,
+        child: Pressable(
+          onTap: onTap,
+          child: Container(
+            height: 36,
+            constraints: const BoxConstraints(minWidth: 36),
+            padding: EdgeInsets.symmetric(horizontal: label == null ? 0 : 14),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0x14FFFFFF),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0x24FFFFFF)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              TIcon(icon, size: 15, color: Tk.ink),
+              if (label != null) ...[const SizedBox(width: 7), Text(label!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Tk.ink))],
+            ]),
+          ),
+        ),
+      );
+}
+
+/// Your player card on Me (canvas: Me). Big faint shirt number behind,
+/// your initials in a main-colour ring, position in big type, your style
+/// and Pep's read side by side, what Pep sees, who can see it, edit.
+class _MeCard extends StatelessWidget {
+  const _MeCard({required this.card, required this.profile, required this.linkOn, required this.onPrivacy, required this.onEdit});
+
+  final PlayerCard? card;
+  final Profile profile;
+  final bool linkOn;
+  final VoidCallback onPrivacy;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = context.accent;
+    final c = card;
+    final number = c?.shirtNumber ?? profile.shirtNumber;
+    final shirt = c?.shirtName ?? profile.shirtName ?? profile.displayName;
+    final initials = c?.initials ?? (shirt.isEmpty ? '?' : shirt.split(RegExp(r'[ .]+')).where((x) => x.isNotEmpty).take(2).map((x) => x[0]).join().toUpperCase());
+    final position = c?.positionName ?? (profile.positions.isEmpty ? 'Footballer' : profile.positions.first);
+    final line = [
+      if ((c?.foot ?? profile.foot) != null) '${_cap(c?.foot ?? profile.foot!)} foot',
+      if ((c?.region ?? profile.region) != null) c?.region ?? profile.region!,
+      if (c?.level != null) c!.level!,
+    ].join(' · ');
+    final sees = c?.pepSees ?? const <String>[];
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Color.alphaBlend(a.main.withValues(alpha: .14), const Color(0xFF111111))),
+        gradient: LinearGradient(
+          begin: const Alignment(-.8, -1),
+          end: const Alignment(.8, 1),
+          stops: const [0, .55],
+          colors: [Color.alphaBlend(a.main.withValues(alpha: .10), const Color(0xFF111111)), const Color(0xFF111111)],
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(children: [
+        if (number != null)
+          Positioned(
+            right: -6,
+            top: -22,
+            child: ExcludeSemantics(
+              child: Text('$number',
+                  style: TextStyle(fontFamily: TType.display, fontSize: 150, height: 1, fontWeight: FontWeight.w800, color: a.main.withValues(alpha: .10))),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF1A1A1A), border: Border.all(color: a.main, width: 2.5)),
+                child: Text(initials, style: const TextStyle(fontFamily: TType.display, fontSize: 23, fontWeight: FontWeight.w700, color: Tk.ink)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text([shirt.toUpperCase(), if (number != null) '$number'].join(' · '),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .9, color: a.main)),
+                  const SizedBox(height: 3),
+                  Text(position, style: const TextStyle(fontFamily: TType.display, fontSize: 24, height: 1.05, fontWeight: FontWeight.w700, color: Tk.ink)),
+                  if (line.isNotEmpty) ...[const SizedBox(height: 3), Text(line, style: bNote)],
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 14),
+            IntrinsicHeight(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Expanded(child: _Half(label: 'Your style', labelColor: Tk.muted, bg: const Color(0xFF1C1F17), value: c?.style ?? profile.style ?? 'Pick one', dim: (c?.style ?? profile.style) == null)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _Half(
+                    label: "Pep's read",
+                    labelColor: Tk.pep,
+                    bg: const Color(0xFF221A33),
+                    value: sees.isEmpty ? 'After a few clips' : sees.first,
+                    dim: sees.isEmpty,
+                  ),
+                ),
+              ]),
+            ),
+            if (sees.length > 1) ...[
+              const SizedBox(height: 12),
+              const Row(children: [
+                PepFace(PepMood.justHere, size: 16),
+                SizedBox(width: 6),
+                Text('PEP SEES', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: .6, color: Tk.pep)),
+              ]),
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final x in sees.skip(1)) BChip(x, color: a.main, background: a.tile),
+              ]),
+            ],
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.only(top: 12),
+              decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0x14FFFFFF)))),
+              child: Row(children: [
+                Semantics(
+                  button: true,
+                  label: linkOn ? 'Shared by link. Change who can see it' : 'Private. Change who can see it',
+                  excludeSemantics: true,
+                  child: Pressable(
+                    onTap: onPrivacy,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF262626))),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        TIcon(linkOn ? 'globe' : 'lock', size: 12, color: Tk.muted),
+                        const SizedBox(width: 5),
+                        Text(linkOn ? 'Shared by link' : 'Private', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Tk.muted)),
+                      ]),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Pressable(
+                  onTap: onEdit,
+                  child: const Row(children: [
+                    Text('Edit profile', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Tk.lab)),
+                    SizedBox(width: 4),
+                    TIcon('chevron', size: 12, color: Tk.lab),
+                  ]),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  static String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+}
+
+class _Half extends StatelessWidget {
+  const _Half({required this.label, required this.labelColor, required this.bg, required this.value, required this.dim});
+
+  final String label;
+  final Color labelColor;
+  final Color bg;
+  final String value;
+  final bool dim;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: .6, color: labelColor)),
+          const SizedBox(height: 3),
+          Text(value,
+              style: TextStyle(fontSize: dim ? 13 : 14, height: 1.25, fontWeight: dim ? FontWeight.w500 : FontWeight.w600, color: dim ? Tk.faint : Tk.ink)),
+        ]),
+      );
 }
 
 class _ClipStrip extends StatelessWidget {

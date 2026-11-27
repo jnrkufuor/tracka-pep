@@ -15,6 +15,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:tracka/screens/auth_screen.dart';
 import 'package:tracka/screens/onboarding_screen.dart';
+import 'package:tracka/screens/settings_screen.dart';
 import 'package:tracka/screens/shell.dart';
 import 'package:tracka/state/app_state.dart';
 import 'package:tracka/theme/theme.dart';
@@ -73,7 +74,15 @@ void main() {
     '08-step-3-journey': () => const OnboardingScreen(startPage: 3),
     '09-step-4-profile': () => const OnboardingScreen(startPage: 4),
     '10-step-5-schedule': () => const OnboardingScreen(startPage: 5),
+    '10b-all-set': () => const OnboardingScreen(startPage: 7),
     '11-home': () => const Shell(),
+    '12-pitchside': () => const Shell(initialTab: 1),
+    '13-pep': () => const Shell(initialTab: 2),
+    '14-me': () => const Shell(initialTab: 3),
+    '15-settings': () => const SettingsScreen(),
+    '16-home-day-one': () => const Shell(),
+    '17-pep-day-one': () => const Shell(initialTab: 2),
+    '18-me-day-one': () => const Shell(initialTab: 3),
     '20-pep-moods': () => const _Moods(),
   };
 
@@ -82,7 +91,7 @@ void main() {
       tester.view.physicalSize = const Size(390 * 3, 844 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
-      final s = (await tester.runAsync(readyState))!;
+      final s = (await tester.runAsync(() => readyState(dayOne: name.contains('day-one'))))!;
       await tester.pumpWidget(ChangeNotifierProvider<AppState>.value(
         value: s,
         child: MaterialApp(debugShowCheckedModeBanner: false, theme: trackaTheme(), home: make()),

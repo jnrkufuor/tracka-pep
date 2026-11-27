@@ -233,15 +233,18 @@ final Map<String, Object> fixtures = {
   },
 };
 
-http.Client fakeServer() => MockClient((req) async {
+/// A brand-new player: no clips, no tests yet (the canvas's "day one" boards).
+const dayOneFixtures = <String, Object>{'/v1/videos': <Object>[], '/v1/progress': <String, Object>{}, '/v1/focus': <String, Object>{}};
+
+http.Client fakeServer({Map<String, Object> overrides = const {}}) => MockClient((req) async {
       final path = req.url.path;
-      final body = fixtures[path] ?? (path.startsWith('/v1/') ? <String, Object>{} : null);
+      final body = overrides[path] ?? fixtures[path] ?? (path.startsWith('/v1/') ? <String, Object>{} : null);
       if (body == null) return http.Response('not found', 404);
       return http.Response(jsonEncode(body), 200, headers: {'content-type': 'application/json'});
     });
 
-Future<AppState> readyState() async {
-  final api = ApiClient(client: fakeServer(), cache: MemoryCache());
+Future<AppState> readyState({bool dayOne = false}) async {
+  final api = ApiClient(client: fakeServer(overrides: dayOne ? dayOneFixtures : const {}), cache: MemoryCache());
   final s = AppState(api: api, net: FakeNet());
   s.me = await api.me();
   s.meta = await api.meta();
@@ -255,7 +258,10 @@ final screens = <String, Widget Function()>{
   'Sign up: phone': () => const PhoneScreen(),
   'Sign up: email': () => const AuthScreen(signUp: true),
   'Log in': () => const AuthScreen(signUp: false),
-  'Tabs: Home, Pitchside, Pep, Me': () => const Shell(),
+  'Tabs: Home': () => const Shell(),
+  'Tabs: Pitchside': () => const Shell(initialTab: 1),
+  'Tabs: Pep': () => const Shell(initialTab: 2),
+  'Tabs: Me': () => const Shell(initialTab: 3),
   'Customise home': () => const CustomiseHomeScreen(),
   'Focus and tests': () => const FocusScreen(),
   'Reviews': () => const ReviewsScreen(),

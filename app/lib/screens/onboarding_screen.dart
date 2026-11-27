@@ -3,10 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
+import '../widgets/brand.dart';
 import '../widgets/ds.dart';
 import '../widgets/pep.dart';
 import '../widgets/pitch_picker.dart';
 import '../widgets/profile_fields.dart';
+import 'auth_screen.dart' show PitchPainter;
 
 /// Onboarding v2 (canvas page 1): Meet Pep, then five steps, then "All set".
 ///
@@ -169,17 +172,41 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Column(children: [
           if (showSteps)
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 4, 20, 0),
+              // Canvas: round back button, one bar per step, "Step 2 of 5".
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
               child: Row(children: [
-                IconButton(tooltip: 'Back', onPressed: () => _go(-1), icon: const TIcon('back', size: 18, color: Tk.ink)),
-                Text('Step $n of $total', style: const TextStyle(fontSize: 13, color: Tk.muted, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(value: n / total, minHeight: 4),
+                Semantics(
+                  button: true,
+                  label: 'Back',
+                  excludeSemantics: true,
+                  child: Pressable(
+                    onTap: () => _go(-1),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(color: Tk.field, shape: BoxShape.circle),
+                      child: const TIcon('back', size: 16, color: Tk.ink),
+                    ),
                   ),
                 ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Row(children: [
+                    for (var i = 1; i <= total; i++) ...[
+                      if (i > 1) const SizedBox(width: 4),
+                      Expanded(
+                        child: AnimatedContainer(
+                          duration: Motion.of(context, Motion.fill),
+                          height: 5,
+                          decoration: BoxDecoration(color: i <= n ? context.accent.main : const Color(0xFF262626), borderRadius: BorderRadius.circular(9)),
+                        ),
+                      ),
+                    ],
+                  ]),
+                ),
+                const SizedBox(width: 14),
+                Text('Step $n of $total', style: const TextStyle(fontSize: 12, color: Color(0xFFC2C6BA), fontWeight: FontWeight.w600)),
               ]),
             ),
           Expanded(
@@ -192,15 +219,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Column(children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: canContinue && !busy ? _continue : null,
-                    child: busy
-                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
-                        : Text(page == _Page.meet ? "Let's go" : 'Continue'),
-                  ),
-                ),
+                BCta(busy ? 'Saving…' : (page == _Page.meet ? "Let's go" : 'Continue'), onTap: canContinue && !busy ? _continue : null),
                 if (page == _Page.schedule)
                   TextButton(
                     onPressed: busy
@@ -233,6 +252,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _scroll(String title, String? sub, List<Widget> children) => ListView(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
         children: [
+          // The step's name above its question (canvas: "Personal details").
+          if (_eyebrow != null) ...[
+            Text(_eyebrow!, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: context.accent.main)),
+            const SizedBox(height: 6),
+          ],
           EnterFade(child: Text(title, style: Theme.of(context).textTheme.headlineLarge)),
           if (sub != null) ...[const SizedBox(height: 6), Text(sub, style: const TextStyle(fontSize: 14, color: Tk.muted))],
           const SizedBox(height: 22),
@@ -240,11 +264,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ],
       );
 
+  String? get _eyebrow => switch (page) {
+        _Page.personal => 'Personal details',
+        _Page.location => 'Location',
+        _Page.journey => 'Your journey',
+        _Page.profile => 'Player profile',
+        _Page.schedule => 'Schedule',
+        _Page.casual => 'How you play',
+        _ => null,
+      };
+
   Widget _label(String t, {String? hint}) => Padding(
         padding: const EdgeInsets.only(top: 4, bottom: 8),
         child: Row(children: [
-          Text(t, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink)),
-          if (hint != null) Text('  ·  $hint', style: const TextStyle(fontSize: 12.5, color: Tk.faint)),
+          Text(t, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab)),
+          if (hint != null) Flexible(child: Text(' · $hint', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab))),
         ]),
       );
 
@@ -413,16 +447,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         onChanged: (v) => d.town = v,
       ),
       const SizedBox(height: 22),
-      _label('How should Pep talk to you?'),
-      SingleChips<String>(
-        options: const {'street': 'Street talk', 'coach': 'Coach talk'},
-        value: voice,
-        onChanged: (v) => setState(() => voice = v),
-        scroll: false,
+      const Padding(
+        padding: EdgeInsets.only(top: 4, bottom: 8),
+        child: Row(children: [
+          PepFace(PepMood.listening, size: 18),
+          SizedBox(width: 8),
+          Text('How should Pep talk to you?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.lab)),
+        ]),
       ),
-      const SizedBox(height: 8),
-      Text(voice == 'street' ? '"Charlie, you dey check your shoulder well!"' : '"Good scanning before you received the ball."',
-          style: const TextStyle(fontSize: 13, color: Tk.muted, fontStyle: FontStyle.italic)),
+      // Two cards with how each one sounds (canvas: Location).
+      for (final (k, t, q) in const [
+        ('street', 'Street talk', '"Charlie, you dey check your shoulder well!"'),
+        ('coach', 'Coach talk', '"Good scanning before you received the ball."'),
+      ])
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Semantics(
+            inMutuallyExclusiveGroup: true,
+            checked: voice == k,
+            button: true,
+            label: '$t. $q',
+            excludeSemantics: true,
+            child: Pressable(
+              onTap: () => setState(() => voice = k),
+              child: AnimatedContainer(
+                duration: Motion.of(context, Motion.select),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: voice == k ? context.accent.tile : const Color(0xFF111111),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: voice == k ? context.accent.main : const Color(0xFF222222), width: voice == k ? 1.5 : 1),
+                ),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(t, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
+                      const SizedBox(height: 2),
+                      Text(q, style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Tk.muted)),
+                    ]),
+                  ),
+                  Container(
+                    width: 22,
+                    height: 22,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: voice == k ? context.accent.main : null,
+                      border: voice == k ? null : Border.all(color: const Color(0xFF3A3D36), width: 2),
+                    ),
+                    child: voice == k ? TIcon('check', size: 12, color: context.accent.on, stroke: 6) : null,
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
     ]);
   }
 
@@ -706,51 +785,121 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (d.positionOrder.isNotEmpty) d.positionOrder.first,
       if (age != null) (age < 13 ? 'U13' : age < 15 ? 'U15' : age < 17 ? 'U17' : age < 20 ? 'U20' : 'Adult'),
     ].join(' · ');
-    Widget stop(String label, String title, Color colour, {bool filled = false}) => Row(children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: filled ? colour : Colors.transparent,
-              border: Border.all(color: colour, width: 2),
-            ),
-          ),
+    final h = MediaQuery.sizeOf(context).height;
+    final hero = (h * 0.6).clamp(300.0, 540.0);
+    Widget stop(Widget mark, String title, String sub, Color colour) => Row(children: [
+          SizedBox(width: 30, child: Center(child: mark)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: const TextStyle(fontSize: 12, color: Tk.faint)),
-              Text(title, style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600, color: Tk.ink)),
+              Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: colour)),
+              Text(sub, style: const TextStyle(fontSize: 13, color: Tk.muted)),
             ]),
           ),
         ]);
-    // Align: a list stretches its children to full width, so a bare 2 px line
-    // would draw as a wide grey bar.
-    Widget line() => Align(
-          alignment: Alignment.centerLeft,
-          child: Container(margin: const EdgeInsets.only(left: 12), width: 2, height: 28, color: const Color(0xFF2A2A2A)),
-        );
-    return ListView(padding: const EdgeInsets.fromLTRB(24, 48, 24, 24), children: [
-      Text('All set, ${d.firstName.trim()}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: a.main)),
-      const SizedBox(height: 8),
-      Text(d.goal == 'fun' || d.goal == 'looking' ? 'Your game\nstarts today.' : 'Your road\nstarts today.',
-          style: Theme.of(context).textTheme.displayMedium),
-      const SizedBox(height: 30),
-      stop("You're here", here.isEmpty ? 'Starting out' : here, a.main, filled: true),
-      line(),
-      stop('Next', d.goal == 'fun' ? 'Keep playing' : d.goal == 'looking' ? 'Look around' : 'Put in the work', Tk.stone),
-      line(),
-      stop('Your goal', goal?.$3 ?? 'Find your goal', Tk.gold),
-      const SizedBox(height: 40),
-      FilledButton(
-        onPressed: () async {
-          await showHowPepWorks(context);
-          s.startTour();
-          await s.finishOnboarding();
-        },
-        child: const Text('Show me around'),
+    // Canvas "All set": a pitch at the top fading to black, your road below it.
+    return ListView(padding: EdgeInsets.zero, children: [
+      SizedBox(
+        height: hero,
+        child: Stack(fit: StackFit.expand, children: [
+          const CustomPaint(painter: PitchPainter()),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: [0, .4, 1],
+                colors: [Color(0x4D000000), Color(0x1A000000), Color(0xFF000000)],
+              ),
+            ),
+          ),
+          const Positioned(left: 24, top: 40, child: TrackaLogo(size: 30)),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 8,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('All set, ${d.firstName.trim()}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: a.main)),
+              const SizedBox(height: 6),
+              Text(d.goal == 'fun' || d.goal == 'looking' ? 'Your game\nstarts today.' : 'Your road\nstarts today.',
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(fontSize: 40, height: 1)),
+            ]),
+          ),
+        ]),
       ),
-      TextButton(onPressed: s.finishOnboarding, child: const Text("I'll explore myself")),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
+        child: Stack(children: [
+          // The road: main colour from you, fading through grey to your gold goal.
+          Positioned(
+            left: 14,
+            top: 20,
+            bottom: 20,
+            child: Container(
+              width: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0, .45, .6, 1],
+                  colors: [a.main, a.main, const Color(0xFF3A3D36), Tk.gold],
+                ),
+              ),
+            ),
+          ),
+          Column(children: [
+            stop(
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: a.main, boxShadow: [BoxShadow(color: a.main.withValues(alpha: .18), spreadRadius: 6)]),
+                child: TIcon('pin', size: 14, color: a.on),
+              ),
+              "You're here",
+              here.isEmpty ? 'Starting out' : here,
+              a.main,
+            ),
+            const SizedBox(height: 24),
+            stop(
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Tk.bg, border: Border.all(color: a.main, width: 2)),
+                child: Text('1', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: a.main)),
+              ),
+              d.goal == 'fun' ? 'Keep playing' : d.goal == 'looking' ? 'Look around' : 'Put in the work',
+              'Grow, work, have fun',
+              Tk.ink,
+            ),
+            const SizedBox(height: 24),
+            stop(
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: Tk.gold, borderRadius: BorderRadius.circular(9)),
+                child: const TIcon('flag', size: 14, color: Colors.black),
+              ),
+              goal?.$3 ?? 'Find your goal',
+              'Your goal',
+              Tk.gold,
+            ),
+          ]),
+        ]),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        child: Column(children: [
+          BCta('Show me around', onTap: () async {
+            await showHowPepWorks(context);
+            s.startTour();
+            await s.finishOnboarding();
+          }),
+          TextButton(onPressed: s.finishOnboarding, child: const Text("I'll explore myself")),
+        ]),
+      ),
     ]);
   }
 }

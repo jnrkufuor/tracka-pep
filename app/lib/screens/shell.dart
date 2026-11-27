@@ -22,14 +22,17 @@ import 'video_screen.dart';
 /// on top of whatever you were doing. The active tab takes the player's main
 /// colour (`context.accent`), so it changes with Settings › Main colour.
 class Shell extends StatefulWidget {
-  const Shell({super.key});
+  const Shell({super.key, this.initialTab});
+
+  /// Which tab to open on (tests and screen pictures); normally Home.
+  final int? initialTab;
 
   @override
   State<Shell> createState() => ShellState();
 }
 
 class ShellState extends State<Shell> {
-  int index = (int.tryParse(AppConfig.param('tab') ?? '') ?? 0).clamp(0, 3);
+  late int index = (widget.initialTab ?? int.tryParse(AppConfig.param('tab') ?? '') ?? 0).clamp(0, 3);
 
   @override
   void initState() {

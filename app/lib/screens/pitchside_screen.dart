@@ -1,4 +1,4 @@
-import 'dart:ui' show ImageFilter, lerpDouble;
+import 'dart:ui' show ImageFilter;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
@@ -6,16 +6,19 @@ import 'package:provider/provider.dart';
 import '../api/models.dart';
 import '../state/app_state.dart';
 import '../theme/theme.dart';
+import '../widgets/board.dart';
 import '../widgets/ds.dart';
 import 'feed_screens.dart';
 import 'home_screen.dart' show openUpload;
 
 /// Pitchside: the Feed, weekly challenges, places to play near you, and
-/// opportunities (later). Canvas page 4.
+/// opportunities (later). Canvas: Pitchside and "Feed button".
 ///
-/// The Feed button is "morph 1b": a phone-shaped card with a white frame and a
-/// blurred clip behind it, which shrinks into a pill as you scroll and stays
-/// at the top of every Pitchside section. Pep never appears on other players' clips.
+/// At the top, the Feed is a big picture card. As soon as you scroll, a small
+/// Feed button waits bottom-right: a little phone (white frame, a blurred
+/// clip, a play button) with a "Feed" tag, which folds into a pill while you
+/// scroll and unfolds when you're back at the top ("morph 1b").
+/// Pep never appears on other players' clips.
 class PitchsideScreen extends StatefulWidget {
   const PitchsideScreen({super.key});
 
@@ -30,7 +33,9 @@ class _PitchsideScreenState extends State<PitchsideScreen> {
   ChallengesState? challenges;
   List<Pitch>? pitches;
   String? feedThumb;
+  int feedCount = 0;
   bool failed = false;
+  bool scrolled = false;
 
   @override
   void initState() {
@@ -53,33 +58,81 @@ class _PitchsideScreenState extends State<PitchsideScreen> {
     }
     try {
       final f = await api.feed();
-      if (mounted && f.posts.isNotEmpty) setState(() => feedThumb = f.posts.first.thumbnailUrl);
+      if (mounted) {
+        setState(() {
+          feedThumb = f.posts.firstOrNull?.thumbnailUrl;
+          feedCount = f.posts.length;
+        });
+      }
     } catch (_) {}
   }
 
+  void _feed() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedScreen()));
+
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
+    final a = context.accent;
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: RefreshIndicator(
-          onRefresh: _load,
-          child: CustomScrollView(slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              sliver: SliverToBoxAdapter(child: EnterFade(child: Text('Pitchside', style: t.headlineLarge))),
-            ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _FeedHeader(
-                thumb: feedThumb,
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedScreen())),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-              sliver: SliverList.list(children: [
+        child: Stack(children: [
+          NotificationListener<ScrollUpdateNotification>(
+            onNotification: (n) {
+              if (n.depth == 0) {
+                final now = n.metrics.pixels > 24;
+                if (now != scrolled) setState(() => scrolled = now);
+              }
+              return false;
+            },
+            child: RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(padding: const EdgeInsets.fromLTRB(20, 16, 20, 150), children: [
+                Row(children: [
+                  Expanded(child: EnterFade(child: Text('Pitchside', style: Theme.of(context).textTheme.headlineLarge?.copyWith(fontSize: 30)))),
+                  BRoundButton(icon: 'search', label: 'Search players', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SearchScreen()))),
+                ]),
+                const SizedBox(height: 18),
+                Semantics(
+                  button: true,
+                  label: 'Feed: clips from players your age and the ones you follow',
+                  excludeSemantics: true,
+                  child: Pressable(
+                    onTap: _feed,
+                    child: BThumb(
+                      url: feedThumb,
+                      height: 340,
+                      radius: 24,
+                      children: [
+                        if (feedCount > 0)
+                          Positioned(left: 14, top: 14, child: BChip('$feedCount new', color: a.on, background: a.main)),
+                        Positioned(
+                          left: 16,
+                          right: 16,
+                          bottom: 16,
+                          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                            const Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text('Feed', style: TextStyle(fontFamily: TType.display, fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white)),
+                                SizedBox(height: 4),
+                                Text('Clips from players your age and the ones you follow',
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xCCFFFFFF))),
+                              ]),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              width: 52,
+                              height: 52,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(color: a.main, shape: BoxShape.circle),
+                              child: TIcon('play', size: 18, color: a.on),
+                            ),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
                 SingleChips<_Section>(
                   options: const {
                     _Section.challenges: 'Challenges',
@@ -111,95 +164,120 @@ class _PitchsideScreenState extends State<PitchsideScreen> {
                   ),
               ]),
             ),
-          ]),
-        ),
+          ),
+          Positioned(right: 16, bottom: 16, child: _FeedButton(folded: scrolled, thumb: feedThumb, onTap: _feed)),
+        ]),
       ),
     );
   }
 }
 
-/// The Feed button: a phone (white frame, blurred clip) that morphs into a pill.
-class _FeedHeader extends SliverPersistentHeaderDelegate {
-  _FeedHeader({required this.onTap, this.thumb});
+/// The floating Feed button (canvas "Feed button", morph 1b). At rest: a
+/// little phone, 62 × 110, with a "Feed" tag. While you scroll: the phone
+/// shrinks to 20 × 30 and sits inside an 82 × 44 pill with the word.
+class _FeedButton extends StatelessWidget {
+  const _FeedButton({required this.folded, required this.thumb, required this.onTap});
 
-  final VoidCallback onTap;
+  final bool folded;
   final String? thumb;
+  final VoidCallback onTap;
 
   @override
-  double get maxExtent => 176;
-
-  @override
-  double get minExtent => 60;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final t = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
-    final reduced = Motion.reduced(context);
-    final k = reduced ? (t < 0.5 ? 0.0 : 1.0) : Curves.easeOut.transform(t);
-    final width = lerpDouble(132, 104, k)!;
-    final height = lerpDouble(160, 44, k)!;
-    final radius = lerpDouble(22, 999, k)!;
-    return ColoredBox(
-      color: Tk.bg,
-      child: Align(
-        alignment: Alignment.lerp(Alignment.centerLeft, Alignment.centerRight, k)!,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Semantics(
-            button: true,
-            label: 'Feed: clips from players your age and the ones you follow',
-            excludeSemantics: true,
-            child: Pressable(
-              onTap: onTap,
-              child: Container(
-                width: width,
-                height: height,
+  Widget build(BuildContext context) {
+    final a = context.accent;
+    final d = Motion.of(context, Motion.morph);
+    const curve = Cubic(.45, 0, .2, 1);
+    return Semantics(
+      button: true,
+      label: 'Open the feed',
+      excludeSemantics: true,
+      child: Pressable(
+        onTap: onTap,
+        child: SizedBox(
+          width: 90,
+          height: 130,
+          child: Stack(clipBehavior: Clip.none, children: [
+            AnimatedPositioned(
+              duration: d,
+              curve: curve,
+              right: 0,
+              bottom: folded ? 0 : 16,
+              width: folded ? 82 : 62,
+              height: folded ? 44 : 110,
+              child: AnimatedContainer(
+                duration: d,
+                curve: curve,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(radius),
-                  border: Border.all(color: Colors.white, width: 2),
+                  color: Tk.card2,
+                  borderRadius: BorderRadius.circular(folded ? 22 : 14),
+                  border: Border.all(color: const Color(0x29FFFFFF)),
+                  boxShadow: const [BoxShadow(color: Color(0xA6000000), blurRadius: 34, offset: Offset(0, 14))],
                 ),
+              ),
+            ),
+            AnimatedPositioned(
+              duration: d,
+              curve: curve,
+              right: folded ? 52 : 0,
+              bottom: folded ? 7 : 16,
+              width: folded ? 20 : 62,
+              height: folded ? 30 : 110,
+              child: AnimatedContainer(
+                duration: d,
+                curve: curve,
+                padding: EdgeInsets.all(folded ? 1.5 : 3),
+                decoration: BoxDecoration(color: Tk.ink, borderRadius: BorderRadius.circular(folded ? 6 : 14)),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(radius),
+                  borderRadius: BorderRadius.circular(folded ? 4.5 : 11),
                   child: Stack(fit: StackFit.expand, children: [
                     if (thumb != null)
                       ImageFiltered(
-                        imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                         child: Image.network(thumb!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _FeedFill()),
                       )
                     else
                       const _FeedFill(),
-                    Container(color: const Color(0x55000000)),
                     Center(
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Container(
-                          width: lerpDouble(40, 24, k),
-                          height: lerpDouble(40, 24, k),
-                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0x99000000)),
-                          alignment: Alignment.center,
-                          child: TIcon('play', size: lerpDouble(16, 11, k)!, color: Colors.white),
+                      child: FractionallySizedBox(
+                        widthFactor: .44,
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: a.main, shape: BoxShape.circle),
+                            child: FittedBox(child: Padding(padding: const EdgeInsets.all(6), child: TIcon('play', size: 12, color: a.on))),
+                          ),
                         ),
-                        SizedBox(width: lerpDouble(0, 8, k)),
-                        if (k > 0.5) const Text('Feed', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
-                      ]),
-                    ),
-                    if (k <= 0.5)
-                      const Positioned(
-                        left: 12,
-                        bottom: 10,
-                        child: Text('Feed', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
                       ),
+                    ),
                   ]),
                 ),
               ),
             ),
-          ),
+            AnimatedPositioned(
+              duration: d,
+              curve: curve,
+              right: folded ? 8 : 6,
+              bottom: folded ? 10 : 2,
+              child: AnimatedContainer(
+                duration: d,
+                curve: curve,
+                height: 24,
+                padding: EdgeInsets.symmetric(horizontal: folded ? 4 : 10),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: folded ? const Color(0x00121212) : Tk.card2,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: folded ? const Color(0x00FFFFFF) : const Color(0x33FFFFFF)),
+                ),
+                child: const Text('Feed', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Tk.ink)),
+              ),
+            ),
+          ]),
         ),
       ),
     );
   }
-
-  @override
-  bool shouldRebuild(_FeedHeader old) => old.thumb != thumb;
 }
 
 class _FeedFill extends StatelessWidget {
@@ -208,7 +286,7 @@ class _FeedFill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF5A4632), Color(0xFF1C1712)]),
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF2B3A1E), Color(0xFF101810)]),
         ),
       );
 }
@@ -224,89 +302,120 @@ class _Challenges extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = state;
-    if (c == null) return const Column(children: [Skeleton(height: 190), SizedBox(height: 12), Skeleton(height: 120)]);
+    final a = context.accent;
+    if (c == null) return const Column(children: [Skeleton(height: 150), SizedBox(height: 12), Skeleton(height: 110)]);
     final w = c.thisWeek;
     final days = w.endsOn.difference(DateTime.now()).inDays + 1;
-    Widget stat(String value, String label) => Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(value, style: const TextStyle(fontFamily: TType.display, fontSize: 22, fontWeight: FontWeight.w800, color: Tk.ink)),
-            Text(label, style: const TextStyle(fontSize: 12, color: Tk.muted)),
-          ]),
-        );
+    String count(int n) => n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+    Band? band(String? label) => Band.values.where((b) => b.label == label).firstOrNull;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Panel(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Text('This week · ${w.group}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: context.accent.main)),
-            const Spacer(),
-            Text(days <= 1 ? 'Ends today' : 'Ends Sunday', style: const TextStyle(fontSize: 12, color: Tk.muted)),
-          ]),
-          const SizedBox(height: 8),
-          Text(w.name, style: const TextStyle(fontFamily: TType.display, fontSize: 20, fontWeight: FontWeight.w800, color: Tk.ink)),
-          const SizedBox(height: 4),
-          Text(w.how, style: const TextStyle(fontSize: 13.5, color: Tk.inkSoft)),
-          const SizedBox(height: 14),
-          Row(children: [stat(w.best ?? '–', 'Your best'), stat('${w.tries}', 'Tries'), stat('${w.playersIn}', 'Players in')]),
-          if (w.band != null) ...[
-            const SizedBox(height: 10),
-            if (Band.values.where((b) => b.label == w.band).isNotEmpty) BandPill(Band.values.firstWhere((b) => b.label == w.band)),
-          ],
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChallengeRecordScreen(challenge: w))).then((_) => reload()),
-              child: const Text('Film your go'),
+      // This week's challenge: the big one, in your main colour.
+      Pressable(
+        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChallengeRecordScreen(challenge: w))).then((_) => reload()),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Color.alphaBlend(a.main.withValues(alpha: .14), const Color(0xFF111111))),
+            gradient: LinearGradient(
+              begin: const Alignment(-.8, -1),
+              end: const Alignment(.8, 1),
+              stops: const [0, .6],
+              colors: [Color.alphaBlend(a.main.withValues(alpha: .10), const Color(0xFF111111)), const Color(0xFF111111)],
             ),
           ),
-        ]),
-      ),
-      const SizedBox(height: 18),
-      const SectionLabel('Just for fun'),
-      for (final f in c.fun)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Panel(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            onTap: () => openUpload(context, challenge: f.id, title: f.name).then((_) => reload()),
-            child: Row(children: [
-              const IconTile(icon: 'star', color: Tk.stone, background: Tk.stoneTile, size: 38),
-              const SizedBox(width: 12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              TIcon('trophy', size: 13, color: a.main),
+              const SizedBox(width: 6),
               Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(f.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
-                  Text(f.how, style: const TextStyle(fontSize: 12.5, color: Tk.muted)),
+                child: Text('THIS WEEK · ${w.group.toUpperCase()}', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: .63, color: a.main)),
+              ),
+              Text(days <= 1 ? 'Ends today' : 'Ends Sunday', style: bNote),
+            ]),
+            const SizedBox(height: 8),
+            Text(w.name, style: const TextStyle(fontFamily: TType.display, fontSize: 19, height: 1.2, fontWeight: FontWeight.w700, color: Tk.ink)),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: Text(['${count(w.playersIn)} players in', if (w.best != null) 'your best ${w.best}'].join(' · '), style: bNote)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(color: a.main, borderRadius: BorderRadius.circular(999)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  TIcon('camera', size: 14, color: a.on),
+                  const SizedBox(width: 6),
+                  Text('Film your go', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: a.on)),
                 ]),
               ),
-              Text('${f.playersIn} in', style: const TextStyle(fontSize: 12, color: Tk.muted)),
             ]),
+          ]),
+        ),
+      ),
+      if (c.fun.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 128,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            itemCount: c.fun.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (_, i) {
+              final f = c.fun[i];
+              return SizedBox(
+                width: 150,
+                child: Panel(
+                  padding: const EdgeInsets.all(12),
+                  onTap: () => openUpload(context, challenge: f.id, title: f.name).then((_) => reload()),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const IconTile(icon: 'star', color: Tk.gold, background: Tk.goldTile, size: 34),
+                    const SizedBox(height: 8),
+                    Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13.5, height: 1.3, fontWeight: FontWeight.w600, color: Tk.ink)),
+                    const Spacer(),
+                    Text('${count(f.playersIn)} in', style: bNote.copyWith(fontSize: 11.5)),
+                  ]),
+                ),
+              );
+            },
           ),
         ),
+      ],
       if (c.past.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        const BLab('Your challenges'),
         const SizedBox(height: 10),
-        const SectionLabel('Your challenges'),
         Panel(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Column(children: [
-            for (final p in c.past)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+            for (final (i, p) in c.past.indexed)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: i == c.past.length - 1 ? null : const BoxDecoration(border: Border(bottom: BorderSide(color: Tk.line))),
                 child: Row(children: [
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(p.name, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: Tk.ink)),
-                      Text([p.group, if (p.best != null) p.best!].join(' · '), style: const TextStyle(fontSize: 12.5, color: Tk.muted)),
+                      const SizedBox(height: 2),
+                      Text(p.group, style: bNote),
                     ]),
                   ),
-                  if (p.band != null && Band.values.any((b) => b.label == p.band)) BandPill(Band.values.firstWhere((b) => b.label == p.band)),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    if (p.best != null) Text(p.best!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Tk.ink)),
+                    if (band(p.band) != null) ...[const SizedBox(height: 4), BandPill(band(p.band)!)],
+                  ]),
                 ]),
               ),
           ]),
         ),
       ],
-      const SizedBox(height: 10),
-      Text('Compared with ${c.comparedWith} who tried it. Your attempts stay private unless you post them.',
-          style: const TextStyle(fontSize: 12, color: Tk.faint)),
+      const SizedBox(height: 14),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(16)),
+        child: Text('Your results count on your skill areas in Me, compared with ${c.comparedWith}. Your attempts stay private unless you post them.',
+            style: const TextStyle(fontSize: 13, height: 1.4, color: Tk.inkSoft)),
+      ),
     ]);
   }
 }
