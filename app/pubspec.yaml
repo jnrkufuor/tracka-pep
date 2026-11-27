@@ -14,6 +14,7 @@ dependencies:
   material_ui: ^1.11.1           # Material widgets, now their own package (was package:flutter/material.dart)
   provider: ^6.1.2               # app state (ChangeNotifier), same pattern as YesBut
   http: ^1.2.2                   # REST calls + multipart uploads
+  http_parser: ^4.0.2           # the picture's type when uploading your photo
   flutter_secure_storage: ^9.2.2 # login tokens in the phone's keychain / keystore
   image_picker: ^1.1.2           # pick or record a video (works on web too)
   video_player: ^2.9.2           # play clips, tap yourself on a frame

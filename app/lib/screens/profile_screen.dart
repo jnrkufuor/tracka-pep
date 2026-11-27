@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -75,6 +76,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final c = card;
     final areas = s.coach?.skillAreas;
     final seen = (areas?.measured ?? 0) > 0 || (focus?.bests.isNotEmpty ?? false);
+    // Goal "just looking around" (canvas: Me for players just looking around):
+    // no player card yet, just you, your clips, and the door to a goal.
+    if (me.profile.goal == 'looking') return _explorer(s, me.profile);
     final children = <Widget>[
       Row(children: [
         Expanded(child: Text('Me', style: Theme.of(context).textTheme.headlineLarge?.copyWith(fontSize: 30))),
@@ -120,6 +124,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
             for (final (i, w) in children.indexed) ...[if (i > 0) const SizedBox(height: 18), w],
           ]),
         ),
+      ),
+    );
+  }
+
+  Widget _explorer(AppState s, Profile p) {
+    final a = context.accent;
+    final initials = p.displayName.split(' ').where((x) => x.isNotEmpty).take(2).map((x) => x[0]).join().toUpperCase();
+    Widget stat(String n, String label) => Expanded(
+          child: Column(children: [
+            Text(n, style: const TextStyle(fontFamily: TType.display, fontSize: 22, fontWeight: FontWeight.w700, color: Tk.ink)),
+            Text(label, textAlign: TextAlign.center, style: bNote),
+          ]),
+        );
+    final children = <Widget>[
+      Row(children: [
+        Expanded(child: Text('Me', style: Theme.of(context).textTheme.headlineLarge?.copyWith(fontSize: 30))),
+        _GlassButton(icon: 'settings', label: 'Settings', onTap: () => showSettingsSheet(context)),
+      ]),
+      Row(children: [
+        _Avatar(url: p.photoUrl, initials: initials, size: 64, ring: a.main),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(p.firstName, style: const TextStyle(fontFamily: TType.display, fontSize: 24, fontWeight: FontWeight.w700, color: Tk.ink)),
+            Text(['Just looking around', if (p.region != null) p.region!].join(' · '), style: bNote),
+          ]),
+        ),
+      ]),
+      Panel(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        child: Row(children: [
+          stat('${s.videos.length}', 'Your clips'),
+          stat('${s.videos.where((v) => v.status == 'READY').length}', 'Seen by Pep'),
+        ]),
+      ),
+      BLab('Your clips', link: 'See all', onLink: () => _go(const VideosScreen())),
+      _ClipStrip(videos: s.videos.take(8).toList(), empty: 'No clips yet.'),
+      BPepNote(
+        mood: PepMood.asking,
+        title: 'Want your own player card?',
+        text: "Pick a goal and I'll start coaching you. Your card, skills and portfolio show up here.",
+        onTap: () => _go(const EditProfileScreen()),
+      ),
+      BCta('Pick a goal', ghost: true, onTap: () => _go(const EditProfileScreen())),
+    ];
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(padding: const EdgeInsets.fromLTRB(20, 14, 20, 32), children: [
+          for (final (i, w) in children.indexed) ...[if (i > 0) const SizedBox(height: 18), w],
+        ]),
       ),
     );
   }
@@ -296,13 +350,7 @@ class _MeCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Container(
-                width: 64,
-                height: 64,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF1A1A1A), border: Border.all(color: a.main, width: 2.5)),
-                child: Text(initials, style: const TextStyle(fontFamily: TType.display, fontSize: 23, fontWeight: FontWeight.w700, color: Tk.ink)),
-              ),
+              _Avatar(url: profile.photoUrl, initials: initials, size: 64, ring: a.main),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -406,6 +454,89 @@ class _Half extends StatelessWidget {
               style: TextStyle(fontSize: dim ? 13 : 14, height: 1.25, fontWeight: dim ? FontWeight.w500 : FontWeight.w600, color: dim ? Tk.faint : Tk.ink)),
         ]),
       );
+}
+
+/// Your photo in a main-colour ring, or your initials when there's none.
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.url, required this.initials, required this.size, required this.ring});
+
+  final String? url;
+  final String initials;
+  final double size;
+  final Color ring;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF1A1A1A), border: Border.all(color: ring, width: 2.5)),
+        clipBehavior: Clip.antiAlias,
+        child: url == null
+            ? Text(initials, style: TextStyle(fontFamily: TType.display, fontSize: size * .36, fontWeight: FontWeight.w700, color: Tk.ink))
+            : Image.network(url!, width: size, height: size, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Text(initials, style: TextStyle(fontFamily: TType.display, fontSize: size * .36, fontWeight: FontWeight.w700, color: Tk.ink))),
+      );
+}
+
+/// Edit profile › your photo (canvas: Edit profile, "Change photo"). Only you
+/// see it; it isn't shown on Pitchside or your shared card.
+class _PhotoRow extends StatefulWidget {
+  const _PhotoRow();
+
+  @override
+  State<_PhotoRow> createState() => _PhotoRowState();
+}
+
+class _PhotoRowState extends State<_PhotoRow> {
+  bool busy = false;
+
+  Future<void> _pick() async {
+    final s = context.read<AppState>();
+    final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 85);
+    if (file == null || !mounted) return;
+    setState(() => busy = true);
+    try {
+      await s.api.setPhoto(file);
+      await s.refresh();
+      if (mounted) showToast(context, 'Photo saved', aboveTabs: false);
+    } catch (e) {
+      if (mounted) showToast(context, "Couldn't save the photo", detail: '$e', ok: false, aboveTabs: false);
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _remove() async {
+    final s = context.read<AppState>();
+    try {
+      await s.api.clearPhoto();
+      await s.refresh();
+    } catch (e) {
+      if (mounted) showToast(context, "Couldn't remove it", detail: '$e', ok: false, aboveTabs: false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.watch<AppState>().me?.profile;
+    final name = p?.shirtName ?? p?.displayName ?? '';
+    final initials = name.split(RegExp(r'[ .]+')).where((x) => x.isNotEmpty).take(2).map((x) => x[0]).join().toUpperCase();
+    return Row(children: [
+      _Avatar(url: p?.photoUrl, initials: initials.isEmpty ? '?' : initials, size: 64, ring: context.accent.main),
+      const SizedBox(width: 14),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            BGhostChip(icon: 'camera', label: busy ? 'Saving…' : (p?.photoUrl == null ? 'Add a photo' : 'Change photo'), onTap: busy ? () {} : _pick),
+            if (p?.photoUrl != null) BGhostChip(icon: 'trash', label: 'Remove', onTap: _remove),
+          ]),
+          const SizedBox(height: 6),
+          const Text('Face and shoulders. No team badges. Only you see it.', style: bNote),
+        ]),
+      ),
+    ]);
+  }
 }
 
 class _ClipStrip extends StatelessWidget {
@@ -537,6 +668,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       body: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
         Text('Edit profile', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 16),
+        const _PhotoRow(),
+        gap(),
         const FieldLabel('Your name'),
         TextFormField(initialValue: p.displayName, textCapitalization: TextCapitalization.words, onChanged: (v) => _set('displayName', v.trim())),
         gap(),

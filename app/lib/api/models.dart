@@ -29,7 +29,11 @@ class Profile {
     this.weakFoot,
     this.guardianPhone,
     this.guardianRelation,
+    this.photoUrl,
   });
+
+  /// Your photo (a short-lived signed link), only shown to you.
+  final String? photoUrl;
 
   final String displayName;
   final DateTime? birthDate;
@@ -88,6 +92,7 @@ class Profile {
         guardianPhone: j['guardianPhone'] as String?,
         guardianRelation: j['guardianRelation'] as String?,
         guardianConsent: j['guardianConsent'] as bool? ?? false,
+        photoUrl: j['photoUrl'] as String?,
       );
 
   String get firstName => displayName.split(' ').first;

@@ -102,7 +102,8 @@ class TabBarT extends StatelessWidget {
     Widget tab(int i) {
       final on = index == i;
       // Pep's tab is purple when open (Pep's colour); the others use your main colour.
-      final colour = !on ? Tk.faint : (i == 2 ? Tk.pep : a.main);
+      // Canvas "Bottom tabs": white when not open; open = your main colour (Pep: purple).
+      final colour = !on ? Colors.white : (i == 2 ? Tk.pep : a.main);
       return Expanded(
         child: KeyedSubtree(
           key: i == 2 ? TourKeys.pepTab : null,
@@ -117,16 +118,16 @@ class TabBarT extends StatelessWidget {
               // At least 52 tall for the thumb; taller when the text is big, so labels never get cut.
               constraints: const BoxConstraints(minHeight: 52),
               child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
-                // Pep's own tab: when open he's awake and alive (canvas "Bottom tabs":
-                // he blinks and looks around); otherwise the still line icon.
-                if (i == 2 && on)
-                  PepFace(pepIdleMood(), size: 21)
+                // Pep's own tab (canvas "Bottom tabs"): asleep with a drifting Z
+                // while you're elsewhere; he wakes up when you open his tab.
+                if (i == 2)
+                  PepFace(on ? PepMood.justHere : PepMood.asleep, key: ValueKey(on), size: 22, color: colour, wake: on)
                 else
-                  TIcon(_tabs[i].$1, size: 21, color: colour, stroke: 3),
-                const SizedBox(height: 3),
+                  TIcon(_tabs[i].$1, size: 20, color: colour, stroke: 3),
+                const SizedBox(height: 2),
                 AnimatedDefaultTextStyle(
                   duration: Motion.of(context, Motion.select),
-                  style: TextStyle(fontFamily: TType.text, fontSize: 10.5, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: colour),
+                  style: TextStyle(fontFamily: TType.text, fontSize: 10, letterSpacing: .2, fontWeight: on ? FontWeight.w700 : FontWeight.w500, color: colour),
                   child: Text(_tabs[i].$2, maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
               ]),
@@ -142,7 +143,7 @@ class TabBarT extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
           child: Row(children: [
             tab(0),
             tab(1),
@@ -159,11 +160,11 @@ class TabBarT extends StatelessWidget {
                     key: TourKeys.plus,
                     onTap: onAdd,
                     child: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(color: a.main, borderRadius: BorderRadius.circular(13)),
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(color: a.main, borderRadius: BorderRadius.circular(12)),
                       alignment: Alignment.center,
-                      child: TIcon('plus', size: 20, color: a.on, stroke: 6),
+                      child: TIcon('plus', size: 20, color: a.on, stroke: 7),
                     ),
                   ),
                 ),

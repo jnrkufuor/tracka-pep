@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
 import 'package:image_picker/image_picker.dart';
 
 import '../config.dart';
@@ -213,6 +214,27 @@ class ApiClient {
       throw ApiError(0, 'The upload stopped. Check your connection and try again.');
     }
   }
+
+  /// Your profile photo: a JPG, PNG or WebP, up to 5 MB. Returns the new link.
+  Future<String?> setPhoto(XFile file) async {
+    if (_access == null) throw ApiError(401, 'Not logged in.');
+    final bytes = await file.readAsBytes();
+    final name = file.name.toLowerCase();
+    final type = name.endsWith('.png') ? 'png' : name.endsWith('.webp') ? 'webp' : 'jpeg';
+    Future<http.StreamedResponse> go() {
+      final req = http.MultipartRequest('PUT', _u('/v1/me/photo'))
+        ..headers['Authorization'] = 'Bearer $_access'
+        ..files.add(http.MultipartFile.fromBytes('photo', bytes, filename: 'photo.$type', contentType: MediaType('image', type)));
+      return _http.send(req);
+    }
+
+    var res = await go();
+    if (res.statusCode == 401 && await _tryRefresh()) res = await go();
+    final data = _decode(await http.Response.fromStream(res)) as Map<String, dynamic>;
+    return data['photoUrl'] as String?;
+  }
+
+  Future<void> clearPhoto() => _send('DELETE', '/v1/me/photo');
 
   // ------------------------------------------------------------- coach
 

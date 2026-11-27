@@ -109,3 +109,9 @@ Exercises added as features were built. Each one points at real code.
 5. With `pep serve` running, add a Saturday match (`POST /v1/events`) and
    fetch `GET /v1/week`. Which days did Pep pick for its sessions, and why
    is Friday never one of them? Find the rule in `place_sessions`.
+6. Your profile photo lives in storage, and the database keeps only its key
+  (`pep/players/photos.py`, a new `profile_photos` table pointing at
+  `users`). Why not put the picture's bytes in a database column? And why
+  does `/v1/me` hand the app a link that stops working after an hour,
+  instead of a permanent one? (Hint: who else could use a permanent link to
+  a child's photo?)

@@ -235,7 +235,7 @@ class BCta extends StatelessWidget {
             decoration: BoxDecoration(
               color: ghost ? Tk.field : a.main,
               borderRadius: BorderRadius.circular(999),
-              border: ghost ? Border.all(color: const Color(0xFF333333), width: 1.5) : null,
+              border: ghost ? Border.all(color: const Color(0xFF262626)) : null,
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (icon != null) ...[TIcon(icon!, size: 16, color: fg), const SizedBox(width: 8)],
@@ -516,7 +516,7 @@ class BGhostChip extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(minHeight: Tk.btnSmall),
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF333333), width: 1.5)),
+          decoration: BoxDecoration(color: Tk.field, borderRadius: BorderRadius.circular(999), border: Border.all(color: const Color(0xFF262626))),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             TIcon(icon, size: 14, color: Tk.ink),
             const SizedBox(width: 6),

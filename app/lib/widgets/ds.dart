@@ -165,7 +165,7 @@ class Panel extends StatelessWidget {
         // The canvas's card: #111 with a #222 edge, corners 20.
         color: color ?? const Color(0xFF111111),
         borderRadius: BorderRadius.circular(Tk.rCard),
-        border: Border.all(color: border ?? const Color(0xFF222222)),
+        border: Border.all(color: border ?? const Color(0xFF1A1A1A), width: .5),
       ),
       // A see-through Material inside the card, so list rows and buttons in it
       // draw their tap ripple on the card instead of underneath it.
@@ -293,7 +293,7 @@ class _Chip extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? a.main : Tk.field,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: selected ? a.main : const Color(0xFF333333), width: 1.5),
+            border: Border.all(color: selected ? a.main : const Color(0xFF262626)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (check && selected) ...[TIcon('check', size: 14, color: a.on, stroke: 5), const SizedBox(width: 6)],
@@ -523,7 +523,7 @@ class _Note extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14), border: Border.all(color: border, width: 1.5)),
+        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(14), border: Border.all(color: border)),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Padding(padding: const EdgeInsets.only(top: 1), child: TIcon(icon, size: 16, color: iconColor)),
           const SizedBox(width: 10),
