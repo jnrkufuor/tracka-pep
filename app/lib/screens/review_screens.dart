@@ -397,10 +397,10 @@ class _ReviewRow extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Row(children: [
+                  Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
                     Text(clipKind(v.clipType).toUpperCase(),
                         style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Tk.pep, letterSpacing: 0.6)),
-                    if (fresh) ...[const SizedBox(width: 6), BChip('New', color: context.accent.on, background: context.accent.main, caps: true)],
+                    if (fresh) BChip('New', color: context.accent.on, background: context.accent.main, caps: true),
                   ]),
                   const SizedBox(height: 4),
                   Text(v.displayTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Tk.ink)),
