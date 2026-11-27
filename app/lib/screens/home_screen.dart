@@ -410,9 +410,9 @@ class _DayCard extends StatelessWidget {
         BPepNote(mood: kind == 'rest' ? PepMood.calm : PepMood.reading, text: focus),
         const SizedBox(height: 12),
         if (canStart)
-          BCta('Start training', height: 50, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SessionScreen(sessionKey: item.id))))
+          BCta('Start training', height: Tk.btnInCard, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SessionScreen(sessionKey: item.id))))
         else
-          BCta('See your week', ghost: true, height: 50, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WeekScreen()))),
+          BCta('See your week', ghost: true, height: Tk.btnInCard, onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WeekScreen()))),
         if (week.health != 'fine') ...[
           const SizedBox(height: 12),
           Pressable(
@@ -500,7 +500,7 @@ class _StartHere extends StatelessWidget {
               ]),
             ),
           ),
-        if (cta != null && next != null) ...[const SizedBox(height: 8), BCta(cta, height: 50, onTap: next.go)],
+        if (cta != null && next != null) ...[const SizedBox(height: 8), BCta(cta, height: Tk.btnInCard, onTap: next.go)],
       ]),
     );
   }

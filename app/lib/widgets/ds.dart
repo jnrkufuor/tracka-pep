@@ -288,8 +288,8 @@ class _Chip extends StatelessWidget {
         child: AnimatedContainer(
           duration: Motion.of(context, Motion.select),
           curve: Motion.change,
-          constraints: const BoxConstraints(minHeight: 40), // a comfortable tap target; grows with big text
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 6),
+          constraints: const BoxConstraints(minHeight: Tk.btnSmall), // grows with big text
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: selected ? a.main : Tk.field,
             borderRadius: BorderRadius.circular(999),

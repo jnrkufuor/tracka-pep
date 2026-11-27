@@ -474,9 +474,9 @@ class _SessionScreenState extends State<SessionScreen> {
                       Text(step.how, textAlign: TextAlign.center, style: bNote.copyWith(fontSize: 13)),
                       const SizedBox(height: 14),
                       Row(children: [
-                        Expanded(child: BCta(_running ? 'Pause' : (_left == null ? 'Start' : 'Go on'), ghost: true, height: 48, onTap: () => _toggle(p))),
+                        Expanded(child: BCta(_running ? 'Pause' : (_left == null ? 'Start' : 'Go on'), ghost: true, height: Tk.btnInCard, onTap: () => _toggle(p))),
                         const SizedBox(width: 10),
-                        Expanded(child: BCta(at < p.steps.length - 1 ? 'Next drill' : 'Finish', height: 48, onTap: () => _next(p))),
+                        Expanded(child: BCta(at < p.steps.length - 1 ? 'Next drill' : 'Finish', height: Tk.btnInCard, onTap: () => _next(p))),
                       ]),
                     ]),
                   ),
